@@ -33,7 +33,7 @@ def test_new_features_identifiers():
 
 
 def test_respond():
-    message = {'to-return': ['fluxes', 'tmy'], 'objectives': ['bigg:akg']}
+    message = {'to-return': ['fluxes', 'tmy', 'model'], 'objectives': ['bigg:akg']}
     assert set(respond(message, restore_model('iJO1366')).keys()) == set(message['to-return'])
 
 

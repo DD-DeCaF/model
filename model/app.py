@@ -5,6 +5,7 @@ from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
 from cameo import phenotypic_phase_plane
+from cobra.io.json import to_json
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
     MeasurementChangeModel, full_genotype, feature_id
 from venom.rpc.comms.grpc import Client
@@ -29,6 +30,7 @@ GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 REACTIONS = 'reactions-knockout'
+MODEL = 'model'
 FLUXES = 'fluxes'
 TMY = 'tmy'
 OBJECTIVES = 'objectives'
@@ -167,6 +169,10 @@ async def apply_reactions_knockouts(model, reactions_ids):
     return model
 
 
+def model_json(model, message):
+    return to_json(model)
+
+
 def fluxes(model, message):
     return model.solve().fluxes
 
@@ -188,6 +194,7 @@ APPLY_FUNCTIONS = {
 RETURN_FUNCTIONS = {
     FLUXES: fluxes,
     TMY: theoretical_maximum_yield,
+    MODEL: model_json,
 }
 
 async def modify_model(message, model):
