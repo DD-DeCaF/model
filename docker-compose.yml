@@ -1,0 +1,8 @@
+web:
+  build: .
+  dockerfile: Dockerfile
+  ports:
+    - 8000:8000
+  environment:
+    - PYTHONUNBUFFERED=1
+    - PYTHONASYNCIODEBUG=1

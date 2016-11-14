@@ -1,0 +1,17 @@
+aiohttp
+aiozmq
+aiohttp_cors
+msgpack-python
+cameo==0.7.1
+swiglpk==1.2.14
+gnomic
+requests
+redis
+codecov
+gunicorn
+uvloop
+venom==1.0.0a1
+grpcio
+git+https://github.com/sgalkina/driven.git@model-apply#egg=driven
+pytest-asyncio==0.5.0
+pytest-cov==2.4.0
