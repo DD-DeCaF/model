@@ -5,7 +5,7 @@ from driven.generic.adapter import full_genotype
 
 
 def test_existing_metabolite():
-    ecoli = restore_model('ECO')
+    ecoli = restore_model('iJO1366')
     assert existing_metabolite(ecoli, 'chebi:17790') == existing_metabolite(ecoli, 'bigg:meoh')
     assert existing_metabolite(ecoli, 'bigg:succ').formula == 'C4H4O4'
     with pytest.raises(NoIDMapping):
@@ -13,13 +13,13 @@ def test_existing_metabolite():
 
 
 def test_product_reaction_variable():
-    ecoli = restore_model('ECO')
+    ecoli = restore_model('iJO1366')
     assert product_reaction_variable(ecoli, 'bigg:akg').id == 'EX_akg_e'
     assert product_reaction_variable(ecoli, 'bigg:e4p') is None
 
 
 def test_phase_plane_to_dict():
-    ecoli = restore_model('ECO')
+    ecoli = restore_model('iJO1366')
     result = phase_plane_to_dict(ecoli, 'bigg:glu__L')
     assert set(result.keys()) == {'EX_glu__L_e', 'objective_lower_bound', 'objective_upper_bound'}
     assert len(set([len(v) for v in result.values()])) == 1
@@ -34,11 +34,11 @@ def test_new_features_identifiers():
 
 def test_respond():
     message = {'to-return': ['fluxes', 'tmy'], 'objectives': ['bigg:akg']}
-    assert set(respond(message, restore_model('ECO')).keys()) == set(message['to-return'])
+    assert set(respond(message, restore_model('iJO1366')).keys()) == set(message['to-return'])
 
 
 @pytest.mark.asyncio
 async def test_apply_reactions_knockouts():
-    ecoli = restore_model('ECO')
+    ecoli = restore_model('iJO1366')
     result = await apply_reactions_knockouts(ecoli, ['GLUDy', '3HAD160', 'GLUDy'])
     assert result.reactions.GLUDy.lower_bound == result.reactions.GLUDy.upper_bound == 0

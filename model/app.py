@@ -12,16 +12,16 @@ from model import logger
 from model.messages import GeneToReactionsRemote, GeneRequest
 
 ORGANISMS = {
-    'ECO': 'iJO1366',
-    'SCE': 'iMM904',
-    'CHO': 'iMM1415',
-    'COG': 'iNJ661',
+    'iJO1366',
+    'iMM904',
+    'iMM1415',
+    'iNJ661',
 }
 
 
 class Models(object):
     MODELS = {
-        k: load_model(v) for k, v in ORGANISMS.items()
+        v: load_model(v) for v in ORGANISMS
     }
     print('Models are ready')
 
@@ -35,7 +35,10 @@ OBJECTIVES = 'objectives'
 
 
 def restore_model(model_id):
-    return Models.MODELS.get(model_id).copy()
+    model = Models.MODELS.get(model_id)
+    if not model:
+        return None
+    return model.copy()
 
 
 class NoIDMapping(Exception):
@@ -202,7 +205,7 @@ def respond(message, model):
     return result
 
 
-async def model_handler(request):
+async def model_ws_handler(request):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
     model = restore_model(model_id)
@@ -227,8 +230,21 @@ async def model_handler(request):
     return ws
 
 
+async def model_handler(request):
+    model_id = request.match_info['model_id']
+    model = restore_model(model_id)
+    if not model:
+        return web.HTTPNotFound()
+    data = await request.json()
+    if 'message' not in data:
+        return web.HTTPBadRequest()
+    model = await modify_model(data['message'], model)
+    return web.json_response(respond(data['message'], model))
+
+
 app = web.Application()
-app.router.add_route('GET', '/models/{model_id}', model_handler)
+app.router.add_route('GET', '/wsmodels/{model_id}', model_ws_handler)
+app.router.add_route('POST', '/models/{model_id}', model_handler)
 
 
 # Configure default CORS settings.
