@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp_cors
 import gnomic
+import json
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
@@ -170,7 +171,7 @@ async def apply_reactions_knockouts(model, reactions_ids):
 
 
 def model_json(model, message):
-    return to_json(model)
+    return json.loads(to_json(model))
 
 
 def fluxes(model, message):
