@@ -2,6 +2,8 @@ import asyncio
 import aiohttp_cors
 import gnomic
 import json
+import shelve
+import hashlib
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
@@ -18,6 +20,7 @@ ORGANISMS = {
     'iMM904',
     'iMM1415',
     'iNJ661',
+    'e_coli_core',
 }
 
 
@@ -36,12 +39,54 @@ FLUXES = 'fluxes'
 TMY = 'tmy'
 OBJECTIVES = 'objectives'
 
+SHELVE = 'model-cache'
 
-def restore_model(model_id):
+
+def restore_model(model_id):  # TODO: more persistent solution
+    """Try to restore model by model id
+
+    :param model_id: str
+    :return: Cameo model or None
+    """
     model = Models.MODELS.get(model_id)
-    if not model:
-        return None
-    return model.copy()
+    if model:
+        logger.info('Wild type model with id {} is found'.format(model_id))
+        return model.copy()
+    logger.info('Restoring model with id {}'.format(model_id))
+    with shelve.open(SHELVE) as db:
+        logger.info('{} models cached'.format(len(list(db.keys()))))
+        if model_id in db:
+            logger.info('Found model with id {}'.format(model_id))
+            return db[model_id]
+    logger.info('No model with id {}'.format(model_id))
+    return None
+
+
+def key_from_model_info(model_id, message):
+    """Generate hash string from model information which will later be used as db key
+
+    :param model_id: str
+    :param message: dict
+    :return: str
+    """
+    d = {k: message.get(k, []) for k in {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS}}
+    d['model_id'] = model_id
+    return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
+
+
+def save_model(model, model_id, message):
+    """Store model in cache database
+
+    :param model: Cameo model
+    :param model_id: str
+    :param message: dict
+    :return: str (cache database key)
+    """
+    db_key = key_from_model_info(model_id, message)
+    with shelve.open(SHELVE) as db:
+        db[db_key] = model
+        logger.info('Model created on the base of {} with message {} saved as {}'.format(model_id, message, db_key))
+    return db_key
 
 
 class NoIDMapping(Exception):
@@ -206,10 +251,12 @@ async def modify_model(message, model):
     return model
 
 
-def respond(message, model):
+def respond(message, model, db_key=None):
     result = {}
     for key in message['to-return']:
         result[key] = RETURN_FUNCTIONS[key](model, message)
+    if db_key:
+        result['model-id'] = db_key
     return result
 
 
@@ -240,14 +287,19 @@ async def model_ws_handler(request):
 
 async def model_handler(request):
     model_id = request.match_info['model_id']
-    model = restore_model(model_id)
-    if not model:
-        return web.HTTPNotFound()
     data = await request.json()
     if 'message' not in data:
         return web.HTTPBadRequest()
-    model = await modify_model(data['message'], model)
-    return web.json_response(respond(data['message'], model))
+    message = data['message']
+    db_key = key_from_model_info(model_id, message)
+    model = restore_model(db_key)
+    if not model:
+        model = restore_model(model_id)
+        if not model:
+            return web.HTTPNotFound()
+        model = await modify_model(message, model)
+        db_key = save_model(model, model_id, message)
+    return web.json_response(respond(message, model, db_key))
 
 
 app = web.Application()
