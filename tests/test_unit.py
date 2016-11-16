@@ -5,8 +5,17 @@ import json
 from cobra.io.json import to_json
 from model.app import existing_metabolite, NoIDMapping, restore_model, product_reaction_variable, phase_plane_to_dict, \
     new_features_identifiers, apply_reactions_knockouts, respond, save_model, key_from_model_info, \
-    GENOTYPE_CHANGES, MEASUREMENTS, SHELVE
+    GENOTYPE_CHANGES, MEASUREMENTS, SHELVE, convert_mg_to_mmol
 from driven.generic.adapter import full_genotype
+
+
+def almost_equal(a, b):
+    return abs(a - b) < 10e-6
+
+
+def test_mg_to_mmol():
+    assert almost_equal(convert_mg_to_mmol(34.5, 58.4), 0.59075342)
+    assert almost_equal(convert_mg_to_mmol(18, 18), 1)
 
 
 def test_key_from_model_info():

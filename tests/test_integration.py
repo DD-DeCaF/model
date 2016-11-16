@@ -17,7 +17,7 @@ async def test_modify_model():
         'objectives': ['chebi:17790'],
         'genotype-changes': ['+Aac'],
         'medium': [{'id': 'chebi:44080', 'concentration': 0.01}],
-        'measurements': [{'id': 'chebi:44080', 'measurement': -15}],
+        'measurements': [{'id': 'chebi:44080', 'measurement': -15, 'unit': 'mg', 'name': 'glucose'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
     assert await modify_model(message, restore_model('iJO1366'))

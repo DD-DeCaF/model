@@ -200,7 +200,21 @@ async def call_genes_to_reactions(genotype_features):
     return {k: dict(zip(*(v.reactions_ids, v.equations))) for k, v in zip(identifiers, results)}
 
 
+def convert_mg_to_mmol(mg, formula_weight):
+    return mg * (1/formula_weight)
+
+
 async def apply_measurement_changes(model, measurements):
+    for i in range(len(measurements)):
+        if measurements[i]['unit'] == 'mg':
+            metabolite = existing_metabolite(model, measurements[i]['id'])
+            if metabolite:
+                measurements[i]['measurement'] = convert_mg_to_mmol(
+                    measurements[i]['measurement'],
+                    metabolite.formula_weight
+                )
+                measurements[i]['unit'] = 'mmol'
+                logger.info('Converted metabolite {} from mg to mmol'.format(measurements[i]['name']))
     return MeasurementChangeModel(model, measurements).model
 
 
