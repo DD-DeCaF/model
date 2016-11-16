@@ -271,6 +271,7 @@ def respond(message, model, db_key=None):
         result[key] = RETURN_FUNCTIONS[key](model, message)
     if db_key:
         result['model-id'] = db_key
+    logger.info('Response for {} is ready'.format(message))
     return result
 
 
@@ -307,6 +308,7 @@ async def model_handler(request):
     message = data['message']
     db_key = key_from_model_info(model_id, message)
     model = restore_model(db_key)
+    logger.info('Model with db key {} is ready'.format(db_key))
     if not model:
         model = restore_model(model_id)
         if not model:
