@@ -5,7 +5,7 @@ import json
 from cobra.io.json import to_json
 from model.app import existing_metabolite, NoIDMapping, restore_model, product_reaction_variable, phase_plane_to_dict, \
     new_features_identifiers, apply_reactions_knockouts, respond, save_model, key_from_model_info, \
-    GENOTYPE_CHANGES, MEASUREMENTS, SHELVE, convert_mg_to_mmol
+    GENOTYPE_CHANGES, MEASUREMENTS, SHELVE, convert_mg_to_mmol, convert_measurements_to_mmol
 from driven.generic.adapter import full_genotype
 
 
@@ -81,3 +81,9 @@ async def test_apply_reactions_knockouts():
     ecoli = restore_model('iJO1366')
     result = await apply_reactions_knockouts(ecoli, ['GLUDy', '3HAD160', 'GLUDy'])
     assert result.reactions.GLUDy.lower_bound == result.reactions.GLUDy.upper_bound == 0
+
+
+def test_convert_measurements_to_mmol():
+    ecoli = restore_model('iJO1366')
+    measurements = [{'id': 'chebi:17790', 'measurement': 32.04186, 'unit': 'mg'}]
+    assert convert_measurements_to_mmol(measurements, ecoli) == [{'id': 'chebi:17790', 'measurement': 1.0, 'unit': 'mmol'}]

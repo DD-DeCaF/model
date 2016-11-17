@@ -4,6 +4,7 @@ import gnomic
 import json
 import shelve
 import hashlib
+import time
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
@@ -205,7 +206,14 @@ def convert_mg_to_mmol(mg, formula_weight):
 
 
 async def apply_measurement_changes(model, measurements):
+    measurements = convert_measurements_to_mmol(measurements, model)
+    return MeasurementChangeModel(model, measurements).model
+
+
+def convert_measurements_to_mmol(measurements, model):
     for i in range(len(measurements)):
+        if 'unit' not in measurements[i]:
+            continue
         if measurements[i]['unit'] == 'mg':
             metabolite = existing_metabolite(model, measurements[i]['id'])
             if metabolite:
@@ -214,8 +222,8 @@ async def apply_measurement_changes(model, measurements):
                     metabolite.formula_weight
                 )
                 measurements[i]['unit'] = 'mmol'
-                logger.info('Converted metabolite {} from mg to mmol'.format(measurements[i]['name']))
-    return MeasurementChangeModel(model, measurements).model
+                logger.info('Converted metabolite {} from mg to mmol'.format(measurements[i]['id']))
+    return measurements
 
 
 async def apply_medium_changes(model, medium):
@@ -307,8 +315,10 @@ async def model_handler(request):
         return web.HTTPBadRequest()
     message = data['message']
     db_key = key_from_model_info(model_id, message)
+    t = time.time()
     model = restore_model(db_key)
-    logger.info('Model with db key {} is ready'.format(db_key))
+    t = time.time() - t
+    logger.info('Model with db key {} is ready in {} sec'.format(db_key, t))
     if not model:
         model = restore_model(model_id)
         if not model:
