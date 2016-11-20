@@ -2,19 +2,22 @@ import asyncio
 import aiohttp_cors
 import gnomic
 import json
-import shelve
 import hashlib
 import time
+import aioredis
+import os
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
 from cameo import phenotypic_phase_plane
-from cobra.io.json import to_json
+from cobra.io.json import to_json, from_json
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
     MeasurementChangeModel, full_genotype, feature_id
 from venom.rpc.comms.grpc import Client
 from model import logger
 from model.messages import GeneToReactionsRemote, GeneRequest
+from cameo.core.solver_based_model import to_solver_based_model
+
 
 ORGANISMS = {
     'iJO1366',
@@ -23,6 +26,10 @@ ORGANISMS = {
     'iNJ661',
     'e_coli_core',
 }
+
+
+async def redis_client():
+    return await aioredis.create_redis((os.environ['REDIS_PORT_6379_TCP_ADDR'], 6379), loop=asyncio.get_event_loop())
 
 
 class Models(object):
@@ -40,25 +47,38 @@ FLUXES = 'fluxes'
 TMY = 'tmy'
 OBJECTIVES = 'objectives'
 
-SHELVE = 'model-cache'
+
+async def find_in_db(model_id):
+    t = time.time()
+    model = None
+    redis = await redis_client()
+    if await redis.exists(model_id):
+        dumped_model = await redis.get(model_id)
+        model = to_solver_based_model(from_json(dumped_model.decode('utf-8')))
+    redis.close()
+    t = time.time() - t
+    logger.info('Model with db key {} is ready in {} sec'.format(model_id, t))
+    return model
 
 
-def restore_model(model_id):  # TODO: more persistent solution
+def find_in_memory(model_id):
+    return Models.MODELS.get(model_id)
+
+
+async def restore_model(model_id):  # TODO: more persistent solution
     """Try to restore model by model id
 
     :param model_id: str
     :return: Cameo model or None
     """
-    model = Models.MODELS.get(model_id)
+    model = find_in_memory(model_id)
     if model:
         logger.info('Wild type model with id {} is found'.format(model_id))
         return model.copy()
-    logger.info('Restoring model with id {}'.format(model_id))
-    with shelve.open(SHELVE) as db:
-        logger.info('{} models cached'.format(len(list(db.keys()))))
-        if model_id in db:
-            logger.info('Found model with id {}'.format(model_id))
-            return db[model_id]
+    model = await find_in_db(model_id)
+    if model:
+        logger.info('Model with id {} found in database'.format(model_id))
+        return model
     logger.info('No model with id {}'.format(model_id))
     return None
 
@@ -75,7 +95,7 @@ def key_from_model_info(model_id, message):
     return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
 
 
-def save_model(model, model_id, message):
+async def save_to_db(model, model_id, message):
     """Store model in cache database
 
     :param model: Cameo model
@@ -84,9 +104,10 @@ def save_model(model, model_id, message):
     :return: str (cache database key)
     """
     db_key = key_from_model_info(model_id, message)
-    with shelve.open(SHELVE) as db:
-        db[db_key] = model
-        logger.info('Model created on the base of {} with message {} saved as {}'.format(model_id, message, db_key))
+    redis = await redis_client()
+    await redis.set(db_key, to_json(model))
+    redis.close()
+    logger.info('Model created on the base of {} with message {} saved as {}'.format(model_id, message, db_key))
     return db_key
 
 
@@ -286,7 +307,7 @@ def respond(message, model, db_key=None):
 async def model_ws_handler(request):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
-    model = restore_model(model_id)
+    model = await restore_model(model_id)
     if not model:
         raise KeyError('No such model: {}'.format(model_id))
     await ws.prepare(request)
@@ -309,22 +330,20 @@ async def model_ws_handler(request):
 
 
 async def model_handler(request):
+    print(os.getpid())
     model_id = request.match_info['model_id']
     data = await request.json()
     if 'message' not in data:
         return web.HTTPBadRequest()
     message = data['message']
     db_key = key_from_model_info(model_id, message)
-    t = time.time()
-    model = restore_model(db_key)
-    t = time.time() - t
-    logger.info('Model with db key {} is ready in {} sec'.format(db_key, t))
+    model = await restore_model(db_key)
     if not model:
-        model = restore_model(model_id)
+        model = await restore_model(model_id)
         if not model:
             return web.HTTPNotFound()
         model = await modify_model(message, model)
-        db_key = save_model(model, model_id, message)
+        db_key = await save_to_db(model, model_id, message)
     return web.json_response(respond(message, model, db_key))
 
 

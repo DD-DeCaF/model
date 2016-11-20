@@ -3,6 +3,12 @@ web:
   dockerfile: Dockerfile
   ports:
     - 8000:8000
+  links:
+    - redis
   environment:
     - PYTHONUNBUFFERED=1
     - PYTHONASYNCIODEBUG=1
+redis:
+  image: redis
+  ports:
+    - 6379

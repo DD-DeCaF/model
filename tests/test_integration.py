@@ -20,4 +20,4 @@ async def test_modify_model():
         'measurements': [{'id': 'chebi:44080', 'measurement': -15, 'unit': 'mg', 'name': 'glucose'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
-    assert await modify_model(message, restore_model('iJO1366'))
+    assert await modify_model(message, await restore_model('iJO1366'))
