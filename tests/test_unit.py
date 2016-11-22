@@ -1,10 +1,11 @@
 import pytest
 import random
 import json
-from cobra.io.json import to_json
+from cobra.io.json import _to_dict
 from model.app import existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable, \
-    phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_to_db, key_from_model_info,\
-    GENOTYPE_CHANGES, MEASUREMENTS, convert_mg_to_mmol, convert_measurements_to_mmol
+    phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_changes_to_db, \
+    key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol, convert_measurements_to_mmol, \
+    modify_model, restore_from_db
 from driven.generic.adapter import full_genotype
 
 
@@ -35,10 +36,14 @@ def test_key_from_model_info():
 @pytest.mark.asyncio
 async def test_save_and_restore():
     model_id = 'e_coli_core'
-    message = {MEASUREMENTS: []}
-    model = await restore_model(model_id)
-    db_key = await save_to_db(model, model_id, message)
-    assert json.loads(to_json(await restore_model(db_key))) == json.loads(to_json(model))
+    message = {
+        GENOTYPE_CHANGES: ['+Aac'],
+        MEASUREMENTS: [{'id': 'chebi:44080', 'concentration': 0.01}],
+        MEDIUM: [{'id': 'chebi:44080', 'measurement': -15, 'unit': 'mg', 'name': 'glucose'}],
+    }
+    model = await modify_model(message, (await restore_model(model_id)).copy())
+    db_key = await save_changes_to_db(model, model_id, message)
+    assert len(_to_dict(await restore_from_db(db_key))['reactions']) == len(_to_dict(model)['reactions'])
 
 
 def test_existing_metabolite():
@@ -77,7 +82,7 @@ def test_respond():
 @pytest.mark.asyncio
 async def test_apply_reactions_knockouts():
     ecoli = find_in_memory('iJO1366')
-    result = await apply_reactions_knockouts(ecoli, ['GLUDy', '3HAD160', 'GLUDy'])
+    result = (await apply_reactions_knockouts(ecoli, ['GLUDy', '3HAD160', 'GLUDy'])).model
     assert result.reactions.GLUDy.lower_bound == result.reactions.GLUDy.upper_bound == 0
 
 

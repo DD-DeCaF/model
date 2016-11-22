@@ -2,6 +2,7 @@ aiohttp
 aiozmq
 aiohttp_cors
 msgpack-python
+git+https://github.com/sgalkina/cobrapy.git@devel#egg=cobra
 cameo==0.7.1
 swiglpk==1.2.14
 gnomic
@@ -16,3 +17,4 @@ git+https://github.com/sgalkina/driven.git@model-apply#egg=driven
 pytest-asyncio==0.5.0
 pytest-cov==2.4.0
 aioredis==0.2.9
+jsondiff==1.0.0

@@ -2,7 +2,7 @@ FROM biosustain/cameo-solvers:647d6ebdf3dd
 RUN apt-get -y update && apt-get install -y git
 
 ADD requirements.txt requirements.txt
-RUN pip install --process-dependency-links -r requirements.txt
+RUN pip install --upgrade --process-dependency-links -r requirements.txt
 
 ADD . ./model
 WORKDIR model

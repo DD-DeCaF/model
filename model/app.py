@@ -6,11 +6,13 @@ import hashlib
 import time
 import aioredis
 import os
+from collections import namedtuple
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
 from cameo import phenotypic_phase_plane
-from cobra.io.json import to_json, from_json
+from cobra.io.json import to_json, from_json, reaction_to_dict, reaction_from_dict, gene_to_dict, gene_from_dict, \
+    metabolite_to_dict, metabolite_from_dict
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
     MeasurementChangeModel, full_genotype, feature_id
 from venom.rpc.comms.grpc import Client
@@ -48,14 +50,23 @@ TMY = 'tmy'
 OBJECTIVES = 'objectives'
 
 
-async def find_in_db(model_id):
-    t = time.time()
-    model = None
+async def find_changes_in_db(model_id):
+    dumped_changes = None
     redis = await redis_client()
     if await redis.exists(model_id):
-        dumped_model = await redis.get(model_id)
-        model = to_solver_based_model(from_json(dumped_model.decode('utf-8')))
+        dumped_changes = (await redis.get(model_id)).decode('utf-8')
     redis.close()
+    return dumped_changes
+
+
+async def restore_from_db(model_id):
+    t = time.time()
+    changes = await find_changes_in_db(model_id)
+    if not changes:
+        return None
+    changes = json.loads(changes)
+    model = find_in_memory(changes['model']).copy()
+    model = restore_changes(model, changes['changes'])
     t = time.time() - t
     logger.info('Model with db key {} is ready in {} sec'.format(model_id, t))
     return model
@@ -65,7 +76,7 @@ def find_in_memory(model_id):
     return Models.MODELS.get(model_id)
 
 
-async def restore_model(model_id):  # TODO: more persistent solution
+async def restore_model(model_id):
     """Try to restore model by model id
 
     :param model_id: str
@@ -75,7 +86,7 @@ async def restore_model(model_id):  # TODO: more persistent solution
     if model:
         logger.info('Wild type model with id {} is found'.format(model_id))
         return model.copy()
-    model = await find_in_db(model_id)
+    model = await restore_from_db(model_id)
     if model:
         logger.info('Model with id {} found in database'.format(model_id))
         return model
@@ -95,7 +106,7 @@ def key_from_model_info(model_id, message):
     return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
 
 
-async def save_to_db(model, model_id, message):
+async def save_changes_to_db(model, model_id, message):
     """Store model in cache database
 
     :param model: Cameo model
@@ -105,7 +116,7 @@ async def save_to_db(model, model_id, message):
     """
     db_key = key_from_model_info(model_id, message)
     redis = await redis_client()
-    await redis.set(db_key, to_json(model))
+    await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes['changes']}))
     redis.close()
     logger.info('Model created on the base of {} with message {} saved as {}'.format(model_id, message, db_key))
     return db_key
@@ -186,7 +197,7 @@ async def apply_genotype_changes(model, genotype_changes):
     genotype_features = full_genotype(genotype_changes)
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
     logger.info('Genes to reaction: {}'.format(genes_to_reactions))
-    return GenotypeChangeModel(model, genotype_features, genes_to_reactions).model
+    return GenotypeChangeModel(model, genotype_features, genes_to_reactions)
 
 
 def new_features_identifiers(genotype_changes: gnomic.Genotype):
@@ -228,7 +239,7 @@ def convert_mg_to_mmol(mg, formula_weight):
 
 async def apply_measurement_changes(model, measurements):
     measurements = convert_measurements_to_mmol(measurements, model)
-    return MeasurementChangeModel(model, measurements).model
+    return MeasurementChangeModel(model, measurements)
 
 
 def convert_measurements_to_mmol(measurements, model):
@@ -248,14 +259,16 @@ def convert_measurements_to_mmol(measurements, model):
 
 
 async def apply_medium_changes(model, medium):
-    return MediumChangeModel(model, medium).model
+    return MediumChangeModel(model, medium)
 
+
+ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
 
 async def apply_reactions_knockouts(model, reactions_ids):
-    for r_id in reactions_ids:
-        reaction = model.reactions.get_by_id(r_id)
-        reaction.knock_out()
-    return model
+    reactions = [model.reactions.get_by_id(r_id) for r_id in reactions_ids]
+    for r in reactions:
+        r.knock_out()
+    return ReactionKnockouts(model, {'removed': {'reactions': reactions}})
 
 
 def model_json(model, message):
@@ -287,10 +300,65 @@ RETURN_FUNCTIONS = {
 }
 
 async def modify_model(message, model):
+    changes = {'added': {'reactions': [], 'metabolites': []}, 'removed': {'genes': [], 'reactions': []}}
+    to_dict = dict(
+        reactions=reaction_to_dict,
+        genes=gene_to_dict,
+        metabolites=metabolite_to_dict,
+    )
     for key in REQUEST_KEYS:
         data = message.get(key, [])
         if data:
-            model = await APPLY_FUNCTIONS[key](model, data)
+            modifications = await APPLY_FUNCTIONS[key](model, data)
+            model = modifications.model
+            for action, by_action in modifications.changes.items():
+                for entity, value in by_action.items():
+                    changes[action][entity].extend([to_dict[entity](i) for i in value])
+    model.notes['changes'] = changes
+    return model
+
+
+def restore_changes(model, changes):
+    model = apply_additions(model, changes['added'])
+    model = apply_removals(model, changes['removed'])
+    return model
+
+
+def apply_additions(model, changes):
+    model = add_metabolites(model, changes['metabolites'])
+    model = add_reactions(model, changes['reactions'])
+    return model
+
+
+def add_reactions(model, changes):
+    reactions = [reaction_from_dict(r, model) for r in changes]
+    model.add_reactions(reactions)
+    return model
+
+
+def add_metabolites(model, changes):
+    metabolites = [metabolite_from_dict(m) for m in changes]
+    model.add_metabolites(metabolites)
+    return model
+
+
+def apply_removals(model, changes):
+    model = remove_reactions(model, changes['reactions'])
+    model = remove_genes(model, changes['genes'])
+    return model
+
+
+def remove_genes(model, changes):
+    for gene in changes:
+        gene = model.genes.query(gene['name'], attribute="name")[0]
+        gene.knock_out()
+    return model
+
+
+def remove_reactions(model, changes):
+    for r in changes:
+        reaction = model.reactions.get_by_id(r['id'])
+        reaction.knock_out()
     return model
 
 
@@ -330,20 +398,19 @@ async def model_ws_handler(request):
 
 
 async def model_handler(request):
-    print(os.getpid())
     model_id = request.match_info['model_id']
     data = await request.json()
     if 'message' not in data:
         return web.HTTPBadRequest()
     message = data['message']
     db_key = key_from_model_info(model_id, message)
-    model = await restore_model(db_key)
+    model = await restore_from_db(db_key)
     if not model:
-        model = await restore_model(model_id)
+        model = find_in_memory(model_id)
         if not model:
             return web.HTTPNotFound()
-        model = await modify_model(message, model)
-        db_key = await save_to_db(model, model_id, message)
+        model = await modify_model(message, model.copy())
+        db_key = await save_changes_to_db(model, model_id, message)
     return web.json_response(respond(message, model, db_key))
 
 
