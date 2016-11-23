@@ -339,7 +339,13 @@ def apply_additions(model, changes):
 
 def add_reactions(model, changes):
     reactions = [reaction_from_dict(r, model) for r in changes]
-    model.add_reactions(reactions)
+    to_add = []
+    for reaction in reactions:
+        if model.reactions.has_id(reaction.id):
+            model.reactions.get_by_id(reaction.id).change_bounds(lb=reaction.lower_bound, ub=reaction.upper_bound)
+        else:
+            to_add.append(reaction)
+    model.add_reactions(to_add)
     return model
 
 
