@@ -7,18 +7,18 @@ import time
 import aioredis
 import os
 from collections import namedtuple
+from functools import lru_cache
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
 from cameo import phenotypic_phase_plane
-from cobra.io.json import to_json, from_json, reaction_to_dict, reaction_from_dict, gene_to_dict, gene_from_dict, \
+from cobra.io.json import to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
     metabolite_to_dict, metabolite_from_dict
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
     MeasurementChangeModel, full_genotype, feature_id
 from venom.rpc.comms.grpc import Client
 from model import logger
 from model.messages import GeneToReactionsRemote, GeneRequest
-from cameo.core.solver_based_model import to_solver_based_model
 
 
 ORGANISMS = {
@@ -64,12 +64,17 @@ async def restore_from_db(model_id):
     changes = await find_changes_in_db(model_id)
     if not changes:
         return None
-    changes = json.loads(changes)
-    model = find_in_memory(changes['model']).copy()
-    model = restore_changes(model, changes['changes'])
+    model = model_from_changes(changes)
     t = time.time() - t
     logger.info('Model with db key {} is ready in {} sec'.format(model_id, t))
     return model
+
+
+@lru_cache(maxsize=16)
+def model_from_changes(changes):
+    changes = json.loads(changes)
+    model = find_in_memory(changes['model']).copy()
+    return restore_changes(model, changes['changes'])
 
 
 def find_in_memory(model_id):
@@ -313,6 +318,8 @@ async def modify_model(message, model):
             model = modifications.model
             for action, by_action in modifications.changes.items():
                 for entity, value in by_action.items():
+                    print(entity)
+                    print([to_dict[entity](i) for i in value])
                     changes[action][entity].extend([to_dict[entity](i) for i in value])
     model.notes['changes'] = changes
     return model
@@ -375,9 +382,10 @@ def respond(message, model, db_key=None):
 async def model_ws_handler(request):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
-    model = await restore_model(model_id)
-    if not model:
+    if not (await find_changes_in_db(model_id)):
         raise KeyError('No such model: {}'.format(model_id))
+    model = await restore_model(model_id)
+    logger.info(model_from_changes.cache_info())
     await ws.prepare(request)
     try:
         async for msg in ws:
@@ -405,6 +413,7 @@ async def model_handler(request):
     message = data['message']
     db_key = key_from_model_info(model_id, message)
     model = await restore_from_db(db_key)
+    logger.info(model_from_changes.cache_info())
     if not model:
         model = find_in_memory(model_id)
         if not model:

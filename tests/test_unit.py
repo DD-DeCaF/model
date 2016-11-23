@@ -1,6 +1,5 @@
 import pytest
 import random
-import json
 from cobra.io.json import _to_dict
 from model.app import existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable, \
     phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_changes_to_db, \
@@ -43,7 +42,11 @@ async def test_save_and_restore():
     }
     model = await modify_model(message, (await restore_model(model_id)).copy())
     db_key = await save_changes_to_db(model, model_id, message)
-    assert len(_to_dict(await restore_from_db(db_key))['reactions']) == len(_to_dict(model)['reactions'])
+    restored = _to_dict(await restore_from_db(db_key))
+    original = _to_dict(model)
+    assert set([i['id'] for i in restored['reactions']]) == set([i['id'] for i in original['reactions']])
+    assert set([i['id'] for i in restored['genes']]) == set([i['id'] for i in original['genes']])
+    assert set([i['id'] for i in restored['metabolites']]) == set([i['id'] for i in original['metabolites']])
 
 
 def test_existing_metabolite():

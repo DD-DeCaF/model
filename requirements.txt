@@ -10,6 +10,7 @@ requests
 redis
 codecov
 gunicorn
+
 uvloop
 venom==1.0.0a1
 grpcio
