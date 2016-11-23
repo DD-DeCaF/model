@@ -64,7 +64,7 @@ async def restore_from_db(model_id):
     changes = await find_changes_in_db(model_id)
     if not changes:
         return None
-    model = model_from_changes(changes)
+    model = model_from_changes(changes).copy()
     t = time.time() - t
     logger.info('Model with db key {} is ready in {} sec'.format(model_id, t))
     return model
