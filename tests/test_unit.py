@@ -85,7 +85,7 @@ def test_new_features_identifiers():
 
 
 def test_respond():
-    message = {'to-return': ['fluxes', 'tmy', 'model'], 'objectives': ['bigg:akg']}
+    message = {'to-return': ['fluxes', 'tmy', 'model', 'growth-rate'], 'objectives': ['bigg:akg']}
     assert set(respond(message, find_in_memory('iJO1366')).keys()) == set(message['to-return'])
 
 

@@ -46,8 +46,10 @@ MEASUREMENTS = 'measurements'
 REACTIONS = 'reactions-knockout'
 MODEL = 'model'
 FLUXES = 'fluxes'
+GROWTH_RATE = 'growth-rate'
 TMY = 'tmy'
 OBJECTIVES = 'objectives'
+REQUEST_ID = 'request-id'
 
 
 async def find_changes_in_db(model_id):
@@ -276,16 +278,25 @@ async def apply_reactions_knockouts(model, reactions_ids):
     return ReactionKnockouts(model, {'removed': {'reactions': reactions}})
 
 
-def model_json(model, message):
-    return json.loads(to_json(model))
+class Response(object):
+    def __init__(self, model, message):
+        self.model = model
+        self.message = message
+        solution = self.model.solve()
+        self.flux = solution.fluxes
+        self.growth = solution.objective_value
 
+    def model_json(self):
+        return json.loads(to_json(self.model))
 
-def fluxes(model, message):
-    return model.solve().fluxes
+    def fluxes(self):
+        return self.flux
 
+    def theoretical_maximum_yield(self):
+        return {key: phase_plane_to_dict(self.model, key) for key in self.message[OBJECTIVES]}
 
-def theoretical_maximum_yield(model, message):
-    return {key: phase_plane_to_dict(model, key) for key in message[OBJECTIVES]}
+    def growth_rate(self):
+        return self.growth
 
 
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS]
@@ -299,9 +310,10 @@ APPLY_FUNCTIONS = {
 }
 
 RETURN_FUNCTIONS = {
-    FLUXES: fluxes,
-    TMY: theoretical_maximum_yield,
-    MODEL: model_json,
+    FLUXES: 'fluxes',
+    TMY: 'theoretical_maximum_yield',
+    MODEL: 'model_json',
+    GROWTH_RATE: 'growth_rate',
 }
 
 async def modify_model(message, model):
@@ -318,8 +330,6 @@ async def modify_model(message, model):
             model = modifications.model
             for action, by_action in modifications.changes.items():
                 for entity, value in by_action.items():
-                    print(entity)
-                    print([to_dict[entity](i) for i in value])
                     changes[action][entity].extend([to_dict[entity](i) for i in value])
     model.notes['changes'] = changes
     return model
@@ -377,10 +387,13 @@ def remove_reactions(model, changes):
 
 def respond(message, model, db_key=None):
     result = {}
+    response = Response(model, message)
     for key in message['to-return']:
-        result[key] = RETURN_FUNCTIONS[key](model, message)
+        result[key] = getattr(response, RETURN_FUNCTIONS[key])()
     if db_key:
         result['model-id'] = db_key
+    if REQUEST_ID in message:
+        result[REQUEST_ID] = message[REQUEST_ID]
     logger.info('Response for {} is ready'.format(message))
     return result
 

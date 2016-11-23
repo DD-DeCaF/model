@@ -3,7 +3,7 @@ import pytest
 import requests
 
 MESSAGE_FLUXES = {'to-return': ['fluxes']}
-MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790']}
+MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'to-return': ['tmy', 'fluxes'],
     'objectives': ['chebi:17790'],
