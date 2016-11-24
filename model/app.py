@@ -44,6 +44,7 @@ GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 REACTIONS = 'reactions-knockout'
+REACTIONS_UNDO = 'reactions-knockout-undo'
 MODEL = 'model'
 FLUXES = 'fluxes'
 GROWTH_RATE = 'growth-rate'
@@ -66,7 +67,7 @@ async def restore_from_db(model_id):
     changes = await find_changes_in_db(model_id)
     if not changes:
         return None
-    model = model_from_changes(changes).copy()
+    model = model_from_changes(changes)
     t = time.time() - t
     logger.info('Model with db key {} is ready in {} sec'.format(model_id, t))
     return model
@@ -278,6 +279,24 @@ async def apply_reactions_knockouts(model, reactions_ids):
     return ReactionKnockouts(model, {'removed': {'reactions': reactions}})
 
 
+ReactionKnockoutsUndo = namedtuple('ReactionKnockouts', ['model', 'changes'])
+
+
+def undo_reactions_knockouts(model, reaction_ids):
+    reaction_ids = set(reaction_ids)
+    if not model.notes.get('changes'):
+        return ReactionKnockouts(model, {})
+    reactions = model.notes['changes']['removed']['reactions']
+    for reaction in reactions:
+        if reaction['id'] in reaction_ids:
+            model.reactions.get_by_id(reaction['id']).change_bounds(
+                lb=reaction['lower_bound'],
+                ub=reaction['upper_bound']
+            )
+    model.notes['changes']['removed']['reactions'] = [i for i in reactions if i['id'] not in reaction_ids]
+    return ReactionKnockouts(model, {})
+
+
 class Response(object):
     def __init__(self, model, message):
         self.model = model
@@ -307,6 +326,7 @@ APPLY_FUNCTIONS = {
     MEDIUM: apply_medium_changes,
     MEASUREMENTS: apply_measurement_changes,
     REACTIONS: apply_reactions_knockouts,
+    REACTIONS_UNDO: undo_reactions_knockouts,
 }
 
 RETURN_FUNCTIONS = {
@@ -317,20 +337,25 @@ RETURN_FUNCTIONS = {
 }
 
 async def modify_model(message, model):
-    changes = {'added': {'reactions': [], 'metabolites': []}, 'removed': {'genes': [], 'reactions': []}}
+    for key in REQUEST_KEYS:
+        data = message.get(key, [])
+        if data:
+            modifications = await APPLY_FUNCTIONS[key](model, data)
+            model = collect_changes(modifications)
+    return model
+
+
+def collect_changes(modifications):
+    model = modifications.model
+    changes = model.notes.get('changes', {'added': {'reactions': [], 'metabolites': []}, 'removed': {'genes': [], 'reactions': []}})
     to_dict = dict(
         reactions=reaction_to_dict,
         genes=gene_to_dict,
         metabolites=metabolite_to_dict,
     )
-    for key in REQUEST_KEYS:
-        data = message.get(key, [])
-        if data:
-            modifications = await APPLY_FUNCTIONS[key](model, data)
-            model = modifications.model
-            for action, by_action in modifications.changes.items():
-                for entity, value in by_action.items():
-                    changes[action][entity].extend([to_dict[entity](i) for i in value])
+    for action, by_action in modifications.changes.items():
+        for entity, value in by_action.items():
+            changes[action][entity].extend([to_dict[entity](i) for i in value])
     model.notes['changes'] = changes
     return model
 
@@ -403,7 +428,7 @@ async def model_ws_handler(request):
     model_id = request.match_info['model_id']
     if not (await find_changes_in_db(model_id)):
         raise KeyError('No such model: {}'.format(model_id))
-    model = await restore_model(model_id)
+    model = (await restore_model(model_id)).copy()
     logger.info(model_from_changes.cache_info())
     await ws.prepare(request)
     try:
