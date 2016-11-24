@@ -85,7 +85,8 @@ def find_in_memory(model_id):
 
 
 async def restore_model(model_id):
-    """Try to restore model by model id
+    """Try to restore model by model id.
+    NOTE: if model is found in memory, the original model is returned - to modify, make a copy
 
     :param model_id: str
     :return: Cameo model or None
@@ -93,7 +94,7 @@ async def restore_model(model_id):
     model = find_in_memory(model_id)
     if model:
         logger.info('Wild type model with id {} is found'.format(model_id))
-        return model.copy()
+        return model
     model = await restore_from_db(model_id)
     if model:
         logger.info('Model with id {} found in database'.format(model_id))
@@ -124,7 +125,7 @@ async def save_changes_to_db(model, model_id, message):
     """
     db_key = key_from_model_info(model_id, message)
     redis = await redis_client()
-    await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes['changes']}))
+    await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes.get('changes', {})}))
     redis.close()
     logger.info('Model created on the base of {} with message {} saved as {}'.format(model_id, message, db_key))
     return db_key

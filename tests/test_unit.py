@@ -35,6 +35,7 @@ def test_key_from_model_info():
 @pytest.mark.asyncio
 async def test_save_and_restore():
     model_id = 'e_coli_core'
+    await save_changes_to_db(find_in_memory(model_id), model_id, {})
     message = {
         GENOTYPE_CHANGES: ['-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
         MEASUREMENTS: [{'id': 'chebi:44080', 'concentration': 0.01}],
