@@ -1,2 +1,4 @@
 **/__pycache__
 model-cache
+.env
+.cache

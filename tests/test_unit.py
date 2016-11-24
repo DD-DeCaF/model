@@ -92,12 +92,12 @@ def test_respond():
 
 @pytest.mark.asyncio
 async def test_apply_reactions_knockouts():
-    ecoli = find_in_memory('iJO1366')
+    ecoli = find_in_memory('iJO1366').copy()
     result = (await apply_reactions_knockouts(ecoli, ['GLUDy', '3HAD160', 'GLUDy'])).model
     assert result.reactions.GLUDy.lower_bound == result.reactions.GLUDy.upper_bound == 0
 
 
 def test_convert_measurements_to_mmol():
-    ecoli = find_in_memory('iJO1366')
+    ecoli = find_in_memory('iJO1366').copy()
     measurements = [{'id': 'chebi:17790', 'measurement': 32.04186, 'unit': 'mg'}]
     assert convert_measurements_to_mmol(measurements, ecoli) == [{'id': 'chebi:17790', 'measurement': 1.0, 'unit': 'mmol'}]
