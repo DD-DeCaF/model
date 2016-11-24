@@ -380,6 +380,7 @@ def collect_changes(modifications):
 
 
 def restore_changes(model, changes):
+    logger.info('Changes to restore: {}'.format(changes))
     model = apply_additions(model, changes['added'])
     model = apply_removals(model, changes['removed'])
     return model
