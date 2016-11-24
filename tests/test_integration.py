@@ -13,7 +13,7 @@ async def test_call_genes_to_reactions():
 @pytest.mark.asyncio
 async def test_modify_model():
     message = {
-        'to-return': ['tmy', 'fluxes', 'growth-rate'],
+        'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
         'objectives': ['chebi:17790'],
         'genotype-changes': ['+Aac'],
         'medium': [{'id': 'chebi:44080', 'concentration': 0.01}],

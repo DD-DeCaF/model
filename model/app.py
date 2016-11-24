@@ -6,6 +6,7 @@ import hashlib
 import time
 import aioredis
 import os
+from copy import deepcopy
 from collections import namedtuple
 from functools import lru_cache
 from aiohttp import web, WSMsgType
@@ -51,7 +52,18 @@ GROWTH_RATE = 'growth-rate'
 TMY = 'tmy'
 OBJECTIVES = 'objectives'
 REQUEST_ID = 'request-id'
+REMOVED_REACTIONS = 'removed-reactions'
 
+EMPTY_CHANGES = {
+    'added': {
+        'reactions': [],
+        'metabolites': [],
+    },
+    'removed': {
+        'genes': [],
+        'reactions': [],
+    }
+}
 
 async def find_changes_in_db(model_id):
     dumped_changes = None
@@ -77,7 +89,9 @@ async def restore_from_db(model_id):
 def model_from_changes(changes):
     changes = json.loads(changes)
     model = find_in_memory(changes['model']).copy()
-    return restore_changes(model, changes['changes'])
+    model = restore_changes(model, changes['changes'])
+    model.notes['changes'] = changes['changes']
+    return model
 
 
 def find_in_memory(model_id):
@@ -125,7 +139,7 @@ async def save_changes_to_db(model, model_id, message):
     """
     db_key = key_from_model_info(model_id, message)
     redis = await redis_client()
-    await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes.get('changes', {})}))
+    await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes.get('changes', deepcopy(EMPTY_CHANGES))}))
     redis.close()
     logger.info('Model created on the base of {} with message {} saved as {}'.format(model_id, message, db_key))
     return db_key
@@ -274,17 +288,15 @@ async def apply_medium_changes(model, medium):
 ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
 
 async def apply_reactions_knockouts(model, reactions_ids):
-    reactions = [model.reactions.get_by_id(r_id) for r_id in reactions_ids]
+    reactions = [model.reactions.get_by_id(r_id).copy() for r_id in reactions_ids]
     for r in reactions:
-        r.knock_out()
+        model.reactions.get_by_id(r.id).knock_out()
     return ReactionKnockouts(model, {'removed': {'reactions': reactions}})
 
 
-ReactionKnockoutsUndo = namedtuple('ReactionKnockouts', ['model', 'changes'])
-
-
-def undo_reactions_knockouts(model, reaction_ids):
+async def undo_reactions_knockouts(model, reaction_ids):
     reaction_ids = set(reaction_ids)
+    logger.info('Reactions to undo knockout: {}'.format(reaction_ids))
     if not model.notes.get('changes'):
         return ReactionKnockouts(model, {})
     reactions = model.notes['changes']['removed']['reactions']
@@ -318,8 +330,13 @@ class Response(object):
     def growth_rate(self):
         return self.growth
 
+    def removed_reactions(self):
+        return list(set(
+            [i['id'] for i in self.model.notes.get('changes', deepcopy(EMPTY_CHANGES))['removed']['reactions']]
+        ))
 
-REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS]
+
+REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS, REACTIONS_UNDO]
 
 
 APPLY_FUNCTIONS = {
@@ -335,6 +352,7 @@ RETURN_FUNCTIONS = {
     TMY: 'theoretical_maximum_yield',
     MODEL: 'model_json',
     GROWTH_RATE: 'growth_rate',
+    REMOVED_REACTIONS: 'removed_reactions',
 }
 
 async def modify_model(message, model):
@@ -348,7 +366,7 @@ async def modify_model(message, model):
 
 def collect_changes(modifications):
     model = modifications.model
-    changes = model.notes.get('changes', {'added': {'reactions': [], 'metabolites': []}, 'removed': {'genes': [], 'reactions': []}})
+    changes = model.notes.get('changes', deepcopy(EMPTY_CHANGES))
     to_dict = dict(
         reactions=reaction_to_dict,
         genes=gene_to_dict,
