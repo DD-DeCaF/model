@@ -445,10 +445,11 @@ def respond(message, model, db_key=None):
 async def model_ws_handler(request):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
-    if not (await find_changes_in_db(model_id)):
-        raise KeyError('No such model: {}'.format(model_id))
-    model = (await restore_model(model_id)).copy()
+    model = await restore_model(model_id)
     logger.info(model_from_changes.cache_info())
+    if not model:
+        raise KeyError('No such model: {}'.format(model_id))
+    model = model.copy()
     await ws.prepare(request)
     try:
         async for msg in ws:
