@@ -89,6 +89,7 @@ async def restore_from_db(model_id):
 def model_from_changes(changes):
     changes = json.loads(changes)
     model = find_in_memory(changes['model']).copy()
+    model.notes = deepcopy(model.notes)
     model = restore_changes(model, changes['changes'])
     model.notes['changes'] = changes['changes']
     return model
@@ -117,31 +118,31 @@ async def restore_model(model_id):
     return None
 
 
-def key_from_model_info(model_id, message):
+def key_from_model_info(wild_type_id, message):
     """Generate hash string from model information which will later be used as db key
 
-    :param model_id: str
+    :param wild_type_id: str
     :param message: dict
     :return: str
     """
     d = {k: message.get(k, []) for k in {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS}}
-    d['model_id'] = model_id
+    d['model_id'] = wild_type_id
     return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
 
 
-async def save_changes_to_db(model, model_id, message):
+async def save_changes_to_db(model, wild_type_id, message):
     """Store model in cache database
 
     :param model: Cameo model
-    :param model_id: str
+    :param wild_type_id: str
     :param message: dict
     :return: str (cache database key)
     """
-    db_key = key_from_model_info(model_id, message)
+    db_key = key_from_model_info(wild_type_id, message)
     redis = await redis_client()
     await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes.get('changes', deepcopy(EMPTY_CHANGES))}))
     redis.close()
-    logger.info('Model created on the base of {} with message {} saved as {}'.format(model_id, message, db_key))
+    logger.info('Model created on the base of {} with message {} saved as {}'.format(wild_type_id, message, db_key))
     return db_key
 
 
@@ -446,11 +447,12 @@ def respond(message, model, db_key=None):
 async def model_ws_handler(request):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
-    model = await restore_model(model_id)
+    cached_model = await restore_model(model_id)
     logger.info(model_from_changes.cache_info())
-    if not model:
+    if not cached_model:
         raise KeyError('No such model: {}'.format(model_id))
-    model = model.copy()
+    model = cached_model.copy()
+    model.notes = deepcopy(model.notes)
     await ws.prepare(request)
     try:
         async for msg in ws:
@@ -471,20 +473,22 @@ async def model_ws_handler(request):
 
 
 async def model_handler(request):
-    model_id = request.match_info['model_id']
+    wild_type_id = request.match_info['model_id']
     data = await request.json()
     if 'message' not in data:
         return web.HTTPBadRequest()
     message = data['message']
-    db_key = key_from_model_info(model_id, message)
+    db_key = key_from_model_info(wild_type_id, message)
     model = await restore_from_db(db_key)
     logger.info(model_from_changes.cache_info())
     if not model:
-        model = find_in_memory(model_id)
+        model = find_in_memory(wild_type_id)
         if not model:
             return web.HTTPNotFound()
-        model = await modify_model(message, model.copy())
-        db_key = await save_changes_to_db(model, model_id, message)
+        model = model.copy()
+        model.notes = deepcopy(model.notes)
+        model = await modify_model(message, model)
+        db_key = await save_changes_to_db(model, wild_type_id, message)
     return web.json_response(respond(message, model, db_key))
 
 

@@ -1,5 +1,6 @@
 import pytest
 import random
+from copy import deepcopy
 from cobra.io.json import _to_dict
 from model.app import existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable, \
     phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_changes_to_db, \
@@ -55,6 +56,17 @@ async def test_save_and_restore():
     assert set([i['id'] for i in restored['reactions']]) == set([i['id'] for i in original['reactions']])
     assert set([i['id'] for i in restored['genes']]) == set([i['id'] for i in original['genes']])
     assert set([i['id'] for i in restored['metabolites']]) == set([i['id'] for i in original['metabolites']])
+
+
+@pytest.mark.asyncio
+async def test_model_immutability():
+    """Changes on restored models must not affect cache"""
+    model = (await restore_model('e_coli_core')).copy()
+    model.notes = deepcopy(model.notes)  # TODO: change when fix in cobrapy is released
+    model.notes['test'] = 'test'
+    restored_model = (await restore_model('e_coli_core')).copy()
+    restored_model.notes['test'] = 'different'
+    assert model.notes['test'] == 'test'
 
 
 def test_existing_metabolite():
