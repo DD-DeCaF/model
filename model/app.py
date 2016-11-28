@@ -13,7 +13,7 @@ from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
 from cameo import phenotypic_phase_plane
-from cobra.io.json import to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
+from cobra.io.json import _to_dict, to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
     metabolite_to_dict, metabolite_from_dict
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
     MeasurementChangeModel, full_genotype, feature_id
@@ -320,7 +320,7 @@ class Response(object):
         self.growth = solution.objective_value
 
     def model_json(self):
-        return json.loads(to_json(self.model))
+        return _to_dict(self.model)
 
     def fluxes(self):
         return self.flux
@@ -433,6 +433,7 @@ def remove_reactions(model, changes):
 
 def respond(message, model, db_key=None):
     result = {}
+    t = time.time()
     response = Response(model, message)
     for key in message['to-return']:
         result[key] = getattr(response, RETURN_FUNCTIONS[key])()
@@ -440,7 +441,7 @@ def respond(message, model, db_key=None):
         result['model-id'] = db_key
     if REQUEST_ID in message:
         result[REQUEST_ID] = message[REQUEST_ID]
-    logger.info('Response for {} is ready'.format(message))
+    logger.info('Response for {} is ready in {} sec'.format(message, time.time() - t))
     return result
 
 
