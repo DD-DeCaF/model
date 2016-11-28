@@ -3,14 +3,13 @@ aiozmq
 aiohttp_cors
 msgpack-python
 git+https://github.com/sgalkina/cobrapy.git@devel#egg=cobra
-cameo==0.7.1
+git+https://github.com/biosustain/cameo.git@devel#egg=cameo
 swiglpk==1.2.14
 gnomic
 requests
 redis
 codecov
 gunicorn
-
 uvloop
 venom==1.0.0a1
 grpcio

@@ -204,9 +204,12 @@ def phase_plane_to_dict(model, metabolite_id):
     reaction = product_reaction_variable(model, metabolite_id)
     if not reaction:
         return {}
-    result = phenotypic_phase_plane(model, [reaction]).data_frame.to_dict()
-    for k, v in result.items():
-        result[k] = [v[point] for point in sorted(v.keys())]
+    ppp = phenotypic_phase_plane(model, [reaction]).data_frame.to_dict()
+    result = {}
+    for k, v in ppp.items():
+        if k not in {'c_yield_lower_bound', 'c_yield_upper_bound',
+                     'mass_yield_lower_bound', 'mass_yield_upper_bound'}:
+            result[k] = [v[point] for point in sorted(v.keys())]
     return result
 
 
