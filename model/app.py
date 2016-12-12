@@ -85,7 +85,7 @@ async def restore_from_db(model_id):
     return model
 
 
-@lru_cache(maxsize=16)
+@lru_cache(maxsize=2**6)
 def model_from_changes(changes):
     changes = json.loads(changes)
     model = find_in_memory(changes['model']).copy()
