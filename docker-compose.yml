@@ -8,6 +8,8 @@ web:
   environment:
     - PYTHONUNBUFFERED=1
     - PYTHONASYNCIODEBUG=1
+    - GENE_TO_REACTIONS_API
+    - GENE_TO_REACTIONS_PORT
 redis:
   image: redis
   ports:
