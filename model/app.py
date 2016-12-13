@@ -369,8 +369,8 @@ class Response(object):
             self.model = self.model.copy()
             increase_model_bounds(self.model)
         if self.method_name in {'moma', 'lmoma', 'room'}:
-            fba_solution = fba(self.model)
-            solution = METHODS[self.method_name](self.model, reference=fba_solution)
+            pfba_solution = pfba(self.model)
+            solution = METHODS[self.method_name](self.model, reference=pfba_solution)
         else:
             solution = METHODS[self.method_name](self.model)
         return solution
