@@ -1,5 +1,6 @@
 import pytest
-from model.app import call_genes_to_reactions, modify_model, restore_model
+from model.app import call_genes_to_reactions, modify_model, restore_model, \
+    METHODS, Response, SIMULATION_METHOD
 from driven.generic.adapter import full_genotype
 
 
@@ -21,3 +22,13 @@ async def test_modify_model():
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
     assert await modify_model(message, (await restore_model('iJO1366')).copy())
+
+
+@pytest.mark.asyncio
+async def test_simulation_methods():
+    model = (await restore_model('iJO1366')).copy()
+    for method in METHODS:
+        print(method)
+        message = {SIMULATION_METHOD: method}
+        response = Response(model, message)
+        assert set(response.fluxes().keys()) == set([i.id for i in model.reactions])

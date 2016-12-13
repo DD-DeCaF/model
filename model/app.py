@@ -11,9 +11,9 @@ from collections import namedtuple
 from functools import lru_cache
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
-from cameo import load_model
-from cameo import phenotypic_phase_plane
-from cameo.exceptions import Infeasible
+from cameo import load_model, phenotypic_phase_plane, fba, pfba, flux_variability_analysis
+from cameo.flux_analysis.simulation import room, lmoma, moma
+from cameo.exceptions import SolveError
 from cobra.io.json import _to_dict, to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
     metabolite_to_dict, metabolite_from_dict
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
@@ -33,20 +33,29 @@ ORGANISMS = {
 }
 
 
-async def redis_client():
-    return await aioredis.create_redis((os.environ['REDIS_PORT_6379_TCP_ADDR'], 6379), loop=asyncio.get_event_loop())
+MODEL_GROWTH_RATE = {
+    'iJO1366': 'BIOMASS_Ec_iJO1366_core_53p95M',
+    'iMM904': 'BIOMASS_SC5_notrace',
+    'iMM1415': 'BIOMASS_mm_1_no_glygln',
+    'iNJ661': 'BIOMASS_Mtb_9_60atp',
+    'e_coli_core': 'BIOMASS_Ecoli_core_w_GAM',
+}
 
 
-class Models(object):
-    MODELS = {
-        v: load_model(v) for v in ORGANISMS
-    }
-    print('Models are ready')
+METHODS = {
+    'fba': fba,
+    'pfba': pfba,
+    'fva': flux_variability_analysis,
+    'room': room,
+    'moma': moma,
+    'lmoma': lmoma,
+}
+
 
 GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
-METHOD = 'method'
+SIMULATION_METHOD = 'simulation-method'
 REACTIONS = 'reactions-knockout'
 REACTIONS_UNDO = 'reactions-knockout-undo'
 MODEL = 'model'
@@ -67,6 +76,17 @@ EMPTY_CHANGES = {
         'reactions': [],
     }
 }
+
+async def redis_client():
+    return await aioredis.create_redis((os.environ['REDIS_PORT_6379_TCP_ADDR'], 6379), loop=asyncio.get_event_loop())
+
+
+class Models(object):
+    MODELS = {
+        v: load_model(v) for v in ORGANISMS
+    }
+    print('Models are ready')
+
 
 async def find_changes_in_db(model_id):
     dumped_changes = None
@@ -317,17 +337,43 @@ async def undo_reactions_knockouts(model, reaction_ids):
     return ReactionKnockouts(model, {})
 
 
+def increase_model_bounds(model):
+    C = 1000
+    M = 99999999
+    for reaction in model.reactions:
+        if reaction.upper_bound == C:
+            reaction.upper_bound = M
+        if reaction.lower_bound == -C:
+            reaction.lower_bound = -M
+
+
 class Response(object):
     def __init__(self, model, message):
         self.model = model
         self.message = message
+        self.method_name = message.get(SIMULATION_METHOD, 'fba')
         try:
-            solution = self.model.solve()
-            self.flux = solution.fluxes
-            self.growth = solution.objective_value
-        except Infeasible:
+            solution = self.solve()
+            if self.method_name == 'fva':
+                self.flux = solution.data_frame.T.to_dict()
+                self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
+            else:
+                self.flux = solution.fluxes
+                self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]
+        except SolveError:
             self.flux = {}
             self.growth = 0.0
+
+    def solve(self):
+        if self.method_name == 'room':
+            self.model = self.model.copy()
+            increase_model_bounds(self.model)
+        if self.method_name in {'moma', 'lmoma', 'room'}:
+            fba_solution = fba(self.model)
+            solution = METHODS[self.method_name](self.model, reference=fba_solution)
+        else:
+            solution = METHODS[self.method_name](self.model)
+        return solution
 
     def model_json(self):
         return _to_dict(self.model)
