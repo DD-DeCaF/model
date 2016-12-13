@@ -85,7 +85,7 @@ async def redis_client():
 class Models(object):
     MODELS = {
         v: load_model(v) for v in ORGANISMS
-    }
+        }
     print('Models are ready')
 
 
@@ -367,11 +367,12 @@ class Response(object):
             self.growth = 0.0
 
     def solve(self):
-        if self.method_name == 'room':
-            increase_model_bounds(self.model)
         if self.method_name in {'moma', 'lmoma', 'room'}:
-            fba_solution = fba(self.model)
-            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=fba_solution.fluxes)
+            pfba_solution = pfba(self.model)
+            if self.method_name == 'room':
+                increase_model_bounds(self.model)
+            solution = METHODS[self.method_name](self.model, cache=self.cache,
+                                                 reference=pfba_solution.fluxes)
         else:
             solution = METHODS[self.method_name](self.model)
         return solution
