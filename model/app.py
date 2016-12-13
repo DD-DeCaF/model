@@ -13,6 +13,7 @@ from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import load_model
 from cameo import phenotypic_phase_plane
+from cameo.exceptions import Infeasible
 from cobra.io.json import _to_dict, to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
     metabolite_to_dict, metabolite_from_dict
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
@@ -318,9 +319,13 @@ class Response(object):
     def __init__(self, model, message):
         self.model = model
         self.message = message
-        solution = self.model.solve()
-        self.flux = solution.fluxes
-        self.growth = solution.objective_value
+        try:
+            solution = self.model.solve()
+            self.flux = solution.fluxes
+            self.growth = solution.objective_value
+        except Infeasible:
+            self.flux = {}
+            self.growth = 0.0
 
     def model_json(self):
         return _to_dict(self.model)
