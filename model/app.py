@@ -20,6 +20,7 @@ from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel,
     MeasurementChangeModel, full_genotype, feature_id
 from venom.rpc.comms.grpc import Client
 from model import logger
+from model.settings import GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT
 from model.messages import GeneToReactionsRemote, GeneRequest
 
 
@@ -250,7 +251,7 @@ async def call_genes_to_reactions(genotype_features):
     :param genotype_features: generator of new genes ids
     :return:
     """
-    client = Client(GeneToReactionsRemote, '139.59.133.210', 50053)
+    client = Client(GeneToReactionsRemote, GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT)
     identifiers = list(new_features_identifiers(genotype_features))
     results = await asyncio.gather(*[
         client.invoke(
