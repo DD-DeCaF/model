@@ -14,6 +14,7 @@ from cameo.data import metanetx
 from cameo import load_model, phenotypic_phase_plane, fba, pfba, flux_variability_analysis
 from cameo.flux_analysis.simulation import room, lmoma, moma
 from cameo.exceptions import SolveError
+from cameo.util import ProblemCache
 from cobra.io.json import _to_dict, to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
     metabolite_to_dict, metabolite_from_dict
 from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
@@ -348,10 +349,11 @@ def increase_model_bounds(model):
 
 
 class Response(object):
-    def __init__(self, model, message):
+    def __init__(self, model, message, cache=None):
         self.model = model
         self.message = message
         self.method_name = message.get(SIMULATION_METHOD, 'fba')
+        self.cache = cache
         try:
             solution = self.solve()
             if self.method_name == 'fva':
@@ -366,11 +368,10 @@ class Response(object):
 
     def solve(self):
         if self.method_name == 'room':
-            self.model = self.model.copy()
             increase_model_bounds(self.model)
         if self.method_name in {'moma', 'lmoma', 'room'}:
-            pfba_solution = pfba(self.model)
-            solution = METHODS[self.method_name](self.model, reference=pfba_solution.fluxes)
+            fba_solution = fba(self.model)
+            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=fba_solution.fluxes)
         else:
             solution = METHODS[self.method_name](self.model)
         return solution
@@ -487,10 +488,10 @@ def remove_reactions(model, changes):
     return model
 
 
-def respond(message, model, db_key=None):
+def respond(message, model, db_key=None, cache=None):
     result = {}
     t = time.time()
-    response = Response(model, message)
+    response = Response(model, message, cache=cache)
     for key in message['to-return']:
         result[key] = getattr(response, RETURN_FUNCTIONS[key])()
     if db_key:
@@ -510,6 +511,7 @@ async def model_ws_handler(request):
         raise KeyError('No such model: {}'.format(model_id))
     model = cached_model.copy()
     model.notes = deepcopy(model.notes)
+    cache = ProblemCache(model)
     await ws.prepare(request)
     try:
         async for msg in ws:
@@ -520,7 +522,7 @@ async def model_ws_handler(request):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(respond(message, model))
+                    ws.send_json(respond(message, model, cache=cache))
             elif msg.type == WSMsgType.ERROR:
                 logger.error('Websocket for model_id {} closed with exception {}'.format(model_id, ws.exception()))
     except asyncio.CancelledError:
@@ -546,6 +548,8 @@ async def model_handler(request):
         model.notes = deepcopy(model.notes)
         model = await modify_model(message, model)
         db_key = await save_changes_to_db(model, wild_type_id, message)
+    if message.get(SIMULATION_METHOD) == 'room':
+        model = model.copy()
     return web.json_response(respond(message, model, db_key))
 
 
