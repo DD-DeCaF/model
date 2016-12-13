@@ -370,7 +370,7 @@ class Response(object):
             increase_model_bounds(self.model)
         if self.method_name in {'moma', 'lmoma', 'room'}:
             pfba_solution = pfba(self.model)
-            solution = METHODS[self.method_name](self.model, reference=pfba_solution)
+            solution = METHODS[self.method_name](self.model, reference=pfba_solution.fluxes)
         else:
             solution = METHODS[self.method_name](self.model)
         return solution
