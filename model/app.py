@@ -46,6 +46,7 @@ class Models(object):
 GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
+METHOD = 'method'
 REACTIONS = 'reactions-knockout'
 REACTIONS_UNDO = 'reactions-knockout-undo'
 MODEL = 'model'
