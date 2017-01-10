@@ -454,11 +454,13 @@ def apply_additions(model, changes):
 def add_reactions(model, changes):
     reactions = [reaction_from_dict(r, model) for r in changes]
     to_add = []
+    current = set()
     for reaction in reactions:
         if model.reactions.has_id(reaction.id):
             model.reactions.get_by_id(reaction.id).change_bounds(lb=reaction.lower_bound, ub=reaction.upper_bound)
-        else:
+        elif reaction.id not in current:
             to_add.append(reaction)
+            current.add(reaction.id)
     model.add_reactions(to_add)
     return model
 

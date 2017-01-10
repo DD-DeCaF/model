@@ -5,7 +5,7 @@ from cobra.io.json import _to_dict
 from model.app import existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable, \
     phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_changes_to_db, \
     key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol, convert_measurements_to_mmol, \
-    modify_model, restore_from_db, undo_reactions_knockouts, collect_changes
+    modify_model, restore_from_db, undo_reactions_knockouts, collect_changes, add_reactions
 from driven.generic.adapter import full_genotype
 
 
@@ -60,7 +60,7 @@ async def test_save_and_restore():
 
 @pytest.mark.asyncio
 async def test_model_immutability():
-    """Changes on restored models must not affect cache"""
+    '''Changes on restored models must not affect cache'''
     model = (await restore_model('e_coli_core')).copy()
     model.notes = deepcopy(model.notes)  # TODO: change when fix in cobrapy is released
     model.notes['test'] = 'test'
@@ -129,3 +129,11 @@ def test_convert_measurements_to_mmol():
     ecoli = find_in_memory('iJO1366').copy()
     measurements = [{'id': 'chebi:17790', 'measurement': 32.04186, 'unit': 'mg'}]
     assert convert_measurements_to_mmol(measurements, ecoli) == [{'id': 'chebi:17790', 'measurement': 1.0, 'unit': 'mmol'}]
+
+
+def test_add_reactions():
+    ecoli = find_in_memory('iJO1366').copy()
+    keys = ('id', 'name', 'metabolites', 'lower_bound', 'upper_bound', 'gene_reaction_rule')
+    info = ('newid', '', {}, 0, 0, '')
+    changes = [dict(zip(keys, info))]*2
+    add_reactions(ecoli, changes)
