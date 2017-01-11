@@ -289,23 +289,35 @@ def convert_mg_to_mmol(mg, formula_weight):
 
 
 async def apply_measurement_changes(model, measurements):
-    measurements = convert_measurements_to_mmol(measurements, model)
+    measurements = fix_measurements_ids(
+        convert_measurements_to_mmol(measurements, model)
+    )
     return MeasurementChangeModel(model, measurements)
 
 
 def convert_measurements_to_mmol(measurements, model):
-    for i in range(len(measurements)):
-        if 'unit' not in measurements[i]:
+    for value in measurements:
+        if 'unit' not in value:
             continue
-        if measurements[i]['unit'] == 'mg':
-            metabolite = existing_metabolite(model, measurements[i]['id'])
+        if value['unit'] == 'mg':
+            metabolite = existing_metabolite(model, value['id'])
             if metabolite:
-                measurements[i]['measurement'] = convert_mg_to_mmol(
-                    measurements[i]['measurement'],
+                value['measurement'] = convert_mg_to_mmol(
+                    value['measurement'],
                     metabolite.formula_weight
                 )
-                measurements[i]['unit'] = 'mmol'
-                logger.info('Converted metabolite {} from mg to mmol'.format(measurements[i]['id']))
+                value['unit'] = 'mmol'
+                logger.info('Converted metabolite {} from mg to mmol'.format(value['id']))
+    return measurements
+
+
+def fix_measurements_ids(measurements):
+    IDS = {
+        'chebi:42758': 'chebi:12965',
+    }
+    for value in measurements:
+        if value['id'] in IDS:
+            value['id'] = IDS[value['id']]
     return measurements
 
 
