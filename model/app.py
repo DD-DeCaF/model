@@ -328,7 +328,9 @@ async def apply_medium_changes(model, medium):
 ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
 
 async def apply_reactions_knockouts(model, reactions_ids):
-    reactions = [model.reactions.get_by_id(r_id).copy() for r_id in reactions_ids]
+    applied = set([r.id for r in model.notes['changes']['removed']['reactions']])
+    to_apply = set(reactions_ids) - applied
+    reactions = [model.reactions.get_by_id(r_id).copy() for r_id in to_apply]
     for r in reactions:
         model.reactions.get_by_id(r.id).knock_out()
     return ReactionKnockouts(model, {'removed': {'reactions': reactions}})
