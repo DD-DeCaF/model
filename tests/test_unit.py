@@ -5,7 +5,7 @@ from cobra.io.json import _to_dict
 from model.app import existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable, \
     phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_changes_to_db, \
     key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol, convert_measurements_to_mmol, \
-    modify_model, restore_from_db, undo_reactions_knockouts, collect_changes, add_reactions
+    modify_model, restore_from_db, add_reactions, EMPTY_CHANGES
 from driven.generic.adapter import full_genotype
 
 
@@ -103,26 +103,23 @@ def test_respond():
 
 
 @pytest.mark.asyncio
-async def test_apply_reactions_knockouts():
+async def test_reactions_knockouts():
     ecoli = find_in_memory('iJO1366').copy()
-    result = (await apply_reactions_knockouts(ecoli, ['GLUDy', '3HAD160', 'GLUDy'])).model
-    assert result.reactions.GLUDy.lower_bound == result.reactions.GLUDy.upper_bound == 0
-
-
-@pytest.mark.asyncio
-async def test_undo_reactions_knockouts():
-    ecoli = find_in_memory('iJO1366').copy()
-    reaction_ids = ['GLUDy', '3HAD160', 'GLUDy']
-    knockout = (await apply_reactions_knockouts(ecoli, reaction_ids))
-    knockout = collect_changes(knockout)
-    assert set([i['id'] for i in knockout.notes['changes']['removed']['reactions']]) == set(reaction_ids)
-    undo = (await undo_reactions_knockouts(knockout, ['GLUDy']))
-    undo = collect_changes(undo)
-    assert set([i['id'] for i in undo.notes['changes']['removed']['reactions']]) == {'3HAD160'}
-    undo = (await undo_reactions_knockouts(undo, ['3HAD160']))
-    undo = collect_changes(undo)
-    assert set([i['id'] for i in undo.notes['changes']['removed']['reactions']]) == set()
-    assert almost_equal(ecoli.solve().objective_value, undo.solve().objective_value)
+    ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
+    reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
+    GLUDy_upper_bound = ecoli.reactions.get_by_id('GLUDy').upper_bound
+    assert GLUDy_upper_bound != 0
+    ecoli = (await apply_reactions_knockouts(ecoli, list(reaction_ids))).model
+    assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == reaction_ids
+    assert ecoli.reactions.get_by_id('GLUDy').upper_bound == 0
+    reaction_ids = reaction_ids - {'GLUDy'}
+    ecoli = (await apply_reactions_knockouts(ecoli, list(reaction_ids))).model
+    assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == {'3HAD160'}
+    assert GLUDy_upper_bound == ecoli.reactions.get_by_id('GLUDy').upper_bound
+    reaction_ids = reaction_ids - {'3HAD160'}
+    ecoli = (await apply_reactions_knockouts(ecoli, list(reaction_ids))).model
+    assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == set()
+    assert almost_equal(ecoli.solve().objective_value, ecoli.solve().objective_value)
 
 
 def test_convert_measurements_to_mmol():

@@ -58,7 +58,6 @@ MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 SIMULATION_METHOD = 'simulation-method'
 REACTIONS = 'reactions-knockout'
-REACTIONS_UNDO = 'reactions-knockout-undo'
 MODEL = 'model'
 FLUXES = 'fluxes'
 GROWTH_RATE = 'growth-rate'
@@ -328,27 +327,28 @@ async def apply_medium_changes(model, medium):
 ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
 
 async def apply_reactions_knockouts(model, reactions_ids):
-    applied = set([r.id for r in model.notes['changes']['removed']['reactions']])
+    if 'changes' not in model.notes:
+        model.notes['changes'] = deepcopy(EMPTY_CHANGES)
+    current_removed = model.notes['changes']['removed']['reactions']
+    applied = set([r['id'] for r in current_removed])
     to_apply = set(reactions_ids) - applied
-    reactions = [model.reactions.get_by_id(r_id).copy() for r_id in to_apply]
-    for r in reactions:
-        model.reactions.get_by_id(r.id).knock_out()
-    return ReactionKnockouts(model, {'removed': {'reactions': reactions}})
-
-
-async def undo_reactions_knockouts(model, reaction_ids):
-    reaction_ids = set(reaction_ids)
-    logger.info('Reactions to undo knockout: {}'.format(reaction_ids))
-    if not model.notes.get('changes'):
-        return ReactionKnockouts(model, {})
-    reactions = model.notes['changes']['removed']['reactions']
-    for reaction in reactions:
-        if reaction['id'] in reaction_ids:
+    to_undo = [r for r in current_removed
+               if r['id'] in (applied - set(reactions_ids))]
+    removed = []
+    for r_id in to_apply:
+        if model.reactions.has_id(r_id):
+            removed.append(reaction_to_dict(model.reactions.get_by_id(r_id)))
+            model.reactions.get_by_id(r_id).knock_out()
+    for reaction in to_undo:
+        if model.reactions.has_id(reaction['id']):
             model.reactions.get_by_id(reaction['id']).change_bounds(
                 lb=reaction['lower_bound'],
                 ub=reaction['upper_bound']
             )
-    model.notes['changes']['removed']['reactions'] = [i for i in reactions if i['id'] not in reaction_ids]
+    model.notes['changes']['removed']['reactions'] = \
+        [r for r in current_removed
+         if r['id'] not in (applied - set(reactions_ids))]
+    model.notes['changes']['removed']['reactions'].extend(removed)
     return ReactionKnockouts(model, {})
 
 
@@ -409,7 +409,7 @@ class Response(object):
         ))
 
 
-REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS, REACTIONS_UNDO]
+REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS]
 
 
 APPLY_FUNCTIONS = {
@@ -417,7 +417,6 @@ APPLY_FUNCTIONS = {
     MEDIUM: apply_medium_changes,
     MEASUREMENTS: apply_measurement_changes,
     REACTIONS: apply_reactions_knockouts,
-    REACTIONS_UNDO: undo_reactions_knockouts,
 }
 
 RETURN_FUNCTIONS = {
