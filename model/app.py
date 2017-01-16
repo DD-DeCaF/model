@@ -326,7 +326,8 @@ async def apply_medium_changes(model, medium):
 
 ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
 
-async def apply_reactions_knockouts(model, reactions_ids):
+
+def apply_reactions_knockouts(model, reactions_ids):
     if 'changes' not in model.notes:
         model.notes['changes'] = deepcopy(EMPTY_CHANGES)
     current_removed = model.notes['changes']['removed']['reactions']
@@ -349,7 +350,7 @@ async def apply_reactions_knockouts(model, reactions_ids):
         [r for r in current_removed
          if r['id'] not in (applied - set(reactions_ids))]
     model.notes['changes']['removed']['reactions'].extend(removed)
-    return ReactionKnockouts(model, {})
+    return model
 
 
 def increase_model_bounds(model):
@@ -409,14 +410,13 @@ class Response(object):
         ))
 
 
-REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS]
+REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
 
 
 APPLY_FUNCTIONS = {
     GENOTYPE_CHANGES: apply_genotype_changes,
     MEDIUM: apply_medium_changes,
     MEASUREMENTS: apply_measurement_changes,
-    REACTIONS: apply_reactions_knockouts,
 }
 
 RETURN_FUNCTIONS = {
@@ -433,6 +433,8 @@ async def modify_model(message, model):
         if data:
             modifications = await APPLY_FUNCTIONS[key](model, data)
             model = collect_changes(modifications)
+    if REACTIONS in message:
+        model = apply_reactions_knockouts(model, message[REACTIONS])
     return model
 
 

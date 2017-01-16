@@ -109,15 +109,15 @@ async def test_reactions_knockouts():
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
     GLUDy_upper_bound = ecoli.reactions.get_by_id('GLUDy').upper_bound
     assert GLUDy_upper_bound != 0
-    ecoli = (await apply_reactions_knockouts(ecoli, list(reaction_ids))).model
+    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == reaction_ids
     assert ecoli.reactions.get_by_id('GLUDy').upper_bound == 0
     reaction_ids = reaction_ids - {'GLUDy'}
-    ecoli = (await apply_reactions_knockouts(ecoli, list(reaction_ids))).model
+    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == {'3HAD160'}
     assert GLUDy_upper_bound == ecoli.reactions.get_by_id('GLUDy').upper_bound
     reaction_ids = reaction_ids - {'3HAD160'}
-    ecoli = (await apply_reactions_knockouts(ecoli, list(reaction_ids))).model
+    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == set()
     assert almost_equal(ecoli.solve().objective_value, ecoli.solve().objective_value)
 
