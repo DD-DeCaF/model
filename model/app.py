@@ -386,8 +386,10 @@ class Response(object):
     def solve_fva(self):
         fva_reactions = None
         if FVA_REACTIONS in self.message:
+            reactions = [i for i in self.message[FVA_REACTIONS]
+                         if self.model.reactions.has_id(i)]
             fva_reactions = list(set(
-                self.message[FVA_REACTIONS] + [MODEL_GROWTH_RATE[self.model.id]]
+                reactions + [MODEL_GROWTH_RATE[self.model.id]]
             ))
         return flux_variability_analysis(
             self.model,

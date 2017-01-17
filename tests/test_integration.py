@@ -30,7 +30,7 @@ async def test_simulation_methods():
         print(method)
         message = {SIMULATION_METHOD: method}
         if method == 'fva':
-            message[FVA_REACTIONS] = ['MDH', 'ICL']
+            message[FVA_REACTIONS] = ['MDH', 'ICL', 'nonsense']
         model = (await restore_model('iJO1366')).copy()
         cache = ProblemCache(model)
         response = Response(model, message, cache=cache)
