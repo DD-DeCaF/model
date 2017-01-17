@@ -373,7 +373,7 @@ class Response(object):
         try:
             if self.method_name == 'fva':
                 solution = self.solve_fva()
-                self.flux = solution.data_frame.T.to_dict()
+                self.flux = json.loads(solution.data_frame.T.to_json())
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
             else:
                 solution = self.solve()
