@@ -57,6 +57,7 @@ GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 SIMULATION_METHOD = 'simulation-method'
+FVA_REACTIONS = 'fva-reactions'
 REACTIONS = 'reactions-knockout'
 MODEL = 'model'
 FLUXES = 'fluxes'
@@ -370,16 +371,30 @@ class Response(object):
         self.method_name = message.get(SIMULATION_METHOD, 'fba')
         self.cache = cache
         try:
-            solution = self.solve()
             if self.method_name == 'fva':
-                self.flux = solution.data_frame.T.to_dict()
+                solution = self.solve_fva()
+                self.flux = json.loads(solution.data_frame.T.to_json())
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
             else:
+                solution = self.solve()
                 self.flux = solution.fluxes
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]
         except SolveError:
             self.flux = {}
             self.growth = 0.0
+
+    def solve_fva(self):
+        fva_reactions = None
+        if FVA_REACTIONS in self.message:
+            reactions = [i for i in self.message[FVA_REACTIONS]
+                         if self.model.reactions.has_id(i)]
+            fva_reactions = list(set(
+                reactions + [MODEL_GROWTH_RATE[self.model.id]]
+            ))
+        return flux_variability_analysis(
+            self.model,
+            reactions=fva_reactions
+        )
 
     def solve(self):
         if self.method_name in {'moma', 'lmoma', 'room'}:

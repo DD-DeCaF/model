@@ -1,6 +1,6 @@
 import pytest
 from model.app import call_genes_to_reactions, modify_model, restore_model, \
-    METHODS, Response, SIMULATION_METHOD, ProblemCache
+    METHODS, Response, SIMULATION_METHOD, FVA_REACTIONS, ProblemCache
 from driven.generic.adapter import full_genotype
 
 
@@ -29,7 +29,13 @@ async def test_simulation_methods():
     for method in METHODS:
         print(method)
         message = {SIMULATION_METHOD: method}
+        if method == 'fva':
+            message[FVA_REACTIONS] = ['MDH', 'ICL', 'nonsense']
         model = (await restore_model('iJO1366')).copy()
         cache = ProblemCache(model)
         response = Response(model, message, cache=cache)
-        assert set(response.fluxes().keys()) == set([i.id for i in model.reactions])
+        if method == 'fva':
+            reactions_ids = ['MDH', 'ICL', 'BIOMASS_Ec_iJO1366_core_53p95M']
+        else:
+            reactions_ids = [i.id for i in model.reactions]
+        assert set(response.fluxes().keys()) == set(reactions_ids)
