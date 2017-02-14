@@ -397,6 +397,7 @@ class Response(object):
         )
 
     def solve(self):
+        t = time.time()
         if self.method_name in {'moma', 'lmoma', 'room'}:
             pfba_solution = pfba(self.model)
             if self.method_name == 'room':
@@ -405,6 +406,7 @@ class Response(object):
                                                  reference=pfba_solution.fluxes)
         else:
             solution = METHODS[self.method_name](self.model)
+        logger.info('Model solved with method {} in {} sec'.format(self.method_name, time.time() - t))
         return solution
 
     def model_json(self):
