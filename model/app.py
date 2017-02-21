@@ -465,6 +465,9 @@ def collect_changes(modifications):
     )
     for action, by_action in modifications.changes.items():
         for entity, value in by_action.items():
+            ids = set([i['id'] for i in changes[action][entity]])
+            to_replace = set([i.id for i in value if i.id in ids])
+            changes[action][entity] = [i for i in changes[action][entity] if i['id'] not in to_replace]
             changes[action][entity].extend([to_dict[entity](i) for i in value])
     model.notes['changes'] = changes
     return model

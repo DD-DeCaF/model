@@ -17,4 +17,4 @@ git+https://github.com/sgalkina/driven.git@model-apply#egg=driven
 pytest-asyncio==0.5.0
 pytest-cov==2.4.0
 aioredis==0.2.9
-jsondiff==1.0.0
+deepdiff==1.0.0

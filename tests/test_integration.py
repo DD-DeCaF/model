@@ -1,6 +1,8 @@
 import pytest
+from deepdiff import DeepDiff
 from model.app import call_genes_to_reactions, modify_model, restore_model, \
-    METHODS, Response, SIMULATION_METHOD, FVA_REACTIONS, ProblemCache
+    METHODS, Response, SIMULATION_METHOD, FVA_REACTIONS, ProblemCache, \
+    restore_from_db, save_changes_to_db
 from driven.generic.adapter import full_genotype
 
 
@@ -39,3 +41,26 @@ async def test_simulation_methods():
         else:
             reactions_ids = [i.id for i in model.reactions]
         assert set(response.fluxes().keys()) == set(reactions_ids)
+
+
+@pytest.mark.asyncio
+async def test_restore_from_cache():
+    wild_type_id = 'iMM904'
+    message = {
+        'to-return': ['model', 'fluxes'],
+        'genotype-changes': ['+promoter.Sc_TDH3:crtE_WT:terminator.Sc_CYC1,+promoter.Sc_TDH3:crtYB_WT:terminator.Sc_CYC1,+promoter.Sc_TDH3:crtI_WT:terminator.Sc_CYC1'],
+        'simulation-method': 'pfba',
+        'measurements': [{'unit': 'mmol', 'id': 'chebi:12965', 'measurement': -1.0, 'name': 'aldehydo-D-glucose'}, {'unit': 'mmol', 'id': 'chebi:17579', 'measurement': 0.0007, 'name': 'beta-carotene'}]
+    }
+    model = await modify_model(message, (await restore_model(wild_type_id)).copy())
+    db_key = await save_changes_to_db(model, wild_type_id, message)
+    restored_model = (await restore_from_db(db_key)).copy()
+    reactions = {
+        r.id: dict(lower_bound=r.lower_bound, upper_bound=r.upper_bound)
+        for r in model.reactions
+    }
+    reactions_restored = {
+        r.id: dict(lower_bound=r.lower_bound, upper_bound=r.upper_bound)
+        for r in restored_model.reactions
+    }
+    assert DeepDiff(reactions, reactions_restored) == {}
