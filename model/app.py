@@ -30,6 +30,7 @@ ORGANISMS = {
     'iMM904',
     'iMM1415',
     'iNJ661',
+    'iJN746',
     'e_coli_core',
 }
 
@@ -39,6 +40,7 @@ MODEL_GROWTH_RATE = {
     'iMM904': 'BIOMASS_SC5_notrace',
     'iMM1415': 'BIOMASS_mm_1_no_glygln',
     'iNJ661': 'BIOMASS_Mtb_9_60atp',
+    'iJN746': 'BIOMASS_KT_TEMP',
     'e_coli_core': 'BIOMASS_Ecoli_core_w_GAM',
 }
 

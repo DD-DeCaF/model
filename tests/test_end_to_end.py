@@ -5,6 +5,7 @@ import requests
 MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurement': -9.0}, {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurement': 5.0}]}
 MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
+    'simulation-method': 'pfba',
     'to-return': ['tmy', 'fluxes'],
     'objectives': ['chebi:17790'],
     'genotype-changes': ['+Aac'],
