@@ -6,6 +6,7 @@ import hashlib
 import time
 import aioredis
 import os
+import re
 from copy import deepcopy
 from collections import namedtuple
 from functools import lru_cache
@@ -59,7 +60,7 @@ GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 SIMULATION_METHOD = 'simulation-method'
-FVA_REACTIONS = 'fva-reactions'
+MAP = 'map'
 REACTIONS = 'reactions-knockout'
 MODEL = 'model'
 FLUXES = 'fluxes'
@@ -79,6 +80,24 @@ EMPTY_CHANGES = {
         'reactions': [],
     }
 }
+
+MAPS_DIR = 'maps'
+
+
+def generate_map_dictionary():
+    """Generate model-maps lookup depending on the folder structure
+
+    :return: dict
+    """
+    result = {}
+    for path, _, files in os.walk(MAPS_DIR):
+        if files:
+            result[path.replace(MAPS_DIR + '/', '')] = \
+                [re.match(r".*\.(.+)\..*", f).group(1) for f in files]
+    return result
+
+MAP_DICTIONARY = generate_map_dictionary()
+
 
 async def redis_client():
     return await aioredis.create_redis((os.environ['REDIS_PORT_6379_TCP_ADDR'], 6379), loop=asyncio.get_event_loop())
@@ -366,6 +385,18 @@ def increase_model_bounds(model):
             reaction.lower_bound = -M
 
 
+def map_reactions_list(map_path):
+    """Extract reaction ids from map for FVA optimization
+
+    :param map_path: string
+    :return: list of strings
+    """
+    if not os.path.isfile(map_path):
+        return None
+    with open(map_path) as f:
+        return [i['bigg_id'] for i in json.load(f)[1]['reactions'].values()]
+
+
 class Response(object):
     def __init__(self, model, message, cache=None):
         self.model = model
@@ -387,12 +418,16 @@ class Response(object):
 
     def solve_fva(self):
         fva_reactions = None
-        if FVA_REACTIONS in self.message:
-            reactions = [i for i in self.message[FVA_REACTIONS]
-                         if self.model.reactions.has_id(i)]
-            fva_reactions = list(set(
-                reactions + [MODEL_GROWTH_RATE[self.model.id]]
+        if MAP in self.message:
+            reaction_ids = map_reactions_list('{}/{}/{}.{}.json'.format(
+                MAPS_DIR, self.model.id, self.model.id, self.message['map']
             ))
+            if reaction_ids:
+                reactions = [i for i in reaction_ids
+                             if self.model.reactions.has_id(i)]
+                fva_reactions = list(set(
+                    reactions + [MODEL_GROWTH_RATE[self.model.id]]
+                ))
         return flux_variability_analysis(
             self.model,
             reactions=fva_reactions
@@ -593,8 +628,22 @@ async def model_handler(request):
     return web.json_response(respond(message, model, db_key))
 
 
+async def maps_handler(request):
+    return web.json_response(MAP_DICTIONARY)
+
+
+async def map_handler(request):
+    filepath = '{}/{}/{}.{}.json'.format(
+        MAPS_DIR, request.GET['model'], request.GET['model'], request.GET['map']
+    )
+    with open(filepath) as f:
+        return web.json_response(json.load(f))
+
+
 app = web.Application()
 app.router.add_route('GET', '/wsmodels/{model_id}', model_ws_handler)
+app.router.add_route('GET', '/maps', maps_handler)
+app.router.add_route('GET', '/map', map_handler)
 app.router.add_route('POST', '/models/{model_id}', model_handler)
 
 

@@ -1,7 +1,7 @@
 import pytest
 from deepdiff import DeepDiff
 from model.app import call_genes_to_reactions, modify_model, restore_model, \
-    METHODS, Response, SIMULATION_METHOD, FVA_REACTIONS, ProblemCache, \
+    METHODS, Response, SIMULATION_METHOD, MAP, ProblemCache, \
     restore_from_db, save_changes_to_db
 from driven.generic.adapter import full_genotype
 
@@ -25,6 +25,8 @@ async def test_modify_model():
     }
     assert await modify_model(message, (await restore_model('iJO1366')).copy())
 
+FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', 'ACACT5r', 'ECOAH2', 'BUTCT', 'FACOAL60t2pp', 'ACACT6r', 'HACD7', 'ECOAH6', 'ACACT4r', 'FACOAL100t2pp', 'FACOAL160t2pp', 'ECOAH4', 'CTECOAI7', 'HACD1', 'ACOAD4f', 'FACOAL161t2pp', 'FACOAL80t2pp', 'CTECOAI8', 'HACD5', 'ACOAD1f', 'ACACT7r', 'ECOAH5', 'FACOAL180t2pp', 'CTECOAI6', 'FACOAL140t2pp', 'ACOAD7f', 'ACACT2r', 'FACOAL141t2pp', 'FACOAL181t2pp', 'HACD8', 'ACOAD8f', 'ACOAD2f', 'ECOAH8', 'ACACT3r', 'ACOAD3f', 'ACACT8r', 'HACD4', 'HACD6', 'ACOAD5f', 'ACOAD6f', 'FACOAL120t2pp']
+
 
 @pytest.mark.asyncio
 async def test_simulation_methods():
@@ -32,12 +34,12 @@ async def test_simulation_methods():
         print(method)
         message = {SIMULATION_METHOD: method}
         if method == 'fva':
-            message[FVA_REACTIONS] = ['MDH', 'ICL', 'nonsense']
+            message[MAP] = 'Fatty acid beta-oxidation'
         model = (await restore_model('iJO1366')).copy()
         cache = ProblemCache(model)
         response = Response(model, message, cache=cache)
         if method == 'fva':
-            reactions_ids = ['MDH', 'ICL', 'BIOMASS_Ec_iJO1366_core_53p95M']
+            reactions_ids = FATTY_ACID_ECOLI + ['BIOMASS_Ec_iJO1366_core_53p95M']
         else:
             reactions_ids = [i.id for i in model.reactions]
         assert set(response.fluxes().keys()) == set(reactions_ids)

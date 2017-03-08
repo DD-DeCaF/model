@@ -13,10 +13,13 @@ MESSAGE_MODIFY = {
 }
 
 URL = 'http://localhost:8000/models/'
+URL_MAPS = 'http://localhost:8000/maps'
 WS_URL = 'http://localhost:8000/wsmodels/'
 
 
 def test_http():
+    r = requests.get(URL_MAPS)
+    r.raise_for_status()
     for message in [MESSAGE_MODIFY, MESSAGE_FLUXES]:
         r = requests.post(URL + 'iJO1366', json={'message': message})
         r.raise_for_status()
