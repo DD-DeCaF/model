@@ -93,7 +93,7 @@ def generate_map_dictionary():
     for path, _, files in os.walk(MAPS_DIR):
         if files:
             result[path.replace(MAPS_DIR + '/', '')] = \
-                [re.match(r".*\.(.+)\..*", f).group(1) for f in files]
+                sorted([re.match(r".*\.(.+)\..*", f).group(1) for f in files])
     return result
 
 MAP_DICTIONARY = generate_map_dictionary()
