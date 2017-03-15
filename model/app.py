@@ -50,6 +50,7 @@ METHODS = {
     'fba': fba,
     'pfba': pfba,
     'fva': flux_variability_analysis,
+    'pfba-fva': lambda x: flux_variability_analysis(x, fraction_of_optimum=1, pfba_factor=1),
     'room': room,
     'moma': moma,
     'lmoma': lmoma,
@@ -404,7 +405,7 @@ class Response(object):
         self.method_name = message.get(SIMULATION_METHOD, 'fba')
         self.cache = cache
         try:
-            if self.method_name == 'fva':
+            if self.method_name in {'fva', 'pfba-fva'}:
                 solution = self.solve_fva()
                 self.flux = json.loads(solution.data_frame.T.to_json())
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
