@@ -46,11 +46,20 @@ MODEL_GROWTH_RATE = {
 }
 
 
+def pfba_fva(model, reactions=None):
+    return flux_variability_analysis(
+        model,
+        fraction_of_optimum=1,
+        pfba_factor=1,
+        reactions=reactions
+    )
+
+
 METHODS = {
     'fba': fba,
     'pfba': pfba,
     'fva': flux_variability_analysis,
-    'pfba-fva': lambda x: flux_variability_analysis(x, fraction_of_optimum=1, pfba_factor=1),
+    'pfba-fva': pfba_fva,
     'room': room,
     'moma': moma,
     'lmoma': lmoma,
