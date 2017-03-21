@@ -429,7 +429,7 @@ class Response(object):
                 fva_reactions = list(set(
                     reactions + [MODEL_GROWTH_RATE[self.model.id]]
                 ))
-        return flux_variability_analysis(
+        return METHODS[self.method_name](
             self.model,
             reactions=fva_reactions
         )
