@@ -407,6 +407,19 @@ def map_reactions_list(map_path):
         return [i['bigg_id'] for i in json.load(f)[1]['reactions'].values()]
 
 
+def all_maps_reactions_list(model_name):
+    """Extracts reaction ids from all the maps for the given organism without duplicates
+
+    :param model_name: string
+    :return: list of strings
+    """
+    result = set()
+    dirpath = MAPS_DIR + '/' + model_name
+    for path, _, files in os.walk(dirpath):
+        result.update(set([i for f in files for i in map_reactions_list(dirpath + '/' + f)]))
+    return list(result)
+
+
 class Response(object):
     def __init__(self, model, message, cache=None):
         self.model = model
@@ -429,9 +442,7 @@ class Response(object):
     def solve_fva(self):
         fva_reactions = None
         if MAP in self.message:
-            reaction_ids = map_reactions_list('{}/{}/{}.{}.json'.format(
-                MAPS_DIR, self.model.id, self.model.id, self.message['map']
-            ))
+            reaction_ids = all_maps_reactions_list(self.model.id)
             if reaction_ids:
                 reactions = [i for i in reaction_ids
                              if self.model.reactions.has_id(i)]

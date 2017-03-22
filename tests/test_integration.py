@@ -33,16 +33,12 @@ async def test_simulation_methods():
     for method in METHODS:
         print(method)
         message = {SIMULATION_METHOD: method}
-        if method in {'fva', 'pfba-fva'}:
-            message[MAP] = 'Fatty acid beta-oxidation'
         model = (await restore_model('iJO1366')).copy()
         cache = ProblemCache(model)
         response = Response(model, message, cache=cache)
-        if method in {'fva', 'pfba-fva'}:
-            reactions_ids = FATTY_ACID_ECOLI + ['BIOMASS_Ec_iJO1366_core_53p95M']
-        else:
+        if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in model.reactions]
-        assert set(response.fluxes().keys()) == set(reactions_ids)
+            assert set(response.fluxes().keys()) == set(reactions_ids)
 
 
 @pytest.mark.asyncio
