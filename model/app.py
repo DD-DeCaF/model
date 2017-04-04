@@ -29,7 +29,7 @@ from model.settings import ANNOTATIONS_API
 
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
-    'YEAST': ['iMM904'],
+    'YEAST': ['iMM904', 'ecYeast7'],
     'CRIGR': ['iMM1415'],
     'CORGT': ['iNJ661'],
     'PSEPU': ['iJN746'],
@@ -44,6 +44,7 @@ MODEL_NAMESPACE = {
     'iNJ661': 'bigg',
     'iJN746': 'bigg',
     'e_coli_core': 'bigg',
+    'ecYeast7': 'yeast7'
 }
 
 MODEL_GROWTH_RATE = {
@@ -53,6 +54,7 @@ MODEL_GROWTH_RATE = {
     'iNJ661': 'BIOMASS_Mtb_9_60atp',
     'iJN746': 'BIOMASS_KT_TEMP',
     'e_coli_core': 'BIOMASS_Ecoli_core_w_GAM',
+    'ecYeast7': 'r_2111'
 }
 
 
@@ -129,7 +131,11 @@ async def redis_client():
 
 
 def load_model(model_id):
-    model = cameo_load_model(model_id)
+    sbml_name = os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz')
+    if os.path.exists(sbml_name):
+        model = cameo_load_model(sbml_name)
+    else:
+        model = cameo_load_model(model_id)
     model.notes['namespace'] = MODEL_NAMESPACE[model_id]
     return model
 
