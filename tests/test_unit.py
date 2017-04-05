@@ -60,9 +60,8 @@ async def test_save_and_restore():
 
 @pytest.mark.asyncio
 async def test_model_immutability():
-    '''Changes on restored models must not affect cache'''
+    """Changes on restored models must not affect cache"""
     model = (await restore_model('e_coli_core')).copy()
-    model.notes = deepcopy(model.notes)  # TODO: change when fix in cobrapy is released
     model.notes['test'] = 'test'
     restored_model = (await restore_model('e_coli_core')).copy()
     restored_model.notes['test'] = 'different'
