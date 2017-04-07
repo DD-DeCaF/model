@@ -13,14 +13,15 @@ from itertools import chain
 from functools import lru_cache
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
-from cameo import load_model, phenotypic_phase_plane, fba, pfba, flux_variability_analysis
+from cameo import phenotypic_phase_plane, fba, pfba, flux_variability_analysis
+from cameo import load_model as cameo_load_model
 from cameo.flux_analysis.simulation import room, lmoma, moma
 from cameo.exceptions import SolveError
 from cameo.util import ProblemCache
-from cobra.io.json import _to_dict, to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
-    metabolite_to_dict, metabolite_from_dict
-from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
-    MeasurementChangeModel, full_genotype, feature_id
+from cobra.io.json import (_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
+                           metabolite_to_dict, metabolite_from_dict)
+from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
+                           MeasurementChangeModel, full_genotype, feature_id)
 from venom.rpc.comms.grpc import Client
 from model import logger
 from model.settings import GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT
@@ -36,6 +37,17 @@ SPECIES_TO_MODEL = {
 }
 
 MODELS = set(chain.from_iterable(models for _, models in SPECIES_TO_MODEL.items()))
+
+
+MODEL_NAMESPACE = {
+    'iJO1366': 'bigg',
+    'iMM904': 'bigg',
+    'iMM1415': 'bigg',
+    'iNJ661': 'bigg',
+    'iJN746': 'bigg',
+    'e_coli_core': 'bigg',
+    'ecYeast7': 'yeast7'
+}
 
 MODEL_GROWTH_RATE = {
     'iJO1366': 'BIOMASS_Ec_iJO1366_core_53p95M',
@@ -114,6 +126,12 @@ async def redis_client():
     return await aioredis.create_redis((os.environ['REDIS_PORT_6379_TCP_ADDR'], 6379), loop=asyncio.get_event_loop())
 
 
+def load_model(model_id):
+    model = cameo_load_model(model_id)
+    model.notes['namespace'] = MODEL_NAMESPACE[model_id]
+    return model
+
+
 class Models(object):
     MODELS = {
         v: load_model(v) for v in MODELS
@@ -141,7 +159,7 @@ async def restore_from_db(model_id):
     return model
 
 
-@lru_cache(maxsize=2**6)
+@lru_cache(maxsize=2 ** 6)
 def model_from_changes(changes):
     changes = json.loads(changes)
     model = find_in_memory(changes['model']).copy()
@@ -196,7 +214,8 @@ async def save_changes_to_db(model, wild_type_id, message):
     """
     db_key = key_from_model_info(wild_type_id, message)
     redis = await redis_client()
-    await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes.get('changes', deepcopy(EMPTY_CHANGES))}))
+    await redis.set(db_key,
+                    json.dumps({'model': model.id, 'changes': model.notes.get('changes', deepcopy(EMPTY_CHANGES))}))
     redis.close()
     logger.info('Model created on the base of {} with message {} saved as {}'.format(wild_type_id, message, db_key))
     return db_key
@@ -272,7 +291,7 @@ def phase_plane_to_dict(model, metabolite_id):
 async def apply_genotype_changes(model, genotype_changes):
     """Apply genotype changes to cameo model.
 
-    :param initial_model: cameo model
+    :param model: cameo model
     :param genotype_changes: list of strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
     :return:
     """
@@ -280,7 +299,9 @@ async def apply_genotype_changes(model, genotype_changes):
     genotype_features = full_genotype(genotype_changes)
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
     logger.info('Genes to reaction: {}'.format(genes_to_reactions))
-    return GenotypeChangeModel(model, genotype_features, genes_to_reactions)
+    change_model = GenotypeChangeModel(model, genes_to_reactions, model.notes['namespace'])
+    await change_model.apply_changes(genotype_features)
+    return change_model
 
 
 def new_features_identifiers(genotype_changes: gnomic.Genotype):
@@ -317,7 +338,7 @@ async def call_genes_to_reactions(genotype_features):
 
 
 def convert_mg_to_mmol(mg, formula_weight):
-    return mg * (1/formula_weight)
+    return mg * (1 / formula_weight)
 
 
 async def apply_measurement_changes(model, measurements):
