@@ -42,7 +42,7 @@ async def test_save_and_restore():
     message = {
         GENOTYPE_CHANGES: [
             '-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
-        MEASUREMENTS: [{'id': 'chebi:44080', 'concentration': 0.01}],
+        MEASUREMENTS: [{'id': 'chebi:44080', 'measurements': [0.01]}],
         MEDIUM: [{'concentration': 27.0, 'id': 'chebi:42758'}, {'concentration': 6.0, 'id': 'chebi:16015'},
                  {'concentration': 1.6, 'id': 'chebi:30808'}, {'concentration': 2.0, 'id': 'chebi:35696'},
                  {'concentration': 1.0, 'id': 'chebi:49553'}, {'concentration': 2.0, 'id': 'chebi:49976'},
@@ -126,9 +126,9 @@ async def test_reactions_knockouts():
 
 def test_convert_measurements_to_mmol():
     ecoli = find_in_memory('iJO1366').copy()
-    measurements = [{'id': 'chebi:17790', 'measurement': 32.04186, 'unit': 'mg'}]
+    measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg'}]
     assert convert_measurements_to_mmol(measurements, ecoli) == [
-        {'id': 'chebi:17790', 'measurement': 1.0, 'unit': 'mmol'}]
+        {'id': 'chebi:17790', 'measurements': [1.0], 'unit': 'mmol'}]
 
 
 def test_add_reactions():
