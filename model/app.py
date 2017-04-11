@@ -9,7 +9,6 @@ import os
 import re
 from copy import deepcopy
 from collections import namedtuple
-from itertools import chain
 from functools import lru_cache
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
@@ -27,15 +26,15 @@ from model.settings import GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT
 from model.messages import GeneToReactionsRemote, GeneRequest
 
 
-SPECIES_TO_MODEL = {
-    'ECOLX': ['iJO1366', 'e_coli_core'],
-    'YEAST': ['iMM904'],
-    'CRIGR': ['iMM1415'],
-    'CORGT': ['iNJ661'],
-    'PSEPU': ['iJN746'],
+ORGANISMS = {
+    'iJO1366',
+    'iMM904',
+    'iMM1415',
+    'iNJ661',
+    'iJN746',
+    'e_coli_core',
 }
 
-MODELS = set(chain.from_iterable(models for _, models in SPECIES_TO_MODEL.items()))
 
 MODEL_GROWTH_RATE = {
     'iJO1366': 'BIOMASS_Ec_iJO1366_core_53p95M',
@@ -116,7 +115,7 @@ async def redis_client():
 
 class Models(object):
     MODELS = {
-        v: load_model(v) for v in MODELS
+        v: load_model(v) for v in ORGANISMS
         }
     print('Models are ready')
 
@@ -409,7 +408,7 @@ def map_reactions_list(map_path):
 
 
 def all_maps_reactions_list(model_name):
-    """Extracts reaction ids from all the maps for the given model without duplicates
+    """Extracts reaction ids from all the maps for the given organism without duplicates
 
     :param model_name: string
     :return: list of strings
@@ -654,10 +653,6 @@ async def maps_handler(request):
     return web.json_response(MAP_DICTIONARY)
 
 
-async def model_options_handler(request):
-    return web.json_response(SPECIES_TO_MODEL[request.match_info['species']])
-
-
 async def map_handler(request):
     filepath = '{}/{}/{}.{}.json'.format(
         MAPS_DIR, request.GET['model'], request.GET['model'], request.GET['map']
@@ -670,7 +665,6 @@ app = web.Application()
 app.router.add_route('GET', '/wsmodels/{model_id}', model_ws_handler)
 app.router.add_route('GET', '/maps', maps_handler)
 app.router.add_route('GET', '/map', map_handler)
-app.router.add_route('GET', '/model-options/{species}', model_options_handler)
 app.router.add_route('POST', '/models/{model_id}', model_handler)
 
 
