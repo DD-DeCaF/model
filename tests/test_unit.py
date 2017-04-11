@@ -2,11 +2,13 @@ import pytest
 import random
 from copy import deepcopy
 from cobra.io.json import _to_dict
-from model.app import existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable, \
-    phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_changes_to_db, \
-    key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol, convert_measurements_to_mmol, \
-    modify_model, restore_from_db, add_reactions, EMPTY_CHANGES
-from driven.generic.adapter import full_genotype
+from model.app import (existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable,
+                       phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond,
+                       save_changes_to_db,
+                       key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol,
+                       convert_measurements_to_mmol,
+                       modify_model, restore_from_db, add_reactions, EMPTY_CHANGES)
+from model.adapter import full_genotype
 
 
 def almost_equal(a, b):
@@ -38,7 +40,8 @@ async def test_save_and_restore():
     model_id = 'e_coli_core'
     await save_changes_to_db(find_in_memory(model_id), model_id, {})
     message = {
-        GENOTYPE_CHANGES: ['-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
+        GENOTYPE_CHANGES: [
+            '-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
         MEASUREMENTS: [{'id': 'chebi:44080', 'concentration': 0.01}],
         MEDIUM: [{'concentration': 27.0, 'id': 'chebi:42758'}, {'concentration': 6.0, 'id': 'chebi:16015'},
                  {'concentration': 1.6, 'id': 'chebi:30808'}, {'concentration': 2.0, 'id': 'chebi:35696'},
@@ -60,9 +63,8 @@ async def test_save_and_restore():
 
 @pytest.mark.asyncio
 async def test_model_immutability():
-    '''Changes on restored models must not affect cache'''
+    """Changes on restored models must not affect cache"""
     model = (await restore_model('e_coli_core')).copy()
-    model.notes = deepcopy(model.notes)  # TODO: change when fix in cobrapy is released
     model.notes['test'] = 'test'
     restored_model = (await restore_model('e_coli_core')).copy()
     restored_model.notes['test'] = 'different'
@@ -125,12 +127,13 @@ async def test_reactions_knockouts():
 def test_convert_measurements_to_mmol():
     ecoli = find_in_memory('iJO1366').copy()
     measurements = [{'id': 'chebi:17790', 'measurement': 32.04186, 'unit': 'mg'}]
-    assert convert_measurements_to_mmol(measurements, ecoli) == [{'id': 'chebi:17790', 'measurement': 1.0, 'unit': 'mmol'}]
+    assert convert_measurements_to_mmol(measurements, ecoli) == [
+        {'id': 'chebi:17790', 'measurement': 1.0, 'unit': 'mmol'}]
 
 
 def test_add_reactions():
     ecoli = find_in_memory('iJO1366').copy()
     keys = ('id', 'name', 'metabolites', 'lower_bound', 'upper_bound', 'gene_reaction_rule')
     info = ('newid', '', {}, 0, 0, '')
-    changes = [dict(zip(keys, info))]*2
+    changes = [dict(zip(keys, info))] * 2
     add_reactions(ecoli, changes)
