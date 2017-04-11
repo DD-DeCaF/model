@@ -13,11 +13,14 @@ MESSAGE_MODIFY = {
 }
 
 URL = 'http://localhost:8000/models/'
+MODEL_OPTIONS_URL = 'http://localhost:8000/model-options/ECOLX'
 URL_MAPS = 'http://localhost:8000/maps'
 WS_URL = 'http://localhost:8000/wsmodels/'
 
 
 def test_http():
+    r = requests.get(MODEL_OPTIONS_URL)
+    r.raise_for_status()
     r = requests.get(URL_MAPS)
     r.raise_for_status()
     for message in [MESSAGE_MODIFY, MESSAGE_FLUXES]:
