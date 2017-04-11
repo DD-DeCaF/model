@@ -485,13 +485,15 @@ class MeasurementChangeModel(ModelModificationMixin):
         bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
         normal distribution range i.e., mean +- 1.96 * stdev. """
         for scalar in self.measurements:
-            scalar_data = np.array(scalar['measurements'])
+            scalar_data = np.array([v for v in scalar['measurements'] if not np.isnan(v)])
             if len(scalar_data) > 2:
                 upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))
                 lower_bound = float(np.mean(scalar_data) - 1.96 * np.std(scalar_data, ddof=1))
-            else:
+            elif len(scalar_data) > 0:
                 upper_bound = float(np.max(scalar_data))
                 lower_bound = float(np.min(scalar_data))
+            else:
+                continue
             model_metabolite = self.model_metabolite(scalar['id'], '_e')
             if not model_metabolite:
                 self.missing_in_model.append(scalar['id'])
