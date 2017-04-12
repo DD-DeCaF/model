@@ -2,14 +2,17 @@ import aiohttp
 import pytest
 import requests
 
-MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurement': -9.0}, {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurement': 5.0}]}
+MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': [
+    {'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0]},
+    {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurements': [5.0, 4.8, 5.2, 4.9]}]}
 MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
     'to-return': ['tmy', 'fluxes'],
     'objectives': ['chebi:17790'],
     'genotype-changes': ['+Aac'],
-    'measurements': [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurement': -9.0}, {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurement': 5.0}],
+    'measurements': [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0]},
+                     {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurements': [5.0, 4.8, 5.2, 4.9]}],
 }
 
 URL = 'http://localhost:8000/models/'
@@ -28,7 +31,7 @@ def test_http():
         r.raise_for_status()
         assert set(r.json().keys()) == set(message['to-return'] + ['model-id'])
         assert r.json()['fluxes']['EX_glc__D_e'] == -9.0
-        assert r.json()['fluxes']['EX_etoh_e'] == 5.0
+        assert abs(r.json()['fluxes']['EX_etoh_e'] - 4.64) < 0.001  # lower bound
     r = requests.post(URL + 'wrong_id', json={'message': {}})
     assert r.status_code == 404
     r = requests.post(URL + 'iJO1366', json={})

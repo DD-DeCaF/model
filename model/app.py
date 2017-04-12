@@ -27,7 +27,6 @@ from model import logger
 from model.settings import GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT
 from model.messages import GeneToReactionsRemote, GeneRequest
 
-
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
     'YEAST': ['iMM904'],
@@ -78,7 +77,6 @@ METHODS = {
     'lmoma': lmoma,
 }
 
-
 GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
@@ -118,6 +116,7 @@ def generate_map_dictionary():
             result[path.replace(MAPS_DIR + '/', '')] = \
                 sorted([re.match(r".*\.(.+)\..*", f).group(1) for f in files])
     return result
+
 
 MAP_DICTIONARY = generate_map_dictionary()
 
@@ -355,10 +354,10 @@ def convert_measurements_to_mmol(measurements, model):
         if value['unit'] == 'mg':
             metabolite = existing_metabolite(model, value['id'])
             if metabolite:
-                value['measurement'] = convert_mg_to_mmol(
-                    value['measurement'],
+                value['measurements'] = [convert_mg_to_mmol(
+                    point,
                     metabolite.formula_weight
-                )
+                ) for point in value['measurements']]
                 value['unit'] = 'mmol'
                 logger.info('Converted metabolite {} from mg to mmol'.format(value['id']))
     return measurements
@@ -509,7 +508,6 @@ class Response(object):
 
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
 
-
 APPLY_FUNCTIONS = {
     GENOTYPE_CHANGES: apply_genotype_changes,
     MEDIUM: apply_medium_changes,
@@ -523,6 +521,7 @@ RETURN_FUNCTIONS = {
     GROWTH_RATE: 'growth_rate',
     REMOVED_REACTIONS: 'removed_reactions',
 }
+
 
 async def modify_model(message, model):
     for key in REQUEST_KEYS:
@@ -693,7 +692,6 @@ app.router.add_route('GET', '/maps', maps_handler)
 app.router.add_route('GET', '/map', map_handler)
 app.router.add_route('GET', '/model-options/{species}', model_options_handler)
 app.router.add_route('POST', '/models/{model_id}', model_handler)
-
 
 # Configure default CORS settings.
 cors = aiohttp_cors.setup(app, defaults={

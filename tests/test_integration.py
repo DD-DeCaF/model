@@ -20,7 +20,7 @@ async def test_modify_model():
         'objectives': ['chebi:17790'],
         'genotype-changes': ['+Aac'],
         'medium': [{'id': 'chebi:44080', 'concentration': 0.01}],
-        'measurements': [{'id': 'chebi:44080', 'measurement': -15, 'unit': 'mg', 'name': 'glucose'}],
+        'measurements': [{'id': 'chebi:44080', 'measurements': [-15, -11, -14, -12], 'unit': 'mg', 'name': 'glucose'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
     assert await modify_model(message, (await restore_model('iJO1366')).copy())
@@ -56,8 +56,9 @@ async def test_restore_from_cache():
             ('+promoter.Sc_TDH3:crtE_WT:terminator.Sc_CYC1,+promoter.Sc_TDH3:crtYB_WT:terminator.Sc_CYC1,'
              '+promoter.Sc_TDH3:crtI_WT:terminator.Sc_CYC1')],
         'simulation-method': 'pfba',
-        'measurements': [{'unit': 'mmol', 'id': 'chebi:12965', 'measurement': -1.0, 'name': 'aldehydo-D-glucose'},
-                         {'unit': 'mmol', 'id': 'chebi:17579', 'measurement': 0.0007, 'name': 'beta-carotene'}]
+        'measurements': [{'unit': 'mmol', 'id': 'chebi:12965', 'measurements': [-1.1, -1.0], 'name': 'aldehydo-D-glucose'},
+                         {'unit': 'mmol', 'id': 'chebi:17579', 'measurements': [0.006, 0.008, 0.0065, 0.0007],
+                          'name': 'beta-carotene'}]
     }
     model = await modify_model(message, (await restore_model(wild_type_id)).copy())
     db_key = await save_changes_to_db(model, wild_type_id, message)

@@ -1,16 +1,15 @@
-import aiohttp
 import asyncio
 import re
 
+import aiohttp
 import gnomic
-
+import numpy as np
 from cameo.core.metabolite import Metabolite
 from cameo.core.reaction import Reaction
 from cameo.data import metanetx
 
-
-from model.settings import ID_MAPPER_API
 from model import logger
+from model.settings import ID_MAPPER_API
 
 
 def clean_bigg_id(string):
@@ -470,8 +469,8 @@ class MeasurementChangeModel(ModelModificationMixin):
         model
             cameo model
         measurements
-            list of dictionaries of format
-            {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurement': <measurement (float)>}
+            A list of dictionaries of format
+            {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurements': list(<measurement (float)>)}
         """
         self.measurements = measurements
         self.model = model
@@ -482,14 +481,22 @@ class MeasurementChangeModel(ModelModificationMixin):
         self.apply_exchanges()
 
     def apply_exchanges(self):
-        """For each measured flux (production-rate / uptake-rate), constrain the model by setting
-        upper and lower bound locked to these values. """
+        """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
+        bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
+        normal distribution range i.e., mean +- 1.96 * stdev. """
         for scalar in self.measurements:
+            scalar_data = np.array(scalar['measurements'])
+            if len(scalar_data) > 2:
+                upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))
+                lower_bound = float(np.mean(scalar_data) - 1.96 * np.std(scalar_data, ddof=1))
+            else:
+                upper_bound = float(np.max(scalar_data))
+                lower_bound = float(np.min(scalar_data))
             model_metabolite = self.model_metabolite(scalar['id'], '_e')
             if not model_metabolite:
                 self.missing_in_model.append(scalar['id'])
                 logger.info('Model is missing metabolite {}'.format(scalar['id']))
                 return
             reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
-            reaction.change_bounds(lb=scalar['measurement'], ub=scalar['measurement'])
+            reaction.change_bounds(lb=lower_bound, ub=upper_bound)
             self.changes['added']['reactions'].add(reaction)
