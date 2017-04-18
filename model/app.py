@@ -37,7 +37,6 @@ SPECIES_TO_MODEL = {
 
 MODELS = set(chain.from_iterable(models for _, models in SPECIES_TO_MODEL.items()))
 
-
 MODEL_NAMESPACE = {
     'iJO1366': 'bigg',
     'iMM904': 'bigg',
@@ -45,7 +44,6 @@ MODEL_NAMESPACE = {
     'iNJ661': 'bigg',
     'iJN746': 'bigg',
     'e_coli_core': 'bigg',
-    'ecYeast7': 'yeast7'
 }
 
 MODEL_GROWTH_RATE = {

@@ -1,9 +1,9 @@
-import asyncio
 import re
 
 import aiohttp
 import gnomic
 import numpy as np
+import json
 from cameo.core.metabolite import Metabolite
 from cameo.core.reaction import Reaction
 from cameo.data import metanetx
@@ -16,34 +16,20 @@ def clean_bigg_id(string):
     return re.sub(r"bigg:|dsh", "", string)
 
 
-async def call_id_mapper(object_id, db_from, db_to):
+async def query_identifiers(object_ids, db_from, db_to):
     """Call the id mapper service.
 
-    :param object_id: the identifier to query
+    :param object_ids: list of identifiers to query
     :param db_from: the source of the identifier, e.g. 'kegg'
     :param db_to: the destination type of the identifier, e.g. 'bigg'
     """
-    params = {'id': object_id, 'dbFrom': db_from, 'dbTo': db_to}
-    logger.info('query id mapper at {} with {}'.format(ID_MAPPER_API, str(params)))
+    query = json.dumps({'ids': object_ids, 'dbFrom': db_from, 'dbTo': db_to, 'type': 'Metabolite'})
+    logger.info('query id mapper at {} with {}'.format(ID_MAPPER_API, str(query)))
     async with aiohttp.ClientSession() as session:
-        async with session.get(ID_MAPPER_API, params=params) as r:
+        async with session.post(ID_MAPPER_API, data=query) as r:
             assert r.status == 200
-            return await r.json()
-
-
-async def query_identifiers(identifiers, db_from, db_to):
-    """Query identifiers
-
-    :param identifiers: list of identifiers to query
-    :param db_from: the source of the identifier, e.g. 'kegg'
-    :param db_to: the destination type of the identifier, e.g. 'bigg'
-    :return: a dictionary with a list of identifiers for each successful query
-    """
-    logger.info('start query id-mapper')
-    results = await asyncio.gather(*[
-        call_id_mapper(object_id, db_from=db_from, db_to=db_to) for object_id in identifiers
-    ])
-    return {object_id: response['ids'] for object_id, response in zip(identifiers, results) if response['ids']}
+            result = await r.json()
+            return result['ids']
 
 
 def get_existing_metabolite(mnx_id, model, compartment):
