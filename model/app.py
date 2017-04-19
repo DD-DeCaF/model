@@ -283,7 +283,7 @@ def phase_plane_to_dict(model, metabolite_id):
     for k, v in ppp.items():
         if k not in {'c_yield_lower_bound', 'c_yield_upper_bound',
                      'mass_yield_lower_bound', 'mass_yield_upper_bound'}:
-            result[k] = [v[point] for point in sorted(v.keys())]
+            result[k] = [float(v[point]) for point in sorted(v.keys())]
     return result
 
 
