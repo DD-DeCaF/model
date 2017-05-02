@@ -1,7 +1,7 @@
 import pytest
 import random
 from copy import deepcopy
-from cobra.io.json import _to_dict
+from cobra.io.json import model_to_dict
 from model.app import (existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable,
                        phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond,
                        save_changes_to_db,
@@ -54,8 +54,8 @@ async def test_save_and_restore():
     }
     model = await modify_model(message, (await restore_model(model_id)).copy())
     db_key = await save_changes_to_db(model, model_id, message)
-    restored = _to_dict(await restore_from_db(db_key))
-    original = _to_dict(model)
+    restored = model_to_dict(await restore_from_db(db_key))
+    original = model_to_dict(model)
     assert set([i['id'] for i in restored['reactions']]) == set([i['id'] for i in original['reactions']])
     assert set([i['id'] for i in restored['genes']]) == set([i['id'] for i in original['genes']])
     assert set([i['id'] for i in restored['metabolites']]) == set([i['id'] for i in original['metabolites']])
@@ -106,7 +106,8 @@ def test_respond():
 
 @pytest.mark.asyncio
 async def test_reactions_knockouts():
-    ecoli = find_in_memory('iJO1366').copy()
+    ecoli_original = find_in_memory('iJO1366').copy()
+    ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
     GLUDy_upper_bound = ecoli.reactions.get_by_id('GLUDy').upper_bound
@@ -121,7 +122,7 @@ async def test_reactions_knockouts():
     reaction_ids = reaction_ids - {'3HAD160'}
     ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == set()
-    assert almost_equal(ecoli.solve().objective_value, ecoli.solve().objective_value)
+    assert almost_equal(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
 
 
 def test_convert_measurements_to_mmol():

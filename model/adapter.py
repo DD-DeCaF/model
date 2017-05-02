@@ -4,8 +4,7 @@ import aiohttp
 import gnomic
 import numpy as np
 import json
-from cameo.core.metabolite import Metabolite
-from cameo.core.reaction import Reaction
+from cobra import Metabolite, Reaction
 from cameo.data import metanetx
 
 from model import logger
@@ -95,7 +94,8 @@ def feature_id(feature):
 
 class ModelModificationMixin(object):
     """
-    Base model modification class, providing methods for adding adapter and exchange reactions for new metabolites
+    Base model modification class, providing methods for adding adapter, exchange and demand reactions for new
+    metabolites
     """
     model = None
     changes = None
@@ -115,13 +115,14 @@ class ModelModificationMixin(object):
         -------
 
         """
-        exchange_metabolite = Metabolite(metabolite.id.replace('_c', '_e'), formula=metabolite.formula, compartment='e')
-        exchange_metabolite.added_by_model_adjustment = True
-        self.add_adapter_reaction(metabolite, exchange_metabolite)
-        self.add_exchange_reaction(exchange_metabolite)
+        extracellular_metabolite = Metabolite(metabolite.id.replace('_c', '_e'),
+                                              formula=metabolite.formula, compartment='e')
+        extracellular_metabolite.added_by_model_adjustment = True
+        self.add_adapter_reaction(metabolite, extracellular_metabolite)
+        self.add_demand_reaction(extracellular_metabolite)
 
-    def add_exchange_reaction(self, metabolite):
-        """Add exchange reaction "A --> " for given metabolite A
+    def add_demand_reaction(self, metabolite):
+        """Add demand reaction "A --> " for given metabolite A
          If reaction exists, log and pass
 
         Parameters
@@ -134,12 +135,12 @@ class ModelModificationMixin(object):
 
         """
         try:
-            logger.debug('Add exchange reaction for metabolite: {}'.format(metabolite.id))
-            exchange_reaction = self.model.add_exchange(metabolite, prefix='EX_')
-            self.changes['added']['reactions'].add(exchange_reaction)
-            self.annotate_new_metabolites(exchange_reaction)
+            logger.debug('Add demand reaction for metabolite: {}'.format(metabolite.id))
+            demand_reaction = self.model.add_boundary(metabolite, type='demand')
+            self.changes['added']['reactions'].add(demand_reaction)
+            self.annotate_new_metabolites(demand_reaction)
         except ValueError:
-            logger.debug('Exchange reaction exists for metabolite {}'.format(metabolite.id))
+            logger.debug('demand reaction exists for metabolite {}'.format(metabolite.id))
 
     def add_adapter_reaction(self, metabolite, existing_metabolite):
         """Add adapter reaction A <--> B for metabolites A and B
@@ -156,6 +157,7 @@ class ModelModificationMixin(object):
 
         """
         try:
+
             adapter_reaction = Reaction(str('adapter_' + metabolite.id + '_' + existing_metabolite.id))
             adapter_reaction.lower_bound = -1000
             adapter_reaction.add_metabolites({metabolite: -1, existing_metabolite: 1})
@@ -163,10 +165,10 @@ class ModelModificationMixin(object):
             self.changes['added']['reactions'].add(adapter_reaction)
             self.annotate_new_metabolites(adapter_reaction)
             logger.debug('Adapter reaction added: {} <--> {}'.format(metabolite.id, existing_metabolite.id))
-        except Exception:  # TODO: raise a reasonable exception on cameo side if the reaction exists
+        except Exception:  # TODO: raise a reasonable exception on cobra side if the reaction exists
             logger.debug('Adapter reaction exists: {} <--> {}'.format(metabolite.id, existing_metabolite.id))
 
-    def add_demand_reaction(self, metabolite):
+    def make_consumable(self, metabolite):
         """For metabolite in e compartment with existing exchange reaction, make it possible to consume metabolite
         by decreasing the lower bound of exchange reaction
 
@@ -231,7 +233,7 @@ class ModelModificationMixin(object):
         metabolite_id
             string of format <database>:<id>, f.e. chebi:12345
         compartment
-            the compartment where to find the metabolite, e.g. _e for exchange
+            the compartment where to find the metabolite, e.g. _e for extracellular compartment
         Returns
         -------
         the model metabolite (or None if no matching found)
@@ -439,7 +441,7 @@ class MediumChangeModel(ModelModificationMixin):
                 logger.info('No metabolite {}'.format(compound['id']))
                 continue
             logger.info('Found metabolite {}'.format(compound['id']))
-            self.add_demand_reaction(existing_metabolite)
+            self.make_consumable(existing_metabolite)
 
 
 class MeasurementChangeModel(ModelModificationMixin):
@@ -464,9 +466,9 @@ class MeasurementChangeModel(ModelModificationMixin):
             'added': {'reactions': set()},
         }
         self.missing_in_model = []
-        self.apply_exchanges()
+        self.apply_flux_bounds()
 
-    def apply_exchanges(self):
+    def apply_flux_bounds(self):
         """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
         bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
         normal distribution range i.e., mean +- 1.96 * stdev. """
@@ -486,5 +488,5 @@ class MeasurementChangeModel(ModelModificationMixin):
                 logger.info('Model is missing metabolite {}'.format(scalar['id']))
                 return
             reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
-            reaction.change_bounds(lb=lower_bound, ub=upper_bound)
+            reaction.bounds = lower_bound, upper_bound
             self.changes['added']['reactions'].add(reaction)

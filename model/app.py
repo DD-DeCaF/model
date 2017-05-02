@@ -16,9 +16,9 @@ from cameo.data import metanetx
 from cameo import phenotypic_phase_plane, fba, pfba, flux_variability_analysis
 from cameo import load_model as cameo_load_model
 from cameo.flux_analysis.simulation import room, lmoma, moma
-from cameo.exceptions import SolveError
+from cobra.exceptions import OptimizationError
 from cameo.util import ProblemCache
-from cobra.io.json import (_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
+from cobra.io.json import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
                            MeasurementChangeModel, full_genotype, feature_id)
@@ -393,13 +393,9 @@ def apply_reactions_knockouts(model, reactions_ids):
             model.reactions.get_by_id(r_id).knock_out()
     for reaction in to_undo:
         if model.reactions.has_id(reaction['id']):
-            model.reactions.get_by_id(reaction['id']).change_bounds(
-                lb=reaction['lower_bound'],
-                ub=reaction['upper_bound']
-            )
-    model.notes['changes']['removed']['reactions'] = \
-        [r for r in current_removed
-         if r['id'] not in (applied - set(reactions_ids))]
+            model.reactions.get_by_id(reaction['id']).bounds = reaction['lower_bound'], reaction['upper_bound']
+    model.notes['changes']['removed']['reactions'] = [r for r in current_removed
+                                                      if r['id'] not in (applied - set(reactions_ids))]
     model.notes['changes']['removed']['reactions'].extend(removed)
     return model
 
@@ -452,9 +448,9 @@ class Response(object):
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
             else:
                 solution = self.solve()
-                self.flux = solution.fluxes
+                self.flux = json.loads(solution.fluxes.to_json())
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]
-        except SolveError:
+        except OptimizationError:
             self.flux = {}
             self.growth = 0.0
 
@@ -479,15 +475,14 @@ class Response(object):
             pfba_solution = pfba(self.model)
             if self.method_name == 'room':
                 increase_model_bounds(self.model)
-            solution = METHODS[self.method_name](self.model, cache=self.cache,
-                                                 reference=pfba_solution.fluxes)
+            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=pfba_solution.fluxes.to_dict())
         else:
             solution = METHODS[self.method_name](self.model)
         logger.info('Model solved with method {} in {} sec'.format(self.method_name, time.time() - t))
         return solution
 
     def model_json(self):
-        return _to_dict(self.model)
+        return model_to_dict(self.model)
 
     def fluxes(self):
         return self.flux
@@ -569,7 +564,7 @@ def add_reactions(model, changes):
     current = set()
     for reaction in reactions:
         if model.reactions.has_id(reaction.id):
-            model.reactions.get_by_id(reaction.id).change_bounds(lb=reaction.lower_bound, ub=reaction.upper_bound)
+            model.reactions.get_by_id(reaction.id).bounds = reaction.lower_bound, reaction.upper_bound
         elif reaction.id not in current:
             to_add.append(reaction)
             current.add(reaction.id)
