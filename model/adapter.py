@@ -4,7 +4,7 @@ import aiohttp
 import gnomic
 import numpy as np
 import json
-from cameo import Metabolite, Reaction
+from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 from cameo.data import metanetx
 
@@ -136,7 +136,7 @@ class ModelModificationMixin(object):
         """
         try:
             logger.debug('Add demand reaction for metabolite: {}'.format(metabolite.id))
-            demand_reaction = self.model.add_exchange(metabolite, prefix='EX_')
+            demand_reaction = self.model.add_boundary(metabolite, type='demand')
             self.changes['added']['reactions'].add(demand_reaction)
             self.annotate_new_metabolites(demand_reaction)
         except ValueError:
