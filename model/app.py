@@ -18,7 +18,7 @@ from cameo import load_model as cameo_load_model
 from cameo.flux_analysis.simulation import room, lmoma, moma
 from cobra.exceptions import OptimizationError
 from cameo.util import ProblemCache
-from cobra.io.json import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
+from cobra.io.dict import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
                            MeasurementChangeModel, full_genotype, feature_id)
