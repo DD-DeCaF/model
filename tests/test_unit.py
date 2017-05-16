@@ -1,7 +1,7 @@
 import pytest
 import random
 from copy import deepcopy
-from cobra.io.json import _to_dict as model_to_dict
+from cobra.io.dict import model_to_dict
 from model.app import (existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable,
                        phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond,
                        save_changes_to_db,

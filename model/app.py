@@ -13,13 +13,13 @@ from itertools import chain
 from functools import lru_cache
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
-from cameo import phenotypic_phase_plane, fba, pfba, flux_variability_analysis
+from cameo import phenotypic_phase_plane
 from cameo import load_model as cameo_load_model
-from cameo.flux_analysis.simulation import room, lmoma, moma
-from cameo.exceptions import SolveError as OptimizationError
+from cameo.flux_analysis import flux_variability_analysis, room, lmoma, moma
+from cobra.flux_analysis import pfba
+from cobra.exceptions import OptimizationError
 from cameo.util import ProblemCache
-from cobra.io.json import _to_dict as model_to_dict
-from cobra.io.json import (reaction_to_dict, reaction_from_dict, gene_to_dict,
+from cobra.io.dict import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
                            MeasurementChangeModel, full_genotype, feature_id)
@@ -67,7 +67,7 @@ def pfba_fva(model, reactions=None):
 
 
 METHODS = {
-    'fba': fba,
+    'fba': lambda model: model.optimize(),
     'pfba': pfba,
     'fva': flux_variability_analysis,
     'pfba-fva': pfba_fva,
@@ -473,7 +473,7 @@ class Response(object):
                     self.flux = dict((rxn.id, (rxn.upper_bound + rxn.lower_bound) / 2)
                                      for rxn in model.reactions if rxn.id in ids_measured_reactions)
             else:
-                self.flux = solution.fluxes
+                self.flux = solution.fluxes.to_dict()
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]
 
     def solve_fva(self):
@@ -493,11 +493,11 @@ class Response(object):
 
     def solve(self):
         t = time.time()
-        if self.method_name in {'moma', 'lmoma', 'room'}:
-            pfba_solution = pfba(self.model)
+        if self.method_name in {'lmoma', 'room', 'moma'}:
+            pfba_solution = pfba(self.model).fluxes.to_dict()
             if self.method_name == 'room':
                 increase_model_bounds(self.model)
-            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=pfba_solution.fluxes)
+            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=pfba_solution)
         else:
             solution = METHODS[self.method_name](self.model)
         logger.info('Model solved with method {} in {} sec'.format(self.method_name, time.time() - t))
@@ -583,7 +583,7 @@ def apply_additions(model, changes):
 
 def apply_measurements(model, changes):
     for rxn in changes['reactions']:
-        model.reactions.get_by_id(rxn['id']).change_bounds(lb=rxn['lower_bound'], ub=rxn['upper_bound'])
+        model.reactions.get_by_id(rxn['id']).bounds = rxn['lower_bound'], rxn['upper_bound']
     return model
 
 
