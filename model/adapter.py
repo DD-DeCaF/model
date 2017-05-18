@@ -5,6 +5,7 @@ import gnomic
 import numpy as np
 import json
 from cobra import Metabolite, Reaction
+from cobra.manipulation import find_gene_knockout_reactions
 from cameo.data import metanetx
 
 from model import logger
@@ -101,22 +102,21 @@ class ModelModificationMixin(object):
     changes = None
 
     def create_exchange(self, metabolite):
-        """For given metabolite A_c from c compartment, create:
+        """For given metabolite A_<x> from compartment <x>, create:
         a) corresponding metabolite A_e from e compartment;
-        b) adapter reaction A_c <--> A_e
+        b) adapter reaction A_<x> <--> A_e
         c) exchange reaction A_e -->
 
         Parameters
         ----------
         metabolite : Metabolite
-            metabolite id in format <bigg_id>_c, f.e. Nacsertn_c
+            metabolite id in format <bigg_id>_<x>, f.e. Nacsertn_c
 
         Returns
         -------
 
         """
-        extracellular_metabolite = Metabolite(metabolite.id.replace('_c', '_e'),
-                                              formula=metabolite.formula, compartment='e')
+        extracellular_metabolite = Metabolite(metabolite.id[:2] + '_e', formula=metabolite.formula, compartment='e')
         extracellular_metabolite.added_by_model_adjustment = True
         self.add_adapter_reaction(metabolite, extracellular_metabolite)
         self.add_demand_reaction(extracellular_metabolite)
@@ -157,7 +157,6 @@ class ModelModificationMixin(object):
 
         """
         try:
-
             adapter_reaction = Reaction(str('adapter_' + metabolite.id + '_' + existing_metabolite.id))
             adapter_reaction.lower_bound = -1000
             adapter_reaction.add_metabolites({metabolite: -1, existing_metabolite: 1})
@@ -301,10 +300,11 @@ class GenotypeChangeModel(ModelModificationMixin):
     Applies genotype change on cameo model
     """
 
-    def __init__(self, model, genes_to_reactions, namespace):
+    def __init__(self, model, genotype_changes, genes_to_reactions, namespace):
         """Initialize change model
 
         :param model: cameo model
+        :param genotype_changes: gnomic.Genotype object
         :param genes_to_reactions: dictionary like {<gene name>: {<reaction id>: <reactions equation>, ...}, ...}
         """
         self.compartment = '_c'
@@ -313,7 +313,7 @@ class GenotypeChangeModel(ModelModificationMixin):
         self.genes_to_reactions = genes_to_reactions
         self.changes = {
             'added': {'reactions': set(), 'metabolites': set()},  # reaction contain information about genes
-            'removed': {'genes': set()},
+            'removed': {'genes': set(), 'reactions': set()},
         }
 
     async def apply_changes(self, genotype_changes):
@@ -358,11 +358,14 @@ class GenotypeChangeModel(ModelModificationMixin):
         :param feature: gnomic.Feature
         :return:
         """
-        gene = self.model.genes.query(feature.name, attribute="name")
-        if gene:
-            gene[0].knock_out()
-            self.changes['removed']['genes'].add(gene[0])
-            logger.info('Gene knockout: {}'.format(gene[0].name))
+        genes = self.model.genes.query(feature.name, attribute="name")
+        if genes:
+            gene = genes[0]
+            gene.knock_out()
+            self.changes['removed']['genes'].add(gene)
+            for reaction in find_gene_knockout_reactions(self.model, [gene]):
+                self.changes['removed']['reactions'].add(reaction)
+            logger.info('Gene knockout: {}'.format(gene.name))
         else:
             logger.info('Gene for knockout is not found: {}'.format(feature.name))
 
