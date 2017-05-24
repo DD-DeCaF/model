@@ -1,17 +1,22 @@
-web:
-  build: .
-  dockerfile: Dockerfile
-  ports:
-    - 8000:8000
-  links:
-    - redis
-  environment:
-    - PYTHONUNBUFFERED=1
-    - PYTHONASYNCIODEBUG=1
-    - GENE_TO_REACTIONS_API
-    - GENE_TO_REACTIONS_PORT
-    - ID_MAPPER_API
-redis:
-  image: redis
-  ports:
-    - 6379
+version: "3"
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    links:
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONASYNCIODEBUG=1
+      - GENE_TO_REACTIONS_API
+      - GENE_TO_REACTIONS_PORT
+      - ID_MAPPER_API
+    volumes:
+      - ./model:/opt/model/model
+  redis:
+    image: redis
+    ports:
+      - 6379
