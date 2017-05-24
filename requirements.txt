@@ -5,7 +5,7 @@ msgpack-python
 numpy==1.12.1
 pandas==0.18.1
 cobra==0.6.1
-git+https://github.com/biosustain/cameo.git@fix/upgrading-services#egg=cameo
+https://github.com/biosustain/cameo/archive/fix/upgrading-services.zip
 swiglpk==1.4.3
 gnomic
 requests
@@ -15,6 +15,7 @@ gunicorn
 uvloop
 venom==1.0.0a1
 grpcio
+https://github.com/sgalkina/driven/archive/model-apply.zip
 pytest-asyncio==0.5.0
 pytest-cov==2.4.0
 aioredis==0.2.9
