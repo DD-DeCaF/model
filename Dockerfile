@@ -1,4 +1,4 @@
-FROM biosustain/cameo-solvers:647d6ebdf3dd
+FROM biosustain/cameo-solvers:e9e330ca3e37
 
 RUN pip install --upgrade pip setuptools wheel
 COPY requirements.txt /tmp/requirements.txt
