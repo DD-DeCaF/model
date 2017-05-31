@@ -3,7 +3,7 @@ FROM biosustain/cameo-solvers:e9e330ca3e37
 RUN pip install --upgrade pip setuptools wheel
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade --process-dependency-links -r /tmp/requirements.txt
-
+RUN pip freeze
 COPY . /opt/model
 WORKDIR /opt/model
 
