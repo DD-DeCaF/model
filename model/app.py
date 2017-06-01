@@ -16,9 +16,10 @@ from cameo.data import metanetx
 from cameo import phenotypic_phase_plane, fba, pfba, flux_variability_analysis
 from cameo import load_model as cameo_load_model
 from cameo.flux_analysis.simulation import room, lmoma, moma
-from cobra.exceptions import OptimizationError
+from cameo.exceptions import SolveError as OptimizationError
 from cameo.util import ProblemCache
-from cobra.io.json import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
+from cobra.io.json import _to_dict as model_to_dict
+from cobra.io.json import (reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
                            MeasurementChangeModel, full_genotype, feature_id)
@@ -273,6 +274,7 @@ def phase_plane_to_dict(model, metabolite_id):
     :param metabolite_id: string of format <database>:<id>, f.e. chebi:12345
     :return:
     """
+    model.solver = 'glpk'
     reaction = product_reaction_variable(model, metabolite_id)
     if not reaction:
         return {}
@@ -282,6 +284,7 @@ def phase_plane_to_dict(model, metabolite_id):
         if k not in {'c_yield_lower_bound', 'c_yield_upper_bound',
                      'mass_yield_lower_bound', 'mass_yield_upper_bound'}:
             result[k] = [float(v[point]) for point in sorted(v.keys())]
+    model.solver = 'cplex'
     return result
 
 
@@ -296,7 +299,7 @@ async def apply_genotype_changes(model, genotype_changes):
     genotype_features = full_genotype(genotype_changes)
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
     logger.info('Genes to reaction: {}'.format(genes_to_reactions))
-    change_model = GenotypeChangeModel(model, genes_to_reactions, model.notes['namespace'])
+    change_model = GenotypeChangeModel(model, genotype_changes, genes_to_reactions, model.notes['namespace'])
     await change_model.apply_changes(genotype_features)
     return change_model
 
@@ -444,11 +447,11 @@ class Response(object):
         try:
             if self.method_name in {'fva', 'pfba-fva'}:
                 solution = self.solve_fva()
-                self.flux = json.loads(solution.data_frame.T.to_json())
+                self.flux = solution.data_frame.T.to_dict()
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
             else:
                 solution = self.solve()
-                self.flux = json.loads(solution.fluxes.to_json())
+                self.flux = solution.fluxes
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]
         except OptimizationError:
             self.flux = {}
@@ -475,7 +478,7 @@ class Response(object):
             pfba_solution = pfba(self.model)
             if self.method_name == 'room':
                 increase_model_bounds(self.model)
-            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=pfba_solution.fluxes.to_dict())
+            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=pfba_solution.fluxes)
         else:
             solution = METHODS[self.method_name](self.model)
         logger.info('Model solved with method {} in {} sec'.format(self.method_name, time.time() - t))
