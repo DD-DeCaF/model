@@ -8,9 +8,11 @@ web:
   environment:
     - PYTHONUNBUFFERED=1
     - PYTHONASYNCIODEBUG=1
-    - GENE_TO_REACTIONS_API
-    - GENE_TO_REACTIONS_PORT
-    - ID_MAPPER_API
+    - GENE_TO_REACTIONS_API=139.59.134.152
+    - GENE_TO_REACTIONS_PORT=50053
+    - ID_MAPPER_API=https://api.dd-decaf.eu/idmapping/query
+  volumes:
+    - ./:/opt/model
 redis:
   image: redis
   ports:
