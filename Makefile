@@ -35,7 +35,7 @@ clean:
 
 ## Read the logs.
 logs:
-	docker-compose logs
+	docker-compose logs --tail="all" -f
 
 #################################################################################
 # PROJECT RULES                                                                 #
