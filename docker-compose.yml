@@ -11,8 +11,6 @@ web:
     - GENE_TO_REACTIONS_API=139.59.134.152
     - GENE_TO_REACTIONS_PORT=50053
     - ID_MAPPER_API=https://api.dd-decaf.eu/idmapping/query
-  volumes:
-    - ./:/opt/model
 redis:
   image: redis
   ports:
