@@ -285,8 +285,6 @@ def full_genotype(genotype_changes):
     """
 
     def chain(definitions, **kwargs):
-        print(definitions, '!!!')
-        print('WHAAAT')
         if not definitions:
             return gnomic.Genotype([])
         genotype = gnomic.Genotype.parse(definitions[0], **kwargs)
