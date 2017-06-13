@@ -9,32 +9,43 @@ import os
 import re
 from copy import deepcopy
 from collections import namedtuple
+from itertools import chain
 from functools import lru_cache
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
-from cameo import load_model, phenotypic_phase_plane, fba, pfba, flux_variability_analysis
+from cameo import phenotypic_phase_plane, fba, pfba, flux_variability_analysis
+from cameo import load_model as cameo_load_model
 from cameo.flux_analysis.simulation import room, lmoma, moma
-from cameo.exceptions import SolveError
+from cameo.exceptions import SolveError as OptimizationError
 from cameo.util import ProblemCache
-from cobra.io.json import _to_dict, to_json, reaction_to_dict, reaction_from_dict, gene_to_dict, \
-    metabolite_to_dict, metabolite_from_dict
-from driven.generic.adapter import get_existing_metabolite, GenotypeChangeModel, MediumChangeModel, \
-    MeasurementChangeModel, full_genotype, feature_id
+from cobra.io.json import _to_dict as model_to_dict
+from cobra.io.json import (reaction_to_dict, reaction_from_dict, gene_to_dict,
+                           metabolite_to_dict, metabolite_from_dict)
+from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
+                           MeasurementChangeModel, full_genotype, feature_id)
 from venom.rpc.comms.grpc import Client
 from model import logger
 from model.settings import GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT
 from model.messages import GeneToReactionsRemote, GeneRequest
 
-
-ORGANISMS = {
-    'iJO1366',
-    'iMM904',
-    'iMM1415',
-    'iNJ661',
-    'iJN746',
-    'e_coli_core',
+SPECIES_TO_MODEL = {
+    'ECOLX': ['iJO1366', 'e_coli_core'],
+    'YEAST': ['iMM904'],
+    'CRIGR': ['iMM1415'],
+    'CORGT': ['iNJ661'],
+    'PSEPU': ['iJN746'],
 }
 
+MODELS = set(chain.from_iterable(models for _, models in SPECIES_TO_MODEL.items()))
+
+MODEL_NAMESPACE = {
+    'iJO1366': 'bigg',
+    'iMM904': 'bigg',
+    'iMM1415': 'bigg',
+    'iNJ661': 'bigg',
+    'iJN746': 'bigg',
+    'e_coli_core': 'bigg',
+}
 
 MODEL_GROWTH_RATE = {
     'iJO1366': 'BIOMASS_Ec_iJO1366_core_53p95M',
@@ -64,7 +75,6 @@ METHODS = {
     'moma': moma,
     'lmoma': lmoma,
 }
-
 
 GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
@@ -106,6 +116,7 @@ def generate_map_dictionary():
                 sorted([re.match(r".*\.(.+)\..*", f).group(1) for f in files])
     return result
 
+
 MAP_DICTIONARY = generate_map_dictionary()
 
 
@@ -113,9 +124,15 @@ async def redis_client():
     return await aioredis.create_redis((os.environ['REDIS_PORT_6379_TCP_ADDR'], 6379), loop=asyncio.get_event_loop())
 
 
+def load_model(model_id):
+    model = cameo_load_model(model_id)
+    model.notes['namespace'] = MODEL_NAMESPACE[model_id]
+    return model
+
+
 class Models(object):
     MODELS = {
-        v: load_model(v) for v in ORGANISMS
+        v: load_model(v) for v in MODELS
         }
     print('Models are ready')
 
@@ -140,7 +157,7 @@ async def restore_from_db(model_id):
     return model
 
 
-@lru_cache(maxsize=2**6)
+@lru_cache(maxsize=2 ** 6)
 def model_from_changes(changes):
     changes = json.loads(changes)
     model = find_in_memory(changes['model']).copy()
@@ -195,7 +212,8 @@ async def save_changes_to_db(model, wild_type_id, message):
     """
     db_key = key_from_model_info(wild_type_id, message)
     redis = await redis_client()
-    await redis.set(db_key, json.dumps({'model': model.id, 'changes': model.notes.get('changes', deepcopy(EMPTY_CHANGES))}))
+    await redis.set(db_key,
+                    json.dumps({'model': model.id, 'changes': model.notes.get('changes', deepcopy(EMPTY_CHANGES))}))
     redis.close()
     logger.info('Model created on the base of {} with message {} saved as {}'.format(wild_type_id, message, db_key))
     return db_key
@@ -256,6 +274,7 @@ def phase_plane_to_dict(model, metabolite_id):
     :param metabolite_id: string of format <database>:<id>, f.e. chebi:12345
     :return:
     """
+    model.solver = 'glpk'
     reaction = product_reaction_variable(model, metabolite_id)
     if not reaction:
         return {}
@@ -264,14 +283,15 @@ def phase_plane_to_dict(model, metabolite_id):
     for k, v in ppp.items():
         if k not in {'c_yield_lower_bound', 'c_yield_upper_bound',
                      'mass_yield_lower_bound', 'mass_yield_upper_bound'}:
-            result[k] = [v[point] for point in sorted(v.keys())]
+            result[k] = [float(v[point]) for point in sorted(v.keys())]
+    model.solver = 'cplex'
     return result
 
 
 async def apply_genotype_changes(model, genotype_changes):
     """Apply genotype changes to cameo model.
 
-    :param initial_model: cameo model
+    :param model: cameo model
     :param genotype_changes: list of strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
     :return:
     """
@@ -279,7 +299,9 @@ async def apply_genotype_changes(model, genotype_changes):
     genotype_features = full_genotype(genotype_changes)
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
     logger.info('Genes to reaction: {}'.format(genes_to_reactions))
-    return GenotypeChangeModel(model, genotype_features, genes_to_reactions)
+    change_model = GenotypeChangeModel(model, genotype_changes, genes_to_reactions, model.notes['namespace'])
+    await change_model.apply_changes(genotype_features)
+    return change_model
 
 
 def new_features_identifiers(genotype_changes: gnomic.Genotype):
@@ -316,7 +338,7 @@ async def call_genes_to_reactions(genotype_features):
 
 
 def convert_mg_to_mmol(mg, formula_weight):
-    return mg * (1/formula_weight)
+    return mg * (1 / formula_weight)
 
 
 async def apply_measurement_changes(model, measurements):
@@ -333,10 +355,10 @@ def convert_measurements_to_mmol(measurements, model):
         if value['unit'] == 'mg':
             metabolite = existing_metabolite(model, value['id'])
             if metabolite:
-                value['measurement'] = convert_mg_to_mmol(
-                    value['measurement'],
+                value['measurements'] = [convert_mg_to_mmol(
+                    point,
                     metabolite.formula_weight
-                )
+                ) for point in value['measurements']]
                 value['unit'] = 'mmol'
                 logger.info('Converted metabolite {} from mg to mmol'.format(value['id']))
     return measurements
@@ -374,13 +396,9 @@ def apply_reactions_knockouts(model, reactions_ids):
             model.reactions.get_by_id(r_id).knock_out()
     for reaction in to_undo:
         if model.reactions.has_id(reaction['id']):
-            model.reactions.get_by_id(reaction['id']).change_bounds(
-                lb=reaction['lower_bound'],
-                ub=reaction['upper_bound']
-            )
-    model.notes['changes']['removed']['reactions'] = \
-        [r for r in current_removed
-         if r['id'] not in (applied - set(reactions_ids))]
+            model.reactions.get_by_id(reaction['id']).bounds = reaction['lower_bound'], reaction['upper_bound']
+    model.notes['changes']['removed']['reactions'] = [r for r in current_removed
+                                                      if r['id'] not in (applied - set(reactions_ids))]
     model.notes['changes']['removed']['reactions'].extend(removed)
     return model
 
@@ -408,7 +426,7 @@ def map_reactions_list(map_path):
 
 
 def all_maps_reactions_list(model_name):
-    """Extracts reaction ids from all the maps for the given organism without duplicates
+    """Extracts reaction ids from all the maps for the given model without duplicates
 
     :param model_name: string
     :return: list of strings
@@ -429,13 +447,13 @@ class Response(object):
         try:
             if self.method_name in {'fva', 'pfba-fva'}:
                 solution = self.solve_fva()
-                self.flux = json.loads(solution.data_frame.T.to_json())
+                self.flux = solution.data_frame.T.to_dict()
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
             else:
                 solution = self.solve()
                 self.flux = solution.fluxes
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]
-        except SolveError:
+        except OptimizationError:
             self.flux = {}
             self.growth = 0.0
 
@@ -460,15 +478,14 @@ class Response(object):
             pfba_solution = pfba(self.model)
             if self.method_name == 'room':
                 increase_model_bounds(self.model)
-            solution = METHODS[self.method_name](self.model, cache=self.cache,
-                                                 reference=pfba_solution.fluxes)
+            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=pfba_solution.fluxes)
         else:
             solution = METHODS[self.method_name](self.model)
         logger.info('Model solved with method {} in {} sec'.format(self.method_name, time.time() - t))
         return solution
 
     def model_json(self):
-        return _to_dict(self.model)
+        return model_to_dict(self.model)
 
     def fluxes(self):
         return self.flux
@@ -487,7 +504,6 @@ class Response(object):
 
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
 
-
 APPLY_FUNCTIONS = {
     GENOTYPE_CHANGES: apply_genotype_changes,
     MEDIUM: apply_medium_changes,
@@ -501,6 +517,7 @@ RETURN_FUNCTIONS = {
     GROWTH_RATE: 'growth_rate',
     REMOVED_REACTIONS: 'removed_reactions',
 }
+
 
 async def modify_model(message, model):
     for key in REQUEST_KEYS:
@@ -550,7 +567,7 @@ def add_reactions(model, changes):
     current = set()
     for reaction in reactions:
         if model.reactions.has_id(reaction.id):
-            model.reactions.get_by_id(reaction.id).change_bounds(lb=reaction.lower_bound, ub=reaction.upper_bound)
+            model.reactions.get_by_id(reaction.id).bounds = reaction.lower_bound, reaction.upper_bound
         elif reaction.id not in current:
             to_add.append(reaction)
             current.add(reaction.id)
@@ -653,6 +670,10 @@ async def maps_handler(request):
     return web.json_response(MAP_DICTIONARY)
 
 
+async def model_options_handler(request):
+    return web.json_response(SPECIES_TO_MODEL[request.match_info['species']])
+
+
 async def map_handler(request):
     filepath = '{}/{}/{}.{}.json'.format(
         MAPS_DIR, request.GET['model'], request.GET['model'], request.GET['map']
@@ -665,8 +686,8 @@ app = web.Application()
 app.router.add_route('GET', '/wsmodels/{model_id}', model_ws_handler)
 app.router.add_route('GET', '/maps', maps_handler)
 app.router.add_route('GET', '/map', map_handler)
+app.router.add_route('GET', '/model-options/{species}', model_options_handler)
 app.router.add_route('POST', '/models/{model_id}', model_handler)
-
 
 # Configure default CORS settings.
 cors = aiohttp_cors.setup(app, defaults={

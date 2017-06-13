@@ -3,8 +3,8 @@ aiozmq
 aiohttp_cors
 msgpack-python
 cobra==0.5.11
-cameo==0.10.1
-swiglpk==1.2.14
+cameo==0.10.3
+swiglpk==1.4.3
 gnomic
 requests
 redis
@@ -13,7 +13,6 @@ gunicorn
 uvloop
 venom==1.0.0a1
 grpcio
-git+https://github.com/sgalkina/driven.git@model-apply#egg=driven
 pytest-asyncio==0.5.0
 pytest-cov==2.4.0
 aioredis==0.2.9

@@ -1,12 +1,14 @@
 import pytest
 import random
 from copy import deepcopy
-from cobra.io.json import _to_dict
-from model.app import existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable, \
-    phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond, save_changes_to_db, \
-    key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol, convert_measurements_to_mmol, \
-    modify_model, restore_from_db, add_reactions, EMPTY_CHANGES
-from driven.generic.adapter import full_genotype
+from cobra.io.json import _to_dict as model_to_dict
+from model.app import (existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable,
+                       phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond,
+                       save_changes_to_db,
+                       key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol,
+                       convert_measurements_to_mmol,
+                       modify_model, restore_from_db, add_reactions, EMPTY_CHANGES)
+from model.adapter import full_genotype
 
 
 def almost_equal(a, b):
@@ -38,8 +40,9 @@ async def test_save_and_restore():
     model_id = 'e_coli_core'
     await save_changes_to_db(find_in_memory(model_id), model_id, {})
     message = {
-        GENOTYPE_CHANGES: ['-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
-        MEASUREMENTS: [{'id': 'chebi:44080', 'concentration': 0.01}],
+        GENOTYPE_CHANGES: [
+            '-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
+        MEASUREMENTS: [{'id': 'chebi:44080', 'measurements': [0.01, float('nan')]}],
         MEDIUM: [{'concentration': 27.0, 'id': 'chebi:42758'}, {'concentration': 6.0, 'id': 'chebi:16015'},
                  {'concentration': 1.6, 'id': 'chebi:30808'}, {'concentration': 2.0, 'id': 'chebi:35696'},
                  {'concentration': 1.0, 'id': 'chebi:49553'}, {'concentration': 2.0, 'id': 'chebi:49976'},
@@ -51,8 +54,8 @@ async def test_save_and_restore():
     }
     model = await modify_model(message, (await restore_model(model_id)).copy())
     db_key = await save_changes_to_db(model, model_id, message)
-    restored = _to_dict(await restore_from_db(db_key))
-    original = _to_dict(model)
+    restored = model_to_dict(await restore_from_db(db_key))
+    original = model_to_dict(model)
     assert set([i['id'] for i in restored['reactions']]) == set([i['id'] for i in original['reactions']])
     assert set([i['id'] for i in restored['genes']]) == set([i['id'] for i in original['genes']])
     assert set([i['id'] for i in restored['metabolites']]) == set([i['id'] for i in original['metabolites']])
@@ -60,9 +63,8 @@ async def test_save_and_restore():
 
 @pytest.mark.asyncio
 async def test_model_immutability():
-    '''Changes on restored models must not affect cache'''
+    """Changes on restored models must not affect cache"""
     model = (await restore_model('e_coli_core')).copy()
-    model.notes = deepcopy(model.notes)  # TODO: change when fix in cobrapy is released
     model.notes['test'] = 'test'
     restored_model = (await restore_model('e_coli_core')).copy()
     restored_model.notes['test'] = 'different'
@@ -104,7 +106,8 @@ def test_respond():
 
 @pytest.mark.asyncio
 async def test_reactions_knockouts():
-    ecoli = find_in_memory('iJO1366').copy()
+    ecoli_original = find_in_memory('iJO1366').copy()
+    ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
     GLUDy_upper_bound = ecoli.reactions.get_by_id('GLUDy').upper_bound
@@ -119,18 +122,19 @@ async def test_reactions_knockouts():
     reaction_ids = reaction_ids - {'3HAD160'}
     ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == set()
-    assert almost_equal(ecoli.solve().objective_value, ecoli.solve().objective_value)
+    assert almost_equal(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
 
 
 def test_convert_measurements_to_mmol():
     ecoli = find_in_memory('iJO1366').copy()
-    measurements = [{'id': 'chebi:17790', 'measurement': 32.04186, 'unit': 'mg'}]
-    assert convert_measurements_to_mmol(measurements, ecoli) == [{'id': 'chebi:17790', 'measurement': 1.0, 'unit': 'mmol'}]
+    measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg'}]
+    assert convert_measurements_to_mmol(measurements, ecoli) == [
+        {'id': 'chebi:17790', 'measurements': [1.0], 'unit': 'mmol'}]
 
 
 def test_add_reactions():
     ecoli = find_in_memory('iJO1366').copy()
     keys = ('id', 'name', 'metabolites', 'lower_bound', 'upper_bound', 'gene_reaction_rule')
     info = ('newid', '', {}, 0, 0, '')
-    changes = [dict(zip(keys, info))]*2
+    changes = [dict(zip(keys, info))] * 2
     add_reactions(ecoli, changes)
