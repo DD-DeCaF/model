@@ -466,7 +466,9 @@ class MeasurementChangeModel(ModelModificationMixin):
         self.measurements = measurements
         self.model = model
         self.changes = {
-            'added': {'reactions': set()},
+            # previously, 'added' but this doesn't add new reactions, only updating bounds based on measurements,
+            # add to both dictionaries?
+            'measured': {'reactions': set()},
         }
         self.missing_in_model = []
         self.apply_flux_bounds()
@@ -485,11 +487,16 @@ class MeasurementChangeModel(ModelModificationMixin):
                 lower_bound = float(np.min(scalar_data))
             else:
                 continue
-            model_metabolite = self.model_metabolite(scalar['id'], '_e')
-            if not model_metabolite:
-                self.missing_in_model.append(scalar['id'])
-                logger.info('Model is missing metabolite {}'.format(scalar['id']))
-                return
-            reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
+            # flux measured for a given boundary reaction for a metabolite
+            if 'id' in scalar:
+                model_metabolite = self.model_metabolite(scalar['id'], '_e')
+                if not model_metabolite:
+                    self.missing_in_model.append(scalar['id'])
+                    logger.info('Model is missing metabolite {}'.format(scalar['id']))
+                    return
+                reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
+            # flux measured for a given reaction
+            if 'reaction_id' in scalar:
+                reaction = self.model.reactions.get_by_id(scalar['reaction_id'])
+            self.changes['measured']['reactions'].add(reaction)
             reaction.bounds = lower_bound, upper_bound
-            self.changes['added']['reactions'].add(reaction)
