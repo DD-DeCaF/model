@@ -2,12 +2,14 @@ import aiohttp
 import pytest
 import requests
 
-MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0]},
-                {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurements': [5.0, 4.8, 5.2, 4.9]},
-                {'reaction_id': 'PFK', 'measurements': [5, 5]}]
+MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
+                 'type': 'compound'},
+                {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurements': [5.0, 4.8, 5.2, 4.9],
+                 'type': 'compound'},
+                {'id': 'PFK', 'measurements': [5, 5], 'type': 'reaction'}]
 MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': MEASUREMENTS}
 MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
-    {'reaction_id': 'ATPM', 'measurements': [100, 100]}]}
+    {'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction'}]}
 MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',

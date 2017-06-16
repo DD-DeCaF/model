@@ -449,25 +449,31 @@ class Response(object):
         self.message = message
         self.method_name = message.get(SIMULATION_METHOD, 'fba')
         self.cache = cache
-        try:
-            if self.method_name in {'fva', 'pfba-fva'}:
+        if self.method_name in {'fva', 'pfba-fva'}:
+            try:
                 solution = self.solve_fva()
+            except OptimizationError:
+                logger.info('infeasible model for fva')
+                self.flux = {}
+                self.growth = 0.0
+            else:
                 self.flux = solution.data_frame.T.to_dict()
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
-            else:
+        else:
+            try:
                 solution = self.solve()
+            except OptimizationError:
+                logger.info('infeasible model, returning measured fluxes only')
+                changes = model.notes['changes']
+                self.flux = {}
+                self.growth = 0.0
+                if 'measured' in changes:
+                    ids_measured_reactions = set(rxn['id'] for rxn in changes['measured']['reactions'])
+                    self.flux = dict((rxn.id, (rxn.upper_bound + rxn.lower_bound) / 2)
+                                     for rxn in model.reactions if rxn.id in ids_measured_reactions)
+            else:
                 self.flux = solution.fluxes
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]
-        except OptimizationError:
-            # id model is infeasible, return the average measured fluxes only
-            logger.info('infeasible model, returning measured fluxes only')
-            changes = model.notes['changes']
-            self.flux = {}
-            self.growth = 0.0
-            if 'measured' in changes:
-                ids_measured_reactions = set(rxn['id'] for rxn in changes['measured']['reactions'])
-                self.flux = dict((rxn.id, (rxn.upper_bound + rxn.lower_bound) / 2)
-                                 for rxn in model.reactions if rxn.id in ids_measured_reactions)
 
     def solve_fva(self):
         fva_reactions = None
@@ -576,8 +582,7 @@ def apply_additions(model, changes):
 
 def apply_measurements(model, changes):
     for rxn in changes['reactions']:
-        model.reactions.get_by_id(rxn['id']).lower_bound = rxn['lower_bound']
-        model.reactions.get_by_id(rxn['id']).upper_bound = rxn['upper_bound']
+        model.reactions.get_by_id(rxn['id']).change_bounds(lb=rxn['lower_bound'], ub=rxn['upper_bound'])
     return model
 
 
