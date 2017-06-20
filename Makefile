@@ -22,7 +22,7 @@ test: start
 	@echo "**********************************************************************"
 	@echo "* Running tests."
 	@echo "**********************************************************************"
-	docker-compose exec web /bin/bash -c "py.test -vs --cov=./model tests/"
+	docker-compose exec web /bin/bash -c "py.test -vxs --cov=./model tests/"
 
 
 ## Shut down the Docker containers.
