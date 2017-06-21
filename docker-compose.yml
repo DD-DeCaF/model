@@ -15,7 +15,18 @@ services:
       - GENE_TO_REACTIONS_PORT=50053
       - ID_MAPPER_API=https://api.dd-decaf.eu/idmapping/query
       - REDIS_PORT_6379_TCP_ADDR=redis
+    networks:
+      default:
+      iloop-net:
+        aliases:
+          - model-backend
   redis:
     image: redis
     ports:
       - 6379
+    networks:
+      - default
+
+networks:
+  iloop-net:
+    external: true
