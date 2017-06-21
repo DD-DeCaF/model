@@ -125,7 +125,8 @@ MAP_DICTIONARY = generate_map_dictionary()
 
 
 async def redis_client():
-    return await aioredis.create_redis((os.environ['REDIS_PORT_6379_TCP_ADDR'], 6379), loop=asyncio.get_event_loop())
+    return await aioredis.create_redis((os.environ['REDIS_ADDR'], os.environ['REDIS_PORT']),
+                                       loop=asyncio.get_event_loop())
 
 
 def load_model(model_id):
