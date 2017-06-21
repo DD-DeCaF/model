@@ -466,7 +466,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         self.measurements = measurements
         self.model = model
         self.changes = {
-            'added': {'reactions': set()},
+            'measured': {'reactions': set()},
         }
         self.missing_in_model = []
         self.apply_flux_bounds()
@@ -485,11 +485,16 @@ class MeasurementChangeModel(ModelModificationMixin):
                 lower_bound = float(np.min(scalar_data))
             else:
                 continue
-            model_metabolite = self.model_metabolite(scalar['id'], '_e')
-            if not model_metabolite:
-                self.missing_in_model.append(scalar['id'])
-                logger.info('Model is missing metabolite {}'.format(scalar['id']))
-                return
-            reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
+            if scalar['type'] == 'compound':
+                model_metabolite = self.model_metabolite(scalar['id'], '_e')
+                if not model_metabolite:
+                    self.missing_in_model.append(scalar['id'])
+                    logger.info('Model is missing metabolite {}'.format(scalar['id']))
+                    return
+                reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
+            elif scalar['type'] == 'reaction':
+                reaction = self.model.reactions.get_by_id(scalar['id'])
+            else:
+                logger.info('scalar for measured type {} not supported'.format(scalar['type']))
+            self.changes['measured']['reactions'].add(reaction)
             reaction.bounds = lower_bound, upper_bound
-            self.changes['added']['reactions'].add(reaction)
