@@ -1,15 +1,37 @@
 sudo: required
 language: python
+
+branches:
+  only:
+  - master
+  - devel
+
+git:
+  depth: 3
+
 services:
-- docker
+  - docker
+
+env:
+  - DOCKER_COMPOSE_VERSION=1.12.0
+
 before_install:
-- docker login -e=$DOCKER_EMAIL -u=$DOCKER_USERNAME -p=$DOCKER_PASSWORD
-install: docker-compose up -d --build
+  - docker login -e=$DOCKER_EMAIL -u=$DOCKER_USERNAME -p=$DOCKER_PASSWORD
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
+install:
+  - make start
+
 script:
-- docker-compose exec web /bin/bash -c "py.test -vs --cov=./model tests/"
-- docker-compose logs
+  - make test
+  - docker-compose logs
+
 after_success:
-- docker-compose exec web /bin/bash -c "codecov --token $CODECOV_TOKEN"
+  - docker-compose exec web /bin/bash -c "codecov --token $CODECOV_TOKEN"
+
 deploy:
   provider: script
   script: ./push_to_hub_travis.sh
