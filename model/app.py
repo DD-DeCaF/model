@@ -1,5 +1,6 @@
 import asyncio
 import aiohttp_cors
+import aiohttp
 import gnomic
 import json
 import hashlib
@@ -23,10 +24,8 @@ from cobra.io.json import (reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
                            MeasurementChangeModel, full_genotype, feature_id)
-from venom.rpc.comms.grpc import Client
 from model import logger
-from model.settings import GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT
-from model.messages import GeneToReactionsRemote, GeneRequest
+from model.settings import GENE_TO_REACTIONS_API
 
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
@@ -331,15 +330,25 @@ async def call_genes_to_reactions(genotype_features):
     :param genotype_features: generator of new genes ids
     :return:
     """
-    client = Client(GeneToReactionsRemote, GENE_TO_REACTIONS_API, GENE_TO_REACTIONS_PORT)
     identifiers = list(new_features_identifiers(genotype_features))
     results = await asyncio.gather(*[
-        client.invoke(
-            GeneToReactionsRemote.reactions,
-            GeneRequest(gene=identifier)
-        ) for identifier in identifiers
+        query_genes_to_reaction(gene=identifier) for identifier in identifiers
         ])
-    return {k: dict(zip(*(v.reactions_ids, v.equations))) for k, v in zip(identifiers, results)}
+    return {k: v for k, v in zip(identifiers, results)}
+
+
+async def query_genes_to_reaction(gene):
+    """Make asynchronous call for getting information about which reactions were added with the gene
+
+    :param gene: gene identifier
+    :return: reactions mapping {<rn ID>: <reaction string>} 
+    """
+    logger.info('Annotated gene at {}: {}'.format(GENE_TO_REACTIONS_API, gene))
+    async with aiohttp.ClientSession() as session:
+        async with session.get(GENE_TO_REACTIONS_API, params={'geneId': gene}) as r:
+            assert r.status == 200
+            result = await r.json()
+            return result.get('response', {})
 
 
 def convert_mg_to_mmol(mg, formula_weight):
@@ -458,7 +467,10 @@ class Response(object):
                 self.flux = {}
                 self.growth = 0.0
             else:
-                self.flux = solution.data_frame.T.to_dict()
+                self.flux = {
+                    rn_id: {bound: float(value) for bound, value in v.items()}
+                    for rn_id, v in solution.data_frame.T.to_dict().items()
+                }
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
         else:
             try:

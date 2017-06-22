@@ -393,6 +393,8 @@ class GenotypeChangeModel(ModelModificationMixin):
         :param gene_name: gene name
         :return:
         """
+        if self.model.reactions.has_id(reaction_id):
+            return
         reaction = Reaction(reaction_id)
         self.model.add_reactions([reaction])
         equation = await map_equation_to_model(equation, self.namespace, self.compartment)
