@@ -467,10 +467,10 @@ class Response(object):
                 self.flux = {}
                 self.growth = 0.0
             else:
-                self.flux = {
-                    rn_id: {bound: float(value) for bound, value in v.items()}
-                    for rn_id, v in solution.data_frame.T.to_dict().items()
-                }
+                df = solution.data_frame
+                for key in ['lower_bound', 'upper_bound']:
+                    df[key] = df[key].astype('float')
+                self.flux = df.T.to_dict()
                 self.growth = self.flux[MODEL_GROWTH_RATE[model.id]]['upper_bound']
         else:
             try:
