@@ -32,7 +32,12 @@ async def query_identifiers(object_ids, db_from, db_to):
             return result['ids']
 
 
-def get_existing_metabolite(mnx_id, model, compartment):
+def get_only_element(x):
+    if len(x) != 1:
+        raise IndexError
+    return x[0]
+
+async def get_existing_metabolite(mnx_id, model, compartment):
     """Find compartment in the model by Metanetx id.
 
     Parameters
@@ -51,14 +56,22 @@ def get_existing_metabolite(mnx_id, model, compartment):
     """
     if not mnx_id:
         return
+    response = await query_identifiers([mnx_id], 'mnx', model.notes['namespace'])
     try:
-        clean_id = clean_bigg_id(metanetx.mnx2bigg[mnx_id])
-        return model.metabolites.get_by_id(clean_id + compartment)
-    except KeyError:
+        logger.info('trying any of {}'.format(', '.join(response[mnx_id]) + compartment))
+        model_metabolite = get_only_element(model.metabolites.query(
+            lambda met: met.id in response[mnx_id] and met.compartment == compartment
+        ))
+    except (KeyError, IndexError):
         try:
-            return model.metabolites.get_by_id(mnx_id + compartment)
+            # added metabolites get the mnx id so search for those
+            model_metabolite = model.metabolites.get_by_id(mnx_id + compartment)
         except KeyError:
-            pass
+            model_metabolite = None
+            logger.info(f'failed to resolve {mnx_id} in {compartment} for {model.id}')
+    else:
+        logger.info(f'mapped {mnx_id} to {model_metabolite.id}')
+    return model_metabolite
 
 
 def contains_carbon(metabolite):  # TODO: use method from Metabolite class when this change is merged
@@ -116,7 +129,8 @@ class ModelModificationMixin(object):
         -------
 
         """
-        extracellular_metabolite = Metabolite(metabolite.id[:-2] + '_e', formula=metabolite.formula, compartment='e')
+        extracellular_metabolite = Metabolite(re.sub('_[cpm]$', '_e', metabolite.id),
+                                              formula=metabolite.formula, compartment='e')
         extracellular_metabolite.added_by_model_adjustment = True
         self.add_adapter_reaction(metabolite, extracellular_metabolite)
         self.add_demand_reaction(extracellular_metabolite)
@@ -224,7 +238,7 @@ class ModelModificationMixin(object):
                 self.annotate_new_metabolite(metabolite)
                 self.changes['added']['metabolites'].add(metabolite)
 
-    def model_metabolite(self, metabolite_id, compartment='_e'):
+    async def model_metabolite(self, metabolite_id, compartment='_e'):
         """Get metabolite associated with this model for a given entity
 
         Parameters
@@ -238,13 +252,16 @@ class ModelModificationMixin(object):
         the model metabolite (or None if no matching found)
         """
         mnx_id = metanetx.all2mnx.get(metabolite_id)
-        return get_existing_metabolite(mnx_id, self.model, compartment)
+        return await get_existing_metabolite(mnx_id, self.model, compartment)
 
 
 async def map_equation_to_model(equation, model_namespace, compartment=None):
     """Try to map given equation which contains KEGG ids to an equation with ids
     in the model's namespace.
-    If metabolite does not exist in the BIGG database, use Metanetx id.
+
+    If metabolite does not exist in the BIGG database, use Metanetx id, if that fails, use the identifiers used in
+    the equation.
+
     If compartment is given, metabolites ids will have it as postfix.
 
     Example:
@@ -258,7 +275,7 @@ async def map_equation_to_model(equation, model_namespace, compartment=None):
     """
     array = equation.split()
     re_id = re.compile("^[A-Za-z0-9_-]+$")
-    kegg_id = re.compile("^C[0-9]*$")
+    kegg_id = re.compile("^C[0-9]{5}$")
     to_map = [el for el in array if re.match(kegg_id, el)]
     logger.info('query ids: {}'.format(to_map))
     mapping = {}
@@ -352,7 +369,6 @@ class GenotypeChangeModel(ModelModificationMixin):
         }
 
     async def apply_changes(self, genotype_changes):
-
         """Apply genotype changes on initial model
 
         :param genotype_changes: gnomic.Genotype
@@ -461,18 +477,17 @@ class MediumChangeModel(ModelModificationMixin):
         self.changes = {
             'added': {'reactions': set()},
         }
-        self.apply_medium()
 
-    def apply_medium(self):
+    async def apply_medium(self):
         """For each metabolite in medium try to find corresponding metabolite in e compartment of the model.
         If metabolite is found, change the lower limit of the reaction to a negative number,
         so the model would be able to consume this compound.
         If metabolite is not found in e compartment, log and continue.
         """
         for compound in self.medium:
-            existing_metabolite = self.model_metabolite(compound['id'], '_e')
+            existing_metabolite = await self.model_metabolite(compound['id'], '_e')
             if not existing_metabolite:
-                logger.info('No metabolite {}'.format(compound['id']))
+                logger.info('No metabolite {} in external compartment'.format(compound['id']))
                 continue
             logger.info('Found metabolite {}'.format(compound['id']))
             self.make_consumable(existing_metabolite)
@@ -500,9 +515,8 @@ class MeasurementChangeModel(ModelModificationMixin):
             'measured': {'reactions': set()},
         }
         self.missing_in_model = []
-        self.apply_flux_bounds()
 
-    def apply_flux_bounds(self):
+    async def apply_flux_bounds(self):
         """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
         bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
         normal distribution range i.e., mean +- 1.96 * stdev. """
@@ -517,10 +531,10 @@ class MeasurementChangeModel(ModelModificationMixin):
             else:
                 continue
             if scalar['type'] == 'compound':
-                model_metabolite = self.model_metabolite(scalar['id'], '_e')
+                model_metabolite = await self.model_metabolite(scalar['id'], '_e')
                 if not model_metabolite:
                     self.missing_in_model.append(scalar['id'])
-                    logger.info('Model is missing metabolite {}'.format(scalar['id']))
+                    logger.info('Model is missing metabolite {}, cannot apply measurement'.format(scalar['id']))
                     return
                 reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
             elif scalar['type'] == 'reaction':

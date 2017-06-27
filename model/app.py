@@ -20,6 +20,7 @@ from cameo.flux_analysis import flux_variability_analysis, room, lmoma, moma
 from cobra.flux_analysis import pfba
 from cobra.exceptions import OptimizationError
 from cameo.util import ProblemCache
+from cobra.io import read_sbml_model
 from cobra.io.dict import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
@@ -35,7 +36,8 @@ SPECIES_TO_MODEL = {
     'PSEPU': ['iJN746'],
 }
 
-MODELS = set(chain.from_iterable(models for _, models in SPECIES_TO_MODEL.items()))
+MODELS = frozenset(chain.from_iterable(models for _, models in SPECIES_TO_MODEL.items()))
+LOCAL_MODELS = frozenset(['ecYeast7'])
 
 MODEL_NAMESPACE = {
     'iJO1366': 'bigg',
@@ -131,9 +133,9 @@ async def redis_client():
 
 
 def load_model(model_id):
-    sbml_name = os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz')
-    if os.path.exists(sbml_name):
-        model = cameo_load_model(sbml_name)
+    if model_id in LOCAL_MODELS:
+        sbml_file = os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz')
+        model = read_sbml_model(sbml_file)
     else:
         model = cameo_load_model(model_id)
     model.notes['namespace'] = MODEL_NAMESPACE[model_id]
@@ -237,7 +239,7 @@ class NoIDMapping(Exception):
         return 'No Metanetx mapping for metabolite {}'.format(self.value)
 
 
-def existing_metabolite(model, metabolite_id):
+async def existing_metabolite(model, metabolite_id):
     """Find metabolite in _e compartment of the given model.
 
     :param model: cameo model
@@ -254,21 +256,17 @@ def existing_metabolite(model, metabolite_id):
     }
     if mnx_id in elements_map:
         mnx_id = elements_map[mnx_id]
-    return get_existing_metabolite(
-        mnx_id,
-        model,
-        '_e'
-    )
+    return await get_existing_metabolite(mnx_id, model, '_e')
 
 
-def product_reaction_variable(model, metabolite_id):
+async def product_reaction_variable(model, metabolite_id):
     """Find a medium exchange reaction in the model for the given metabolite id
 
     :param model: cameo model
     :param metabolite_id: string of format <database>:<id>, f.e. chebi:12345
     :return:
     """
-    metabolite = existing_metabolite(model, metabolite_id)
+    metabolite = await existing_metabolite(model, metabolite_id)
     if not metabolite:
         return None
     exchange_reactions = list(set(metabolite.reactions).intersection(model.exchanges))
@@ -277,7 +275,7 @@ def product_reaction_variable(model, metabolite_id):
     return exchange_reactions[0]
 
 
-def phase_plane_to_dict(model, metabolite_id):
+async def phase_plane_to_dict(model, metabolite_id):
     """Return phenotypic phase plane results in format that is convenient for
 
     :param model: cameo model
@@ -285,7 +283,7 @@ def phase_plane_to_dict(model, metabolite_id):
     :return:
     """
     model.solver = 'glpk'
-    reaction = product_reaction_variable(model, metabolite_id)
+    reaction = await product_reaction_variable(model, metabolite_id)
     if not reaction:
         return {}
     ppp = phenotypic_phase_plane(model, [reaction]).data_frame.to_dict()
@@ -362,18 +360,19 @@ def convert_mg_to_mmol(mg, formula_weight):
 
 
 async def apply_measurement_changes(model, measurements):
-    measurements = fix_measurements_ids(
-        convert_measurements_to_mmol(measurements, model)
-    )
-    return MeasurementChangeModel(model, measurements)
+    measurement = await convert_measurements_to_mmol(measurements, model)
+    measurements = fix_measurements_ids(measurement)
+    change_model = MeasurementChangeModel(model, measurements)
+    await change_model.apply_flux_bounds()
+    return change_model
 
 
-def convert_measurements_to_mmol(measurements, model):
+async def convert_measurements_to_mmol(measurements, model):
     for value in measurements:
         if 'unit' not in value:
             continue
         if value['unit'] == 'mg':
-            metabolite = existing_metabolite(model, value['id'])
+            metabolite = await existing_metabolite(model, value['id'])
             if metabolite:
                 value['measurements'] = [convert_mg_to_mmol(
                     point,
@@ -396,7 +395,9 @@ def fix_measurements_ids(measurements):
 
 
 async def apply_medium_changes(model, medium):
-    return MediumChangeModel(model, medium)
+    change_model = MediumChangeModel(model, medium)
+    await change_model.apply_medium()
+    return change_model
 
 
 ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
@@ -531,8 +532,10 @@ class Response(object):
     def fluxes(self):
         return self.flux
 
-    def theoretical_maximum_yield(self):
-        return {key: phase_plane_to_dict(self.model, key) for key in self.message[OBJECTIVES]}
+    async def theoretical_maximum_yield(self):
+        res = {key: await phase_plane_to_dict(self.model, key) for key in self.message[OBJECTIVES]}
+        logger.info(res)
+        return res
 
     def growth_rate(self):
         return self.growth
@@ -649,12 +652,15 @@ def remove_reactions(model, changes):
     return model
 
 
-def respond(message, model, db_key=None, cache=None):
+async def respond(message, model, db_key=None, cache=None):
     result = {}
     t = time.time()
     response = Response(model, message, cache=cache)
     for key in message['to-return']:
-        result[key] = getattr(response, RETURN_FUNCTIONS[key])()
+        if key == TMY:
+            result[key] = await response.theoretical_maximum_yield()
+        else:
+            result[key] = getattr(response, RETURN_FUNCTIONS[key])()
     if db_key:
         result['model-id'] = db_key
     if REQUEST_ID in message:
@@ -683,7 +689,7 @@ async def model_ws_handler(request):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(respond(message, model, cache=cache))
+                    ws.send_json(await respond(message, model, cache=cache))
             elif msg.type == WSMsgType.ERROR:
                 logger.error('Websocket for model_id {} closed with exception {}'.format(model_id, ws.exception()))
     except asyncio.CancelledError:
@@ -711,7 +717,7 @@ async def model_handler(request):
         db_key = await save_changes_to_db(model, wild_type_id, message)
     if message.get(SIMULATION_METHOD) == 'room':
         model = model.copy()
-    return web.json_response(respond(message, model, db_key))
+    return web.json_response(await respond(message, model, db_key))
 
 
 async def maps_handler(request):
