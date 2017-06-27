@@ -116,7 +116,7 @@ class ModelModificationMixin(object):
         -------
 
         """
-        extracellular_metabolite = Metabolite(metabolite.id[:2] + '_e', formula=metabolite.formula, compartment='e')
+        extracellular_metabolite = Metabolite(metabolite.id[:-2] + '_e', formula=metabolite.formula, compartment='e')
         extracellular_metabolite.added_by_model_adjustment = True
         self.add_adapter_reaction(metabolite, extracellular_metabolite)
         self.add_demand_reaction(extracellular_metabolite)
@@ -257,10 +257,13 @@ async def map_equation_to_model(equation, model_namespace, compartment=None):
     :return:
     """
     array = equation.split()
-    re_id = re.compile("^[A-Za-z][A-Za-z0-9]*$")
-    to_map = [el for el in array if re.match(re_id, el)]
+    re_id = re.compile("^[A-Za-z0-9_-]+$")
+    kegg_id = re.compile("^C[0-9]*$")
+    to_map = [el for el in array if re.match(kegg_id, el)]
     logger.info('query ids: {}'.format(to_map))
-    mapping = await query_identifiers(to_map, 'kegg', model_namespace)
+    mapping = {}
+    if to_map:
+        mapping = await query_identifiers(to_map, 'kegg', model_namespace)
     logger.info('response ids: {}'.format(mapping))
     result = []
     for i, el in enumerate(array):
@@ -295,6 +298,36 @@ def full_genotype(genotype_changes):
     return chain(genotype_changes)
 
 
+def insert(feature, dict1, dict2):
+    """Helper function for managing two feature storages"""
+    if feature.name in dict2:
+        dict2.pop(feature.name)
+    else:
+        dict1[feature.name] = feature
+
+
+DELETE_GENE = 'delta8bp'  # the gene mutation which disables its functions
+
+
+def detect_mutations(remove, add):
+    """Check if deletion-addition combination is in fact mutation and should be skipped.
+    If the feature has DELETE_GENE suffix, consider this gene deleted
+    """
+    drop_remove, drop_add = [], []
+    for old_feature in remove:
+        for new_feature in add:
+            if new_feature.startswith(old_feature):
+                logger.info('Gene {} is replaced with {}'.format(old_feature,
+                                                                 new_feature))
+                drop_add.append(new_feature)
+                if DELETE_GENE not in new_feature:
+                    drop_remove.append(old_feature)
+    for name in drop_remove:
+        remove.pop(name)
+    for name in drop_add:
+        add.pop(name)
+
+
 class GenotypeChangeModel(ModelModificationMixin):
     """
     Applies genotype change on cameo model
@@ -317,39 +350,33 @@ class GenotypeChangeModel(ModelModificationMixin):
         }
 
     async def apply_changes(self, genotype_changes):
+
         """Apply genotype changes on initial model
 
         :param genotype_changes: gnomic.Genotype
         :return:
         """
+        to_remove = {}
+        to_add = {}
+
         for change in genotype_changes.changes():
             if isinstance(change, gnomic.Mutation):
-                await self.apply_mutation(change)
+                old = change.old.features() if change.old else []
+                for feature in old:
+                    insert(feature, to_remove, to_add)
+                new = change.new.features() if change.new else []
+                for feature in new:
+                    insert(feature, to_add, to_remove)
             if isinstance(change, gnomic.Plasmid):
-                await self.add_plasmid(change)
+                for feature in change.features():
+                    insert(feature, to_add, to_remove)
 
-    async def apply_mutation(self, mutation):
-        """Apply mutations on initial model
+        detect_mutations(to_remove, to_add)
 
-        :param mutation: gnomic.Mutation
-        :return:
-        """
-        if mutation.old:
-            for feature in mutation.old.features():
-                self.knockout_gene(feature)
-        if mutation.new:
-            for feature in mutation.new.features():
-                await self.add_gene(feature)
-
-    async def add_plasmid(self, plasmid):
-        """Add plasmid features to the initial model.
-        No plasmid instance in cameo, so changes are made in model genes and reactions directly
-
-        :param plasmid: gnomic.Plasmid
-        :return:
-        """
-        for feature in plasmid.features():
-            await self.add_gene(feature)
+        for k, v in to_remove.items():
+            self.knockout_gene(v)
+        for k, v in to_add.items():
+            await self.add_gene(v)
 
     def knockout_gene(self, feature):
         """Perform gene knockout.
