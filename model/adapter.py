@@ -36,7 +36,7 @@ async def query_identifiers(object_ids, db_from, db_to):
 
 def get_only_element(x):
     if len(x) != 1:
-        raise IndexError
+        raise IndexError('expected single element list')
     return x[0]
 
 async def get_existing_metabolite(mnx_id, model, compartment):
@@ -59,10 +59,11 @@ async def get_existing_metabolite(mnx_id, model, compartment):
     if not mnx_id:
         return
     response = await query_identifiers([mnx_id], 'mnx', model.notes['namespace'])
+    # TODO: so messy, adjust when fixing #30
     try:
-        logger.info('trying any of {}'.format(', '.join(response[mnx_id]) + compartment))
+        logger.info('trying any of {} in {}'.format(', '.join(response[mnx_id]), compartment))
         model_metabolite = get_only_element(model.metabolites.query(
-            lambda met: met.id in response[mnx_id] and met.compartment == compartment
+            lambda met: re.sub('_[cepm]$', '', met.id) in response[mnx_id] and met.compartment == compartment[1:]
         ))
     except (KeyError, IndexError):
         try:
@@ -537,7 +538,12 @@ class MeasurementChangeModel(ModelModificationMixin):
                     self.missing_in_model.append(scalar['id'])
                     logger.info('Model is missing metabolite {}, cannot apply measurement'.format(scalar['id']))
                     return
-                reaction = list(set(model_metabolite.reactions).intersection(self.model.exchanges))[0]
+                possible_reactions = list(set(model_metabolite.reactions).intersection(self.model.exchanges))
+                try:
+                    reaction = get_only_element(possible_reactions)
+                except IndexError:
+                    logger.info('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
+                    reaction = possible_reactions[0]
             elif scalar['type'] == 'reaction':
                 reaction = self.model.reactions.get_by_id(scalar['id'])
             else:
