@@ -275,22 +275,21 @@ async def map_equation_to_model(equation, model_namespace, compartment=None):
     """
     array = equation.split()
     re_id = re.compile("^[A-Za-z0-9_-]+$")
-    kegg_id = re.compile("^C[0-9]{5}$")
-    to_map = [el for el in array if re.match(kegg_id, el)]
-    logger.info('query ids: {}'.format(to_map))
-    mapping = {}
-    if to_map:
-        mapping = await query_identifiers(to_map, 'kegg', model_namespace)
-    logger.info('response ids: {}'.format(mapping))
+    re_kegg_id = re.compile("^C[0-9]{5}$")
+    to_map = [el for el in array if re.match(re_kegg_id, el)]
+
+    logger.info('query ids for reaction mapping: {}'.format(to_map))
+    kegg_to_model = await query_identifiers(to_map, 'kegg', model_namespace)
+    unmapped = [i for i in to_map if i not in kegg_to_model]
+    kegg_to_mnx = await query_identifiers(unmapped, 'kegg', 'mnx')
+    logger.info('response ids model: {}'.format(kegg_to_model))
+    logger.info('response ids mnx: {}'.format(kegg_to_mnx))
     result = []
     for el in array:
         if el.isdigit() or not re.match(re_id, el):
             result.append(el)
         else:
-            try:
-                el = mapping[el][0]
-            except KeyError:
-                pass
+            el = kegg_to_model.get(el, kegg_to_mnx.get(el, [el]))[0]
             if compartment:
                 el += compartment
             result.append(el)
