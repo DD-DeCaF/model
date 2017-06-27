@@ -11,7 +11,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONASYNCIODEBUG=1
-      - GENE_TO_REACTIONS_API=${GENE_TO_REACTIONS_API:-https://api-staging.dd-decaf.eu/annotation/genes}
+      - ANNOTATIONS_API=${GENE_TO_REACTIONS_API:-https://api-staging.dd-decaf.eu/annotation/genes}
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}

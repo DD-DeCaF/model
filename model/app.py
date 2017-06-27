@@ -25,7 +25,7 @@ from cobra.io.json import (reaction_to_dict, reaction_from_dict, gene_to_dict,
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
                            MeasurementChangeModel, full_genotype, feature_id)
 from model import logger
-from model.settings import GENE_TO_REACTIONS_API
+from model.settings import ANNOTATIONS_API
 
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
@@ -343,9 +343,9 @@ async def query_genes_to_reaction(gene):
     :param gene: gene identifier
     :return: reactions mapping {<rn ID>: <reaction string>} 
     """
-    logger.info('Annotated gene at {}: {}'.format(GENE_TO_REACTIONS_API, gene))
+    logger.info('Annotated gene at {}: {}'.format(ANNOTATIONS_API, gene))
     async with aiohttp.ClientSession() as session:
-        async with session.get(GENE_TO_REACTIONS_API, params={'geneId': gene}) as r:
+        async with session.get(ANNOTATIONS_API, params={'geneId': gene}) as r:
             assert r.status == 200
             result = await r.json()
             return result.get('response', {})
