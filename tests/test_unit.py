@@ -71,26 +71,29 @@ async def test_model_immutability():
     assert model.notes['test'] == 'test'
 
 
-def test_existing_metabolite():
+@pytest.mark.asyncio
+async def test_existing_metabolite():
     ecoli = find_in_memory('iJO1366')
-    assert existing_metabolite(ecoli, 'chebi:17790') == existing_metabolite(ecoli, 'bigg:meoh')
-    assert existing_metabolite(ecoli, 'bigg:succ').formula == 'C4H4O4'
+    assert (await existing_metabolite(ecoli, 'chebi:17790')) == (await existing_metabolite(ecoli, 'bigg:meoh'))
+    assert (await existing_metabolite(ecoli, 'bigg:succ')).formula == 'C4H4O4'
     with pytest.raises(NoIDMapping):
-        existing_metabolite(ecoli, 'wrong_id')
+        await existing_metabolite(ecoli, 'wrong_id')
 
 
-def test_product_reaction_variable():
+@pytest.mark.asyncio
+async def test_product_reaction_variable():
     ecoli = find_in_memory('iJO1366')
-    assert product_reaction_variable(ecoli, 'bigg:akg').id == 'EX_akg_e'
-    assert product_reaction_variable(ecoli, 'bigg:e4p') is None
+    assert (await product_reaction_variable(ecoli, 'bigg:akg')).id == 'EX_akg_e'
+    assert (await product_reaction_variable(ecoli, 'bigg:e4p')) is None
 
 
-def test_phase_plane_to_dict():
+@pytest.mark.asyncio
+async def test_phase_plane_to_dict():
     ecoli = find_in_memory('iJO1366')
-    result = phase_plane_to_dict(ecoli, 'bigg:glu__L')
+    result = await phase_plane_to_dict(ecoli, 'bigg:glu__L')
     assert set(result.keys()) == {'EX_glu__L_e', 'objective_lower_bound', 'objective_upper_bound'}
     assert len(set([len(v) for v in result.values()])) == 1
-    assert phase_plane_to_dict(ecoli, 'bigg:g3p') == {}
+    assert (await phase_plane_to_dict(ecoli, 'bigg:g3p')) == {}
 
 
 def test_new_features_identifiers():
@@ -99,9 +102,10 @@ def test_new_features_identifiers():
     assert set(result) == {'C', 'D', 'E', 'F', 'G', 'Y'}
 
 
-def test_respond():
+@pytest.mark.asyncio
+async def test_respond():
     message = {'to-return': ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions'], 'objectives': ['bigg:akg']}
-    assert set(respond(message, find_in_memory('iJO1366')).keys()) == set(message['to-return'])
+    assert set((await respond(message, find_in_memory('iJO1366'))).keys()) == set(message['to-return'])
 
 
 @pytest.mark.asyncio
@@ -125,10 +129,11 @@ async def test_reactions_knockouts():
     assert almost_equal(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
 
 
-def test_convert_measurements_to_mmol():
+@pytest.mark.asyncio
+async def test_convert_measurements_to_mmol():
     ecoli = find_in_memory('iJO1366').copy()
     measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg', 'type': 'compound'}]
-    assert convert_measurements_to_mmol(measurements, ecoli) == [
+    assert (await convert_measurements_to_mmol(measurements, ecoli)) == [
         {'id': 'chebi:17790', 'measurements': [1.0], 'unit': 'mmol', 'type': 'compound'}]
 
 
