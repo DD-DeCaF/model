@@ -23,11 +23,13 @@ async def query_identifiers(object_ids, db_from, db_to):
     :param db_from: the source of the identifier, e.g. 'kegg'
     :param db_to: the destination type of the identifier, e.g. 'bigg'
     """
+    if len(object_ids) == 0:
+        return {}
     query = json.dumps({'ids': object_ids, 'dbFrom': db_from, 'dbTo': db_to, 'type': 'Metabolite'})
     logger.info('query id mapper at {} with {}'.format(ID_MAPPER_API, str(query)))
     async with aiohttp.ClientSession() as session:
         async with session.post(ID_MAPPER_API, data=query) as r:
-            assert r.status == 200
+            assert r.status == 200, f'response status {r.status} from identifier service'
             result = await r.json()
             return result['ids']
 
