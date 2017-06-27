@@ -544,6 +544,11 @@ class MeasurementChangeModel(ModelModificationMixin):
                 except IndexError:
                     logger.info('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
                     reaction = possible_reactions[0]
+                # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
+                # have <-- x, then multiply with -1
+                direction = reaction.metabolites[model_metabolite]
+                if direction > 0:
+                    lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
             elif scalar['type'] == 'reaction':
                 reaction = self.model.reactions.get_by_id(scalar['id'])
             else:
