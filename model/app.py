@@ -426,13 +426,13 @@ def apply_reactions_knockouts(model, reactions_ids):
 
 
 def increase_model_bounds(model):
-    C = 1000
-    M = 99999999
+    current = 1000
+    new_max = 99999999
     for reaction in model.reactions:
-        if reaction.upper_bound == C:
-            reaction.upper_bound = M
-        if reaction.lower_bound == -C:
-            reaction.lower_bound = -M
+        if reaction.upper_bound == current:
+            reaction.upper_bound = new_max
+        if reaction.lower_bound == -current:
+            reaction.lower_bound = -new_max
 
 
 def map_reactions_list(map_path):
