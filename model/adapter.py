@@ -266,8 +266,8 @@ async def map_equation_to_model(equation, model_namespace, compartment=None):
         mapping = await query_identifiers(to_map, 'kegg', model_namespace)
     logger.info('response ids: {}'.format(mapping))
     result = []
-    for i, el in enumerate(array):
-        if not re.match(re_id, el):
+    for el in array:
+        if el.isdigit() or not re.match(re_id, el):
             result.append(el)
         else:
             try:
