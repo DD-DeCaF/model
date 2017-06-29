@@ -442,7 +442,7 @@ def map_reactions_list(map_path):
     :return: list of strings
     """
     if not os.path.isfile(map_path):
-        return None
+        return []
     with open(map_path) as f:
         return [i['bigg_id'] for i in json.load(f)[1]['reactions'].values()]
 
