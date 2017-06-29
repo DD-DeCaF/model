@@ -300,6 +300,8 @@ def full_genotype(genotype_changes):
 
 def insert(feature, dict1, dict2):
     """Helper function for managing two feature storages"""
+    if not feature.name:
+        return
     if feature.name in dict2:
         dict2.pop(feature.name)
     else:
