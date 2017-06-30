@@ -307,8 +307,9 @@ async def apply_genotype_changes(model, genotype_changes):
     genotype_features = full_genotype(genotype_changes)
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
     logger.info('Genes to reaction: {}'.format(genes_to_reactions))
-    change_model = GenotypeChangeModel(model, genotype_changes, genes_to_reactions, model.notes['namespace'])
-    await change_model.apply_changes(genotype_features)
+    change_model = GenotypeChangeModel(model, genotype_features, genes_to_reactions, model.notes['namespace'])
+    await change_model.map_metabolites()
+    change_model.apply_changes()
     return change_model
 
 
