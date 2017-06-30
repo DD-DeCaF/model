@@ -4,6 +4,7 @@ import aiohttp
 import gnomic
 import numpy as np
 import json
+from itertools import chain
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 from cameo.data import metanetx
@@ -39,6 +40,7 @@ def get_only_element(x):
         raise IndexError('expected single element list')
     return x[0]
 
+
 async def get_existing_metabolite(mnx_id, model, compartment):
     """Find compartment in the model by Metanetx id.
 
@@ -56,24 +58,26 @@ async def get_existing_metabolite(mnx_id, model, compartment):
     Metabolite or None
 
     """
-    if not mnx_id:
-        return
-    response = await query_identifiers([mnx_id], 'mnx', model.notes['namespace'])
-    # TODO: so messy, adjust when fixing #30
-    try:
-        logger.info('trying any of {} in {}'.format(', '.join(response[mnx_id]), compartment))
-        model_metabolite = get_only_element(model.metabolites.query(
-            lambda met: re.sub('_[cepm]$', '', met.id) in response[mnx_id] and met.compartment == compartment[1:]
-        ))
-    except (KeyError, IndexError):
-        try:
-            # added metabolites get the mnx id so search for those
-            model_metabolite = model.metabolites.get_by_id(mnx_id + compartment)
-        except KeyError:
-            model_metabolite = None
-            logger.info(f'failed to resolve {mnx_id} in {compartment} for {model.id}')
+    model_metabolite = None
+    if mnx_id is None:
+        return None
+    if model.metabolites.has_id(mnx_id + compartment):
+        model_metabolite = model.metabolites.get_by_id(mnx_id + compartment)
+        logger.info(f'found {mnx_id} in {model_metabolite.id}')
     else:
-        logger.info(f'mapped {mnx_id} to {model_metabolite.id}')
+        response = await query_identifiers([mnx_id], 'mnx', model.notes['namespace'])
+        re_comp = re.compile('_[cepm]$')
+        try:
+            mapped_id = response[mnx_id]
+            logger.info('trying any of {} in {}'.format(', '.join(mapped_id), compartment))
+            # TODO: so messy, adjust when fixing #30
+            model_metabolite = get_only_element(model.metabolites.query(
+                lambda met: re.sub(re_comp, '', met.id) in mapped_id and met.compartment == compartment[1:]
+            ))
+        except (KeyError, IndexError):
+            logger.info(f'failed to resolve {mnx_id} in {compartment} for {model.id}')
+        else:
+            logger.info(f'mapped {mnx_id} to {model_metabolite.id}')
     return model_metabolite
 
 
@@ -258,44 +262,28 @@ class ModelModificationMixin(object):
         return await get_existing_metabolite(mnx_id, self.model, compartment)
 
 
-async def map_equation_to_model(equation, model_namespace, compartment=None):
-    """Try to map given equation which contains KEGG ids to an equation with ids
-    in the model's namespace.
-
-    If metabolite does not exist in the BIGG database, use Metanetx id, if that fails, use the identifiers used in
-    the equation.
+def map_equation_to_model(equation, metabolite_mapping, compartment=''):
+    """Map given equation with some metabolite identifiers to those used in the model's namespace.
 
     If compartment is given, metabolites ids will have it as postfix.
 
     Example:
-    Input: C00002 + C00033 <=> C00013 + C05993, compartment='_c'
+    Input: C00002 + C00033 <=> C00013 + C05993, compartment='_c', {'C00002': 'atp_c', 'C00033': 'ac_c', ...}
     Output: atp_c + ac_c <=> ppi_c + MNXM4377_c
 
     :param equation: string
     :param compartment: f.e. "_c"
-    :param model_namespace: The namespace the model uses for its metabolites
+    :param metabolite_mapping: A dict that maps metabolite identifiers to those used in the model
     :return:
     """
     array = equation.split()
     re_id = re.compile("^[A-Za-z0-9_-]+$")
-    re_kegg_id = re.compile("^C[0-9]{5}$")
-    to_map = [el for el in array if re.match(re_kegg_id, el)]
-
-    logger.info('query ids for reaction mapping: {}'.format(to_map))
-    kegg_to_model = await query_identifiers(to_map, 'kegg', model_namespace)
-    unmapped = [i for i in to_map if i not in kegg_to_model]
-    kegg_to_mnx = await query_identifiers(unmapped, 'kegg', 'mnx')
-    logger.info('response ids model: {}'.format(kegg_to_model))
-    logger.info('response ids mnx: {}'.format(kegg_to_mnx))
     result = []
     for el in array:
         if el.isdigit() or not re.match(re_id, el):
             result.append(el)
         else:
-            el = kegg_to_model.get(el, kegg_to_mnx.get(el, [el]))[0]
-            if compartment:
-                el += compartment
-            result.append(el)
+            result.append(metabolite_mapping.get(el, [el])[0] + compartment)
     return ' '.join(result)
 
 
@@ -360,26 +348,39 @@ class GenotypeChangeModel(ModelModificationMixin):
         :param model: cameo model
         :param genotype_changes: gnomic.Genotype object
         :param genes_to_reactions: dictionary like {<gene name>: {<reaction id>: <reactions equation>, ...}, ...}
+        :param namespace: the namespace for the model's identifiers
         """
         self.compartment = '_c'
         self.model = model
-        self.namespace = namespace
         self.genes_to_reactions = genes_to_reactions
+        self.genotype_changes = genotype_changes
+        self.namespace = namespace
+        self.metabolite_mapping = {}
         self.changes = {
             'added': {'reactions': set(), 'metabolites': set()},  # reaction contain information about genes
             'removed': {'genes': set(), 'reactions': set()},
         }
 
-    async def apply_changes(self, genotype_changes):
+    async def map_metabolites(self):
+        kegg_re_id = re.compile(r'\bC[0-9]{5}\b')
+        met_ids = list(set(chain.from_iterable(re.findall(kegg_re_id, eq)
+                                               for _, gene_set in self.genes_to_reactions.items()
+                                               for _, eq in gene_set.items())))
+        logger.info(met_ids)
+        self.metabolite_mapping = await query_identifiers(met_ids, 'kegg', self.namespace)
+        unmapped = [mid for mid in met_ids if mid not in self.metabolite_mapping]
+        self.metabolite_mapping.update(await query_identifiers(unmapped, 'kegg', 'mnx'))
+        logger.info('Using metabolite mapping: {}'.format(self.metabolite_mapping))
+
+    def apply_changes(self):
         """Apply genotype changes on initial model
 
-        :param genotype_changes: gnomic.Genotype
         :return:
         """
         to_remove = {}
         to_add = {}
 
-        for change in genotype_changes.changes():
+        for change in self.genotype_changes.changes():
             if isinstance(change, gnomic.Mutation):
                 old = change.old.features() if change.old else []
                 for feature in old:
@@ -396,7 +397,7 @@ class GenotypeChangeModel(ModelModificationMixin):
         for k, v in to_remove.items():
             self.knockout_gene(v)
         for k, v in to_add.items():
-            await self.add_gene(v)
+            self.add_gene(v)
 
     def knockout_gene(self, feature):
         """Perform gene knockout.
@@ -416,7 +417,7 @@ class GenotypeChangeModel(ModelModificationMixin):
         else:
             logger.info('Gene for knockout is not found: {}'.format(feature.name))
 
-    async def add_gene(self, feature):
+    def add_gene(self, feature):
         """Perform gene insertion.
         Find all the reactions associated with this gene using KEGGClient and add them to the model
 
@@ -429,10 +430,10 @@ class GenotypeChangeModel(ModelModificationMixin):
             logger.info('Gene {} exists in the model'.format(feature.name))
             return
         for reaction_id, equation in self.genes_to_reactions.get(identifier, {}).items():
-            await self.add_reaction(reaction_id, equation, identifier)
+            self.add_reaction(reaction_id, equation, identifier)
         logger.info('Gene added: {}'.format(identifier))
 
-    async def add_reaction(self, reaction_id, equation, gene_name):
+    def add_reaction(self, reaction_id, equation, gene_name):
         """Add new reaction by rn ID from equation, where metabolites defined by kegg ids.
 
         :param reaction_id: reaction rn ID
@@ -444,7 +445,7 @@ class GenotypeChangeModel(ModelModificationMixin):
             return
         reaction = Reaction(reaction_id)
         self.model.add_reactions([reaction])
-        equation = await map_equation_to_model(equation, self.namespace, self.compartment)
+        equation = map_equation_to_model(equation, self.metabolite_mapping, self.compartment)
         logger.info('New reaction: {}'.format(equation))
         # TODO: adjust when build_reaction_from_string returns the new metabolites >>
         metabolites_before = {m.id for m in self.model.metabolites}
