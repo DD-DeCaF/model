@@ -3,7 +3,7 @@ aiozmq
 aiohttp_cors
 msgpack-python
 cobra==0.6.2
-https://github.com/biosustain/cameo/archive/fix/phenopp.zip
+https://github.com/biosustain/cameo/archive/decaf2.zip
 swiglpk==1.4.3
 gnomic
 requests
