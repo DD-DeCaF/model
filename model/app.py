@@ -491,7 +491,11 @@ class Response(object):
     def solve_fva(self):
         fva_reactions = None
         if MAP in self.message:
-            reaction_ids = all_maps_reactions_list(self.model.id)
+            reaction_ids = map_reactions_list('{0}/{1}/{1}.{2}.json'.format(
+                MAPS_DIR,
+                self.model.id,
+                self.message[MAP]
+            ))
             if reaction_ids:
                 reactions = [i for i in reaction_ids
                              if self.model.reactions.has_id(i)]
