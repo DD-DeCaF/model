@@ -16,8 +16,8 @@ from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import phenotypic_phase_plane
 from cameo import models, load_model as cameo_load_model
-from cameo.flux_analysis import flux_variability_analysis, room, lmoma, moma
-from cobra.flux_analysis import pfba
+from cameo.flux_analysis import room, lmoma, moma
+from cobra.flux_analysis import pfba, flux_variability_analysis
 from cobra.exceptions import OptimizationError
 from cameo.util import ProblemCache
 from cobra.io import read_sbml_model
@@ -64,8 +64,8 @@ def pfba_fva(model, reactions=None):
     return flux_variability_analysis(
         model,
         fraction_of_optimum=1,
-        pfba_factor=1,
-        reactions=reactions
+        pfba_factor=1.05,
+        reactions_list=reactions
     )
 
 
@@ -547,7 +547,7 @@ class Response(object):
                 self.flux = {}
                 self.growth = 0.0
             else:
-                df = solution.data_frame
+                df = solution.rename(index=str, columns={'maximum': 'upper_bound', 'minimum': 'lower_bound'})
                 for key in ['lower_bound', 'upper_bound']:
                     df[key] = df[key].astype('float')
                 self.flux = df.T.to_dict()
