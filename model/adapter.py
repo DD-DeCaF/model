@@ -364,15 +364,15 @@ class GenotypeChangeModel(ModelModificationMixin):
             'removed': {'genes': set(), 'reactions': set()},
         }
 
-    async def map_metabolites(self):
-        kegg_re_id = re.compile(r'\bC[0-9]{5}\b')
-        met_ids = list(set(chain.from_iterable(re.findall(kegg_re_id, eq)
+    async def map_metabolites(self, from_namespace='kegg', template=r'\bC[0-9]{5}\b'):
+        re_id = re.compile(template)
+        met_ids = list(set(chain.from_iterable(re.findall(re_id, eq)
                                                for _, gene_set in self.genes_to_reactions.items()
                                                for _, eq in gene_set.items())))
         logger.info(met_ids)
-        self.metabolite_mapping = await query_identifiers(met_ids, 'kegg', self.namespace)
+        self.metabolite_mapping = await query_identifiers(met_ids, from_namespace, self.namespace)
         unmapped = [mid for mid in met_ids if mid not in self.metabolite_mapping]
-        self.metabolite_mapping.update(await query_identifiers(unmapped, 'kegg', 'mnx'))
+        self.metabolite_mapping.update(await query_identifiers(unmapped, from_namespace, 'mnx'))
         logger.info('Using metabolite mapping: {}'.format(self.metabolite_mapping))
 
     def apply_changes(self):
@@ -459,7 +459,8 @@ class GenotypeChangeModel(ModelModificationMixin):
             new_metabolite = self.model.metabolites.get_by_id(added_metabolite)
             new_metabolite.added_by_model_adjustment = True
             self.create_exchange(new_metabolite)
-        reaction.gene_reaction_rule = gene_name
+        if gene_name:
+            reaction.gene_reaction_rule = gene_name
         self.changes['added']['reactions'].add(reaction)
 
 
@@ -536,6 +537,7 @@ class MeasurementChangeModel(ModelModificationMixin):
                 lower_bound = float(np.min(scalar_data))
             else:
                 continue
+            reaction = None
             if scalar['type'] == 'compound':
                 model_metabolite = await self.model_metabolite(scalar['id'], '_e')
                 if not model_metabolite:
@@ -557,5 +559,6 @@ class MeasurementChangeModel(ModelModificationMixin):
                 reaction = self.model.reactions.get_by_id(scalar['id'])
             else:
                 logger.info('scalar for measured type {} not supported'.format(scalar['type']))
-            self.changes['measured']['reactions'].add(reaction)
-            reaction.bounds = lower_bound, upper_bound
+            if reaction:
+                self.changes['measured']['reactions'].add(reaction)
+                reaction.bounds = lower_bound, upper_bound

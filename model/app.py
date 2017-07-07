@@ -15,7 +15,7 @@ from functools import lru_cache
 from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import phenotypic_phase_plane
-from cameo import load_model as cameo_load_model
+from cameo import models, load_model as cameo_load_model
 from cameo.flux_analysis import flux_variability_analysis, room, lmoma, moma
 from cobra.flux_analysis import pfba
 from cobra.exceptions import OptimizationError
@@ -24,7 +24,7 @@ from cobra.io import read_sbml_model
 from cobra.io.dict import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
 from model.adapter import (get_existing_metabolite, GenotypeChangeModel, MediumChangeModel,
-                           MeasurementChangeModel, full_genotype, feature_id)
+                           MeasurementChangeModel, full_genotype, feature_id, query_identifiers)
 from model import logger
 from model.settings import ANNOTATIONS_API
 
@@ -84,7 +84,8 @@ MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 SIMULATION_METHOD = 'simulation-method'
 MAP = 'map'
-REACTIONS = 'reactions-knockout'
+REACTIONS_KNOCKOUT = 'reactions-knockout'
+REACTIONS_ADD = 'reactions-add'
 MODEL = 'model'
 FLUXES = 'fluxes'
 GROWTH_RATE = 'growth-rate'
@@ -92,6 +93,7 @@ TMY = 'tmy'
 OBJECTIVES = 'objectives'
 REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
+ADDED_REACTIONS = 'added-reactions'
 
 EMPTY_CHANGES = {
     'added': {
@@ -404,26 +406,96 @@ async def apply_medium_changes(model, medium):
 ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
 
 
-def apply_reactions_knockouts(model, reactions_ids):
+async def operate_on_reactions(model, reactions_ids, key, apply_function, undo_function):
     if 'changes' not in model.notes:
         model.notes['changes'] = deepcopy(EMPTY_CHANGES)
-    current_removed = model.notes['changes']['removed']['reactions']
-    applied = set([r['id'] for r in current_removed])
+    current = model.notes['changes'][key]['reactions']
+    applied = set([r['id'] for r in current])
     to_apply = set(reactions_ids) - applied
-    to_undo = [r for r in current_removed
+    to_undo = [r for r in current
                if r['id'] in (applied - set(reactions_ids))]
+    new_reactions = await apply_function(model, to_apply)
+    removed = undo_function(model, to_undo)
+    model.notes['changes'][key]['reactions'] = [r for r in current if r['id'] in applied - removed]
+    model.notes['changes'][key]['reactions'].extend(new_reactions)
+    return model
+
+
+async def apply_reactions_knockouts(model, reactions_ids):
+    return await operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, knockout_undo)
+
+
+def knockout_undo(model, to_undo):
+    for reaction in to_undo:
+        if model.reactions.has_id(reaction['id']):
+            model.reactions.get_by_id(reaction['id']).bounds = \
+                reaction['lower_bound'], reaction['upper_bound']
+    return {reaction['id'] for reaction in to_undo}
+
+
+async def knockout_apply(model, to_apply):
     removed = []
     for r_id in to_apply:
         if model.reactions.has_id(r_id):
             removed.append(reaction_to_dict(model.reactions.get_by_id(r_id)))
             model.reactions.get_by_id(r_id).knock_out()
-    for reaction in to_undo:
-        if model.reactions.has_id(reaction['id']):
-            model.reactions.get_by_id(reaction['id']).bounds = reaction['lower_bound'], reaction['upper_bound']
-    model.notes['changes']['removed']['reactions'] = [r for r in current_removed
-                                                      if r['id'] not in (applied - set(reactions_ids))]
-    model.notes['changes']['removed']['reactions'].extend(removed)
-    return model
+    return removed
+
+
+async def add_reaction_from_universal(model, reaction_id):
+    reaction = models.metanetx_universal_model_bigg.reactions.get_by_id(reaction_id)
+    reaction_string = reaction.build_reaction_string()
+    adapter = GenotypeChangeModel(
+        model,
+        [],
+        {None: {reaction_id: reaction_string}},
+        model.notes['namespace']
+    )
+    await adapter.map_metabolites(from_namespace='mnx', template=r'MNXM[\d]+')
+    adapter.add_reaction(reaction_id, reaction_string, None)
+    return collect_changes(adapter)
+
+
+async def apply_reactions_add(model, reactions_ids):
+    return await operate_on_reactions(model, reactions_ids, 'added', add_apply, add_undo)
+
+
+def is_dummy(reaction_id):
+    return reaction_id.startswith('DM') or reaction_id.startswith('adapter')
+
+
+def add_undo(model, to_undo):
+    all_metabolites_count = count_metabolites(model.notes['changes']['added']['reactions'])
+    undo_metabolites_count = count_metabolites(to_undo)
+    exchanges_to_keep = set()
+    for k in all_metabolites_count:
+        if all_metabolites_count[k] - undo_metabolites_count.get(k, 0) >= 1:
+            if k.endswith('_c'):
+                exchanges_to_keep.add('DM_' + k[:-2] + '_e')
+                exchanges_to_keep.add('adapter_' + k + '_' + k[:-2] + '_e')
+    final_undo = set([i['id'] for i in to_undo]) - exchanges_to_keep
+    model.remove_reactions([model.reactions.get_by_id(i) for i in final_undo], remove_orphans=True)
+    metabolites_after = {m.id for m in model.metabolites}
+    model.notes['changes']['added']['metabolites'] = [m for m in model.notes['changes']['added']['metabolites'] if m['id'] in metabolites_after]
+    return final_undo
+
+
+def count_metabolites(reactions):
+    metabolites_count = {}
+    for reaction in reactions:
+        if not is_dummy(reaction['id']):
+            for metabolite in reaction['metabolites']:
+                metabolites_count[metabolite] = metabolites_count.get(metabolite, 0) + 1
+    return metabolites_count
+
+
+async def add_apply(model, to_apply):
+    added = []
+    for r_id in to_apply:
+        model = await add_reaction_from_universal(model, r_id)
+        for reaction in model.notes['changes']['added']['reactions']:
+            added.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
+    return added
 
 
 def increase_model_bounds(model):
@@ -546,6 +618,12 @@ class Response(object):
             [i['id'] for i in self.model.notes.get('changes', deepcopy(EMPTY_CHANGES))['removed']['reactions']]
         ))
 
+    def added_reactions(self):
+        return list(set(
+            [i['id'] for i in self.model.notes.get('changes', deepcopy(EMPTY_CHANGES))['added']['reactions']
+             if not is_dummy(i['id'])]
+        ))
+
 
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
 
@@ -561,6 +639,7 @@ RETURN_FUNCTIONS = {
     MODEL: 'model_json',
     GROWTH_RATE: 'growth_rate',
     REMOVED_REACTIONS: 'removed_reactions',
+    ADDED_REACTIONS: 'added_reactions',
 }
 
 
@@ -570,8 +649,10 @@ async def modify_model(message, model):
         if data:
             modifications = await APPLY_FUNCTIONS[key](model, data)
             model = collect_changes(modifications)
-    if REACTIONS in message:
-        model = apply_reactions_knockouts(model, message[REACTIONS])
+    if REACTIONS_ADD in message:
+        model = await apply_reactions_add(model, message[REACTIONS_ADD])
+    if REACTIONS_KNOCKOUT in message:
+        model = await apply_reactions_knockouts(model, message[REACTIONS_KNOCKOUT])
     return model
 
 

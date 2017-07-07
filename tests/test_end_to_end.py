@@ -13,7 +13,10 @@ MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
 MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
-    'to-return': ['tmy', 'fluxes', 'model'],
+    "reactions-add": [
+        "MNXR81835", "MNXR83321"
+    ],
+    'to-return': ['tmy', 'fluxes', 'model', 'added-reactions', 'removed-reactions'],
     'objectives': ['chebi:17790'],
     'genotype-changes': ['+Aac', '-pta'],
     'measurements': MEASUREMENTS,
