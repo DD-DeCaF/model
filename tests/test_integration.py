@@ -22,7 +22,7 @@ async def test_modify_model():
         'medium': [{'id': 'chebi:44080', 'concentration': 0.01}],
         'measurements': [{'id': 'chebi:44080', 'measurements': [-15, -11, -14, -12], 'unit': 'mg', 'name': 'glucose',
                           'type': 'compound'},
-                         {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction'}],
+                         {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'BiGG'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
     assert await modify_model(message, (await restore_model('iJO1366')).copy())
@@ -62,7 +62,7 @@ async def test_restore_from_cache():
                           'name': 'aldehydo-D-glucose', 'type': 'compound'},
                          {'unit': 'mmol', 'id': 'chebi:17579', 'measurements': [0.006, 0.008, 0.0065, 0.0007],
                           'name': 'beta-carotene', 'type': 'compound'},
-                         {'id': 'PFK', 'measurements': [5], 'type': 'reaction'}]
+                         {'id': 'PFK', 'measurements': [5], 'type': 'reaction', 'db_name': 'BiGG'}]
     }
     model = await modify_model(message, (await restore_model(wild_type_id)).copy())
     db_key = await save_changes_to_db(model, wild_type_id, message)

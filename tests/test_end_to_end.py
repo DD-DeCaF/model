@@ -6,10 +6,10 @@ MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:4275
                  'type': 'compound'},
                 {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurements': [5.0, 4.8, 5.2, 4.9],
                  'type': 'compound'},
-                {'id': 'PFK', 'measurements': [5, 5], 'type': 'reaction'}]
+                {'id': 'PFK', 'measurements': [5, 5], 'type': 'reaction', 'db_name': 'BiGG'}]
 MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': MEASUREMENTS}
 MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
-    {'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction'}]}
+    {'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'BiGG'}]}
 MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
