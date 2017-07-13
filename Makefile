@@ -13,7 +13,7 @@ PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 ## Install and start the model service.
 start:
-	docker network inspect iloop-net || docker network create iloop-net
+	docker network inspect iloop || docker network create iloop
 	docker-compose up -d --build
 
 
