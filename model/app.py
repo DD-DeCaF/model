@@ -348,7 +348,7 @@ async def query_genes_to_reaction(gene):
     """Make asynchronous call for getting information about which reactions were added with the gene
 
     :param gene: gene identifier
-    :return: reactions mapping {<rn ID>: <reaction string>} 
+    :return: reactions mapping {<rn ID>: <reaction string>}
     """
     logger.info('Annotated gene at {}: {}'.format(ANNOTATIONS_API, gene))
     async with aiohttp.ClientSession() as session:
@@ -811,6 +811,7 @@ async def model_options_handler(request):
 
 
 async def map_handler(request):
+    # FIXME: A malicious user can access any JSON file in the system this way.
     filepath = '{}/{}/{}.{}.json'.format(
         MAPS_DIR, request.GET['model'], request.GET['model'], request.GET['map']
     )
