@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - 8000:8000
+      - "${MODEL_PORT:-8000}:8000"
     links:
       - redis
     environment:
