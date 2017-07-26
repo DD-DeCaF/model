@@ -1,4 +1,4 @@
-.PHONY: start stop clean test
+.PHONY: start stop clean test logs
 
 #################################################################################
 # GLOBALS                                                                       #
