@@ -520,6 +520,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         self.model = model
         self.changes = {
             'measured': {'reactions': set()},
+            'measured-missing': {'reactions': set()}
         }
         self.missing_in_model = []
 
@@ -558,7 +559,10 @@ class MeasurementChangeModel(ModelModificationMixin):
             elif scalar['type'] == 'reaction':
                 if scalar['db_name'] != 'BiGG':
                     raise NotImplementedError('only supporting bigg reaction identifiers not %s' % scalar['db_name'])
-                reaction = self.model.reactions.get_by_id(scalar['id'])
+                try:
+                    reaction = self.model.reactions.get_by_id(scalar['id'])
+                except KeyError:
+                    self.changes['measured-missing']['reactions'].add(Reaction(scalar['id']))
             else:
                 logger.info('scalar for measured type {} not supported'.format(scalar['type']))
             if reaction:

@@ -94,6 +94,7 @@ OBJECTIVES = 'objectives'
 REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
+MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
 
 EMPTY_CHANGES = {
     'added': {
@@ -105,6 +106,10 @@ EMPTY_CHANGES = {
         'reactions': [],
     },
     'measured': {
+        'genes': [],
+        'reactions': []
+    },
+    'measured-missing': {
         'genes': [],
         'reactions': []
     }
@@ -613,6 +618,11 @@ class Response(object):
     def growth_rate(self):
         return self.growth
 
+    def measured_missing_reactions(self):
+        return list(set(
+            [i['id'] for i in self.model.notes.get('changes', deepcopy(EMPTY_CHANGES))['measured-missing']['reactions']]
+        ))
+
     def removed_reactions(self):
         return list(set(
             [i['id'] for i in self.model.notes.get('changes', deepcopy(EMPTY_CHANGES))['removed']['reactions']]
@@ -640,6 +650,7 @@ RETURN_FUNCTIONS = {
     GROWTH_RATE: 'growth_rate',
     REMOVED_REACTIONS: 'removed_reactions',
     ADDED_REACTIONS: 'added_reactions',
+    MISSING_MEASURED_REACTIONS: 'measured_missing_reactions',
 }
 
 
