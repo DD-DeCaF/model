@@ -21,9 +21,9 @@ async def test_reactions_additions():
     ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
     reaction_ids = {'MNXR69355', 'MNXR81835', 'MNXR83321'}
     added_reactions = {'DM_12dgr182_9_12_e', 'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
-            'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
-            'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e',
-            'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
+                       'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
+                       'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e',
+                       'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
     ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
     assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == added_reactions
     for reaction in ecoli.notes['changes']['added']['reactions']:
@@ -36,8 +36,8 @@ async def test_reactions_additions():
     for reaction in ecoli.notes['changes']['added']['reactions']:
         assert ecoli.reactions.has_id(reaction['id'])
     removed_reactions = {'DM_12dgr182_9_12_e',
-            'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
-            'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
+                         'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
+                         'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
     for reaction in removed_reactions:
         assert not ecoli.reactions.has_id(reaction)
     reaction_ids = {'MNXR69355', 'MNXR81835', 'MNXR83321'}
