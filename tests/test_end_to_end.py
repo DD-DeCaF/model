@@ -15,7 +15,8 @@ MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:1779
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
     "reactions-add": [
-        "MNXR81835", "MNXR83321"
+        {'id': 'MNXR69355', 'string': None},
+        {'id': 'MNXR83321', 'string': None},
     ],
     'to-return': ['tmy', 'fluxes', 'model', 'added-reactions', 'removed-reactions'],
     'objectives': ['chebi:17790'],

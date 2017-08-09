@@ -411,14 +411,18 @@ async def apply_medium_changes(model, medium):
 ReactionKnockouts = namedtuple('ReactionKnockouts', ['model', 'changes'])
 
 
-async def operate_on_reactions(model, reactions_ids, key, apply_function, undo_function):
+async def operate_on_reactions(model, reactions, key, apply_function, undo_function):
     if 'changes' not in model.notes:
         model.notes['changes'] = deepcopy(EMPTY_CHANGES)
     current = model.notes['changes'][key]['reactions']
     applied = set([r['id'] for r in current])
-    to_apply = set(reactions_ids) - applied
-    to_undo = [r for r in current
-               if r['id'] in (applied - set(reactions_ids))]
+    if key == 'removed':
+        to_apply = set(reactions) - applied
+        to_undo = [r for r in current
+                   if r['id'] in (applied - set(reactions))]
+    else:
+        to_apply = [r for r in reactions if r['id'] not in applied]
+        to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
     new_reactions = await apply_function(model, to_apply)
     removed = undo_function(model, to_undo)
     model.notes['changes'][key]['reactions'] = [r for r in current if r['id'] in applied - removed]
@@ -461,6 +465,17 @@ async def add_reaction_from_universal(model, reaction_id):
     return collect_changes(adapter)
 
 
+def add_reaction_from_string(model, reaction_id, reaction_string):
+    adapter = GenotypeChangeModel(
+        model,
+        [],
+        {None: {reaction_id: reaction_string}},
+        model.notes['namespace']
+    )
+    adapter.add_reaction(reaction_id, reaction_string, None)
+    return collect_changes(adapter)
+
+
 async def apply_reactions_add(model, reactions_ids):
     return await operate_on_reactions(model, reactions_ids, 'added', add_apply, add_undo)
 
@@ -496,8 +511,11 @@ def count_metabolites(reactions):
 
 async def add_apply(model, to_apply):
     added = []
-    for r_id in to_apply:
-        model = await add_reaction_from_universal(model, r_id)
+    for rn in to_apply:
+        if rn['string']:
+            model = add_reaction_from_string(model, rn['id'], rn['string'])
+        else:
+            model = await add_reaction_from_universal(model, rn['id'])
         for reaction in model.notes['changes']['added']['reactions']:
             added.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
     return added
