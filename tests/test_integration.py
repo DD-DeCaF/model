@@ -19,17 +19,26 @@ async def test_reactions_additions():
     ecoli_original = find_in_memory('iJO1366').copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
-    reaction_ids = {'MNXR69355', 'MNXR81835', 'MNXR83321'}
+    reactions = [
+        {'id': 'MNXR69355', 'string': None},
+        {'id': 'MNXR81835', 'string': None},
+        {'id': 'MNXR83321', 'string': None},
+    ]
+    reaction_ids = set([i['id'] for i in reactions])
     added_reactions = {'DM_12dgr182_9_12_e', 'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
                        'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
                        'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e',
                        'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
-    ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
+    ecoli = await apply_reactions_add(ecoli, reactions)
     assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == added_reactions
     for reaction in ecoli.notes['changes']['added']['reactions']:
         assert ecoli.reactions.has_id(reaction['id'])
-    reaction_ids -= {'MNXR83321'}
-    ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
+    reactions = [
+        {'id': 'MNXR69355', 'string': None},
+        {'id': 'MNXR81835', 'string': None},
+    ]
+    reaction_ids = set([i['id'] for i in reactions])
+    ecoli = await apply_reactions_add(ecoli, reactions)
     assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == \
            {'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
             'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e'}
@@ -40,12 +49,18 @@ async def test_reactions_additions():
                          'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
     for reaction in removed_reactions:
         assert not ecoli.reactions.has_id(reaction)
-    reaction_ids = {'MNXR69355', 'MNXR81835', 'MNXR83321'}
-    ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
+    reactions = [
+        {'id': 'MNXR69355', 'string': None},
+        {'id': 'MNXR81835', 'string': None},
+        {'id': 'MNXR83321', 'string': None},
+    ]
+    reaction_ids = set([i['id'] for i in reactions])
+    ecoli = await apply_reactions_add(ecoli, reactions)
     assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == added_reactions
     reaction_ids = {}
     ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
+    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'string': None}, {'id': 'SUCR', 'string': 'h2o_c + sucr_c <=> fru_c + glc__D_c'}])
 
 
 @pytest.mark.asyncio
