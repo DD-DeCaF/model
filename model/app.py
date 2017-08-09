@@ -416,11 +416,11 @@ async def operate_on_reactions(model, reactions, key, apply_function, undo_funct
         model.notes['changes'] = deepcopy(EMPTY_CHANGES)
     current = model.notes['changes'][key]['reactions']
     applied = set([r['id'] for r in current])
-    try:
+    if key == 'removed':
         to_apply = set(reactions) - applied
         to_undo = [r for r in current
                    if r['id'] in (applied - set(reactions))]
-    except TypeError:
+    else:
         to_apply = [r for r in reactions if r['id'] not in applied]
         to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
     new_reactions = await apply_function(model, to_apply)
