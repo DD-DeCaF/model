@@ -436,7 +436,7 @@ class GenotypeChangeModel(ModelModificationMixin):
             self.add_reaction(reaction_id, equation, identifier)
         logger.info('Gene added: {}'.format(identifier))
 
-    def add_reaction(self, reaction_id, equation, gene_name):
+    def add_reaction(self, reaction_id, equation, gene_name, compartment=None):
         """Add new reaction by rn ID from equation, where metabolites defined by kegg ids.
 
         :param reaction_id: reaction rn ID
@@ -444,11 +444,13 @@ class GenotypeChangeModel(ModelModificationMixin):
         :param gene_name: gene name
         :return:
         """
+        if compartment is None:
+            compartment = self.compartment
         if self.model.reactions.has_id(reaction_id):
             return
         reaction = Reaction(reaction_id)
         self.model.add_reactions([reaction])
-        equation = map_equation_to_model(equation, self.metabolite_mapping, self.compartment)
+        equation = map_equation_to_model(equation, self.metabolite_mapping, compartment)
         logger.info('New reaction: {}'.format(equation))
         # TODO: adjust when build_reaction_from_string returns the new metabolites >>
         metabolites_before = {m.id for m in self.model.metabolites}

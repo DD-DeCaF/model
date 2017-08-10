@@ -60,7 +60,7 @@ async def test_reactions_additions():
     reaction_ids = {}
     ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
-    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'string': None}, {'id': 'SUCR', 'string': 'h2o_c + sucr_c <=> fru_c + glc__D_c'}])
+    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'string': None}, {'id': 'SUCR', 'string': ' h2o_c +  sucr_c  <=>  fru_c +  glc__D_c '}])
 
 
 @pytest.mark.asyncio

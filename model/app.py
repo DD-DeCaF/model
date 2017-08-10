@@ -466,13 +466,14 @@ async def add_reaction_from_universal(model, reaction_id):
 
 
 def add_reaction_from_string(model, reaction_id, reaction_string):
+    reaction_string = reaction_string.strip()
     adapter = GenotypeChangeModel(
         model,
         [],
         {None: {reaction_id: reaction_string}},
         model.notes['namespace']
     )
-    adapter.add_reaction(reaction_id, reaction_string, None)
+    adapter.add_reaction(reaction_id, reaction_string, None, '')
     return collect_changes(adapter)
 
 
