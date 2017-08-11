@@ -289,7 +289,6 @@ async def phase_plane_to_dict(model, metabolite_id):
     :param metabolite_id: string of format <database>:<id>, f.e. chebi:12345
     :return:
     """
-    model.solver = 'glpk'
     reaction = await product_reaction_variable(model, metabolite_id)
     if not reaction:
         return {}
@@ -299,7 +298,6 @@ async def phase_plane_to_dict(model, metabolite_id):
         if k not in {'c_yield_lower_bound', 'c_yield_upper_bound',
                      'mass_yield_lower_bound', 'mass_yield_upper_bound'}:
             result[k] = [float(v[point]) for point in sorted(v.keys())]
-    model.solver = 'cplex'
     return result
 
 
