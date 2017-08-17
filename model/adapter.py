@@ -1,6 +1,7 @@
 import re
 
 import aiohttp
+import asyncio
 import gnomic
 import numpy as np
 import json
@@ -487,19 +488,24 @@ class MediumChangeModel(ModelModificationMixin):
             'added': {'reactions': set()},
         }
 
-    async def apply_medium(self):
-        """For each metabolite in medium try to find corresponding metabolite in e compartment of the model.
+    async def apply_medium_compound(self, compound):
+        """Try to find corresponding metabolite in e compartment of the model.
         If metabolite is found, change the lower limit of the reaction to a negative number,
         so the model would be able to consume this compound.
         If metabolite is not found in e compartment, log and continue.
         """
-        for compound in self.medium:
-            existing_metabolite = await self.model_metabolite(compound['id'], '_e')
-            if not existing_metabolite:
-                logger.info('No metabolite {} in external compartment'.format(compound['id']))
-                continue
-            logger.info('Found metabolite {}'.format(compound['id']))
-            self.make_consumable(existing_metabolite)
+        existing_metabolite = await self.model_metabolite(compound['id'], '_e')
+        if not existing_metabolite:
+            logger.info('No metabolite {} in external compartment'.format(compound['id']))
+            return
+        logger.info('Found metabolite {}'.format(compound['id']))
+        self.make_consumable(existing_metabolite)
+
+    async def apply_medium(self):
+        """Change bounds for each metabolite in medium"""
+        await asyncio.gather(*[
+            self.apply_medium_compound(compound) for compound in self.medium
+        ])
 
 
 class MeasurementChangeModel(ModelModificationMixin):
@@ -526,47 +532,52 @@ class MeasurementChangeModel(ModelModificationMixin):
         }
         self.missing_in_model = []
 
-    async def apply_flux_bounds(self):
+    async def apply_flux_bounds_to_scalar(self, scalar):
         """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
         bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
         normal distribution range i.e., mean +- 1.96 * stdev. """
-        for scalar in self.measurements:
-            scalar_data = np.array([v for v in scalar['measurements'] if not np.isnan(v)])
-            if len(scalar_data) > 2:
-                upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))
-                lower_bound = float(np.mean(scalar_data) - 1.96 * np.std(scalar_data, ddof=1))
-            elif len(scalar_data) > 0:
-                upper_bound = float(np.max(scalar_data))
-                lower_bound = float(np.min(scalar_data))
-            else:
-                continue
-            reaction = None
-            if scalar['type'] == 'compound':
-                model_metabolite = await self.model_metabolite(scalar['id'], '_e')
-                if not model_metabolite:
-                    self.missing_in_model.append(scalar['id'])
-                    logger.info('Model is missing metabolite {}, cannot apply measurement'.format(scalar['id']))
-                    return
-                possible_reactions = list(set(model_metabolite.reactions).intersection(self.model.exchanges))
-                try:
-                    reaction = get_only_element(possible_reactions)
-                except IndexError:
-                    logger.info('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
-                    reaction = possible_reactions[0]
-                # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
-                # have <-- x, then multiply with -1
-                direction = reaction.metabolites[model_metabolite]
-                if direction > 0:
-                    lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
-            elif scalar['type'] == 'reaction':
-                if scalar['db_name'] != 'BiGG':
-                    raise NotImplementedError('only supporting bigg reaction identifiers not %s' % scalar['db_name'])
-                try:
-                    reaction = self.model.reactions.get_by_id(scalar['id'])
-                except KeyError:
-                    self.changes['measured-missing']['reactions'].add(Reaction(scalar['id']))
-            else:
-                logger.info('scalar for measured type {} not supported'.format(scalar['type']))
-            if reaction:
-                self.changes['measured']['reactions'].add(reaction)
-                reaction.bounds = lower_bound, upper_bound
+        scalar_data = np.array([v for v in scalar['measurements'] if not np.isnan(v)])
+        if len(scalar_data) > 2:
+            upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))
+            lower_bound = float(np.mean(scalar_data) - 1.96 * np.std(scalar_data, ddof=1))
+        elif len(scalar_data) > 0:
+            upper_bound = float(np.max(scalar_data))
+            lower_bound = float(np.min(scalar_data))
+        else:
+            return
+        reaction = None
+        if scalar['type'] == 'compound':
+            model_metabolite = await self.model_metabolite(scalar['id'], '_e')
+            if not model_metabolite:
+                self.missing_in_model.append(scalar['id'])
+                logger.info('Model is missing metabolite {}, cannot apply measurement'.format(scalar['id']))
+                return
+            possible_reactions = list(set(model_metabolite.reactions).intersection(self.model.exchanges))
+            try:
+                reaction = get_only_element(possible_reactions)
+            except IndexError:
+                logger.info('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
+                reaction = possible_reactions[0]
+            # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
+            # have <-- x, then multiply with -1
+            direction = reaction.metabolites[model_metabolite]
+            if direction > 0:
+                lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
+        elif scalar['type'] == 'reaction':
+            if scalar['db_name'] != 'BiGG':
+                raise NotImplementedError('only supporting bigg reaction identifiers not %s' % scalar['db_name'])
+            try:
+                reaction = self.model.reactions.get_by_id(scalar['id'])
+            except KeyError:
+                self.changes['measured-missing']['reactions'].add(Reaction(scalar['id']))
+        else:
+            logger.info('scalar for measured type {} not supported'.format(scalar['type']))
+        if reaction:
+            self.changes['measured']['reactions'].add(reaction)
+            reaction.bounds = lower_bound, upper_bound
+
+    async def apply_flux_bounds(self):
+        """Apply flux bounds for all the measurements"""
+        await asyncio.gather(*[
+            self.apply_flux_bounds_to_scalar(scalar) for scalar in self.measurements
+        ])
