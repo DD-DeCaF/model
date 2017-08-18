@@ -16,10 +16,10 @@ from aiohttp import web, WSMsgType
 from cameo.data import metanetx
 from cameo import phenotypic_phase_plane
 from cameo import models, load_model as cameo_load_model
-from cameo.flux_analysis import room, lmoma, moma
+from cameo import phenotypic_phase_plane, models
 from cobra.flux_analysis import pfba, flux_variability_analysis
+from cobra.flux_analysis.moma import add_moma
 from cobra.exceptions import OptimizationError
-from cameo.util import ProblemCache
 from cobra.io import read_sbml_model
 from cobra.io.dict import (model_to_dict, reaction_to_dict, reaction_from_dict, gene_to_dict,
                            metabolite_to_dict, metabolite_from_dict)
@@ -69,14 +69,24 @@ def pfba_fva(model, reactions=None):
     )
 
 
+def moma(model, reference, linear=False):
+    start_time = time.time()
+    with model:
+        add_moma(model, solution=reference, linear=linear)
+        logger.info('moma addition finished in {} s'.format(time.time() - start_time))
+        start_time = time.time()
+        solution = model.optimize()
+        logger.info('moma optimization finished in {} s'.format(time.time() - start_time))
+    return solution
+
+
 METHODS = {
     'fba': lambda model: model.optimize(),
     'pfba': pfba,
     'fva': flux_variability_analysis,
     'pfba-fva': pfba_fva,
-    'room': room,
     'moma': moma,
-    'lmoma': lmoma,
+    'lmoma': lambda model, reference: moma(model, reference, linear=True),
 }
 
 GENOTYPE_CHANGES = 'genotype-changes'
@@ -556,11 +566,10 @@ def all_maps_reactions_list(model_name):
 
 
 class Response(object):
-    def __init__(self, model, message, cache=None):
+    def __init__(self, model, message):
         self.model = model
         self.message = message
         self.method_name = message.get(SIMULATION_METHOD, 'fba')
-        self.cache = cache
         if self.method_name in {'fva', 'pfba-fva'}:
             try:
                 solution = self.solve_fva()
@@ -611,11 +620,8 @@ class Response(object):
 
     def solve(self):
         t = time.time()
-        if self.method_name in {'lmoma', 'room', 'moma'}:
-            pfba_solution = pfba(self.model).fluxes.to_dict()
-            if self.method_name == 'room':
-                increase_model_bounds(self.model)
-            solution = METHODS[self.method_name](self.model, cache=self.cache, reference=pfba_solution)
+        if self.method_name in {'lmoma', 'moma'}:
+            solution = METHODS[self.method_name](self.model, reference=pfba(self.model))
         else:
             solution = METHODS[self.method_name](self.model)
         logger.info('Model solved with method {} in {} sec'.format(self.method_name, time.time() - t))
@@ -762,10 +768,10 @@ def remove_reactions(model, changes):
     return model
 
 
-async def respond(message, model, db_key=None, cache=None):
+async def respond(message, model, db_key=None):
     result = {}
     t = time.time()
-    response = Response(model, message, cache=cache)
+    response = Response(model, message)
     for key in message['to-return']:
         if key == TMY:
             result[key] = await response.theoretical_maximum_yield()
@@ -788,7 +794,6 @@ async def model_ws_handler(request):
         raise KeyError('No such model: {}'.format(model_id))
     model = cached_model.copy()
     model.notes = deepcopy(model.notes)
-    cache = ProblemCache(model)
     await ws.prepare(request)
     try:
         async for msg in ws:
@@ -799,7 +804,7 @@ async def model_ws_handler(request):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(await respond(message, model, cache=cache))
+                    ws.send_json(await respond(message, model))
             elif msg.type == WSMsgType.ERROR:
                 logger.error('Websocket for model_id {} closed with exception {}'.format(model_id, ws.exception()))
     except asyncio.CancelledError:
@@ -825,8 +830,6 @@ async def model_handler(request):
         model.notes = deepcopy(model.notes)
         model = await modify_model(message, model)
         db_key = await save_changes_to_db(model, wild_type_id, message)
-    if message.get(SIMULATION_METHOD) == 'room':
-        model = model.copy()
     return web.json_response(await respond(message, model, db_key))
 
 
