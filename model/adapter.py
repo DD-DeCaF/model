@@ -45,20 +45,14 @@ def get_only_element(x):
 
 
 async def get_existing_metabolite(mnx_id, model, compartment):
-    """Find compartment in the model by Metanetx id.
+    :param model: cobra.Model
+    :param compound_id: string, compound identifier, e.g. CHEBI:12965
+    :param compartment: string, compartment identifier
+    :param db_name: string, the database name, e.g. 'CHEBI'
+    """
+    # TODO: change id-mapper to use miriam db_names
 
-    Parameters
-    ----------
-    mnx_id : string
-        Metanetx id
-    model
-        cobra model
-    compartment : string
-        f.e "_c"
-
-    Returns
-    -------
-    Metabolite or None
+    def query_fun(m):
 
     """
     model_metabolite = None
@@ -93,15 +87,9 @@ def contains_carbon(metabolite):  # TODO: use method from Metabolite class when 
 def find_metabolite_info(met_id):
     """Find chemical formula of metabolite in metanetx.chem_prop dictionary
 
-    Parameters
-    ----------
-    met_id : string
-        string of format "<metabolite_id>_<compartment_id>", where <metabolite_id> is a BIGG id or a Metanetx id
-
-    Returns
-    -------
-    pandas row or None
-
+    :param met_id: string, string of format "<metabolite_id>_<compartment_id>", where <metabolite_id> is a BIGG id or
+    a Metanetx id
+    :returns: pandas row or None
     """
     met_id = met_id[:-2]
     try:
@@ -130,14 +118,7 @@ class ModelModificationMixin(object):
         b) adapter reaction A_<x> <--> A_e
         c) exchange reaction A_e -->
 
-        Parameters
-        ----------
-        metabolite : Metabolite
-            metabolite id in format <bigg_id>_<x>, f.e. Nacsertn_c
-
-        Returns
-        -------
-
+        :param metabolite: cobra.Metabolite, metabolite id in format <bigg_id>_<x>, f.e. Nacsertn_c
         """
         extracellular_metabolite = Metabolite(re.sub('_[cpm]$', '_e', metabolite.id),
                                               formula=metabolite.formula, compartment='e')
@@ -149,14 +130,7 @@ class ModelModificationMixin(object):
         """Add demand reaction "A --> " for given metabolite A
          If reaction exists, log and pass
 
-        Parameters
-        ----------
-        metabolite : basestring
-            metabolite id in format <bigg_id>_<compartment_id>, f.e. Nacsertn_c
-
-        Returns
-        -------
-
+        :param metabolite: basestring, metabolite id in format <bigg_id>_<compartment_id>, f.e. Nacsertn_c
         """
         try:
             logger.debug('Add demand reaction for metabolite: {}'.format(metabolite.id))
@@ -169,16 +143,8 @@ class ModelModificationMixin(object):
     def add_adapter_reaction(self, metabolite, existing_metabolite):
         """Add adapter reaction A <--> B for metabolites A and B
 
-        Parameters
-        ----------
-        metabolite : Metabolite
-            metabolite A
-        existing_metabolite : Metabolite
-            metabolite B
-
-        Returns
-        -------
-
+        :param metabolite: cobra.Metabolite, metabolite A
+        :param existing_metabolite: cobra.Metabolite, metabolite B
         """
         try:
             adapter_reaction = Reaction(str('adapter_' + metabolite.id + '_' + existing_metabolite.id))
@@ -195,14 +161,7 @@ class ModelModificationMixin(object):
         """For metabolite in e compartment with existing exchange reaction, make it possible to consume metabolite
         by decreasing the lower bound of exchange reaction
 
-        Parameters
-        ----------
-        metabolite : Metabolite
-            metabolite from e compartment, f.e. melatn_e
-
-        Returns
-        -------
-
+        :param metabolite: cobra.Metabolite, metabolite from e compartment, f.e. melatn_e
         """
         exchange_reaction = list(set(metabolite.reactions).intersection(self.model.exchanges))[0]
         if exchange_reaction.lower_bound >= 0:
@@ -214,13 +173,10 @@ class ModelModificationMixin(object):
     def annotate_new_metabolite(metabolite):
         """Find information about new metabolite in chem_prop dictionary and add it to model
 
-        Parameters
-        ----------
-        metabolite : Metabolite
-            new metabolite
+        :param metabolite: cobra.Metabolite, new metabolite
+        """
 
-        Returns
-        -------
+        def find_key_for_id(met_id, metabolite_mapping):
 
         """
         info = find_metabolite_info(metabolite.id)
@@ -234,14 +190,7 @@ class ModelModificationMixin(object):
     def annotate_new_metabolites(self, reaction):
         """Annotate new metabolites with chem_prop information and keep track of them
 
-        Parameters
-        ----------
-        reaction : Reaction
-            reaction that is added to the model
-
-        Returns
-        -------
-
+        :param reaction: cobra.Reaction, reaction that is added to the model
         """
         for metabolite in reaction.metabolites:
             if getattr(metabolite, 'added_by_model_adjustment', False):
@@ -249,21 +198,6 @@ class ModelModificationMixin(object):
                 self.changes['added']['metabolites'].add(metabolite)
 
     async def model_metabolite(self, metabolite_id, compartment='_e'):
-        """Get metabolite associated with this model for a given entity
-
-        Parameters
-        ----------
-        metabolite_id
-            string of format <database>:<id>, f.e. chebi:12345
-        compartment
-            the compartment where to find the metabolite, e.g. _e for extracellular compartment
-        Returns
-        -------
-        the model metabolite (or None if no matching found)
-        """
-        mnx_id = metanetx.all2mnx.get(metabolite_id)
-        return await get_existing_metabolite(mnx_id, self.model, compartment)
-
 
 def map_equation_to_model(equation, metabolite_mapping, compartment=''):
     """Map given equation with some metabolite identifiers to those used in the model's namespace.
@@ -473,12 +407,8 @@ class MediumChangeModel(ModelModificationMixin):
 
     def __init__(self, model, medium):
         """
-        Parameters
-        ----------
-        model
-            cameo model
-        medium
-            list of dictionaries of format
+        :param model: cobra.Model
+        :param medium: list of dictionaries of format
             {'id': <compound id (<database>:<id>, f.e. chebi:12345)>, 'concentration': <compound concentration (float)>}
         """
         self.medium = medium
@@ -509,12 +439,8 @@ class MeasurementChangeModel(ModelModificationMixin):
 
     def __init__(self, model, measurements):
         """
-
-        Parameters
-        ----------
-        model
-            cameo model
-        measurements
+        :param model: cobra.Model
+        :param measurements:
             A list of dictionaries of format
             {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurements': list(<measurement (float)>)}
         """
