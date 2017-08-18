@@ -1,11 +1,14 @@
 import re
 
 import aiohttp
+import asyncio
 import gnomic
 import numpy as np
 import json
 import time
-from itertools import chain
+import itertools
+from collections import defaultdict
+
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 from cameo.data import metanetx
@@ -14,8 +17,16 @@ from model import logger
 from model.settings import ID_MAPPER_API
 
 
-def clean_bigg_id(string):
-    return re.sub(r"bigg:|dsh", "", string)
+class NoIDMapping(Exception):
+    def __init__(self, compound_id):
+        self.value = compound_id
+
+    def __str__(self):
+        return 'No metabolite associated with {}'.format(self.value)
+
+
+def add_prefix(x, prefix):
+    return [f'{prefix}:{i}' if not re.match(f'^{prefix}:', i) else i for i in x]
 
 
 async def query_identifiers(object_ids, db_from, db_to):
@@ -38,44 +49,31 @@ async def query_identifiers(object_ids, db_from, db_to):
             return result['ids']
 
 
-def get_only_element(x):
-    if len(x) != 1:
-        raise IndexError('expected single element list')
-    return x[0]
+def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
+    """Get the only metabolite for given compound / compartment.
 
-
-async def get_existing_metabolite(mnx_id, model, compartment):
     :param model: cobra.Model
     :param compound_id: string, compound identifier, e.g. CHEBI:12965
     :param compartment: string, compartment identifier
     :param db_name: string, the database name, e.g. 'CHEBI'
     """
     # TODO: change id-mapper to use miriam db_names
+    key_to_db_name = {'bigg': 'bigg.metabolite', 'chebi': 'CHEBI', 'mnx': 'metanetx.chemical'}
+    db_name = key_to_db_name.get(db_name, db_name)
+    # TODO: change to only use upper-case chebi everywhere instead
+    compound_id = compound_id.replace('chebi:', 'CHEBI:')
 
     def query_fun(m):
+        xrefs = m.annotation.get(db_name, [])
+        xrefs = xrefs if isinstance(xrefs, list) else [xrefs]
+        return compound_id in xrefs and m.compartment == compartment
 
-    """
-    model_metabolite = None
-    if mnx_id is None:
-        return None
-    if model.metabolites.has_id(mnx_id + compartment):
-        model_metabolite = model.metabolites.get_by_id(mnx_id + compartment)
-        logger.info(f'found {mnx_id} in {model_metabolite.id}')
-    else:
-        response = await query_identifiers([mnx_id], 'mnx', model.notes['namespace'])
-        re_comp = re.compile('_[cepm]$')
-        try:
-            mapped_id = response[mnx_id]
-            logger.info('trying any of {} in {}'.format(', '.join(mapped_id), compartment))
-            # TODO: so messy, adjust when fixing #30
-            model_metabolite = get_only_element(model.metabolites.query(
-                lambda met: re.sub(re_comp, '', met.id) in mapped_id and met.compartment == compartment[1:]
-            ))
-        except (KeyError, IndexError):
-            logger.info(f'failed to resolve {mnx_id} in {compartment} for {model.id}')
-        else:
-            logger.info(f'mapped {mnx_id} to {model_metabolite.id}')
-    return model_metabolite
+    metabolites = model.metabolites.query(query_fun)
+    if len(metabolites) > 1:
+        raise IndexError('expected single metabolite, found {}'.format(metabolites))
+    if len(metabolites) < 1:
+        raise NoIDMapping(compound_id)
+    return metabolites[0]
 
 
 def contains_carbon(metabolite):  # TODO: use method from Metabolite class when this change is merged
@@ -111,6 +109,7 @@ class ModelModificationMixin(object):
     """
     model = None
     changes = None
+    metabolite_mapping = None
 
     def create_exchange(self, metabolite):
         """For given metabolite A_<x> from compartment <x>, create:
@@ -169,23 +168,45 @@ class ModelModificationMixin(object):
         self.changes['added']['reactions'].add(exchange_reaction)
         self.annotate_new_metabolites(exchange_reaction)
 
-    @staticmethod
-    def annotate_new_metabolite(metabolite):
+    def annotate_new_metabolite(self, metabolite):
         """Find information about new metabolite in chem_prop dictionary and add it to model
 
         :param metabolite: cobra.Metabolite, new metabolite
         """
 
         def find_key_for_id(met_id, metabolite_mapping):
+            """Find mapped key for a given metabolite id.
 
-        """
+             metabolite_mapping could e.g. {'MNXM89795': {'mnx': ['MNXM89795'], 'bigg': ['udpgal'], 'chebi': [
+             '18307', '13487', '13495'], ...} and the metabolite.id 'udpgal'. We want to use this mapping to lookup
+             the chebi from udpgal, this function will fetch the corresponding primary key 'MNXM89795'.
+            """
+            keys = [key for key, key_map in metabolite_mapping.items() if met_id in
+                    set(itertools.chain(*key_map.values()))]
+            if len(keys) == 0:
+                return None
+            elif len(keys) == 1:
+                return keys[0]
+            else:
+                raise KeyError('multiply mapping keys for {}'.format(met_id))
+
         info = find_metabolite_info(metabolite.id)
         if info is not None:
             metabolite.formula = info['formula']
             metabolite.name = info['name']
             metabolite.annotation = info.to_dict()
         else:
-            logger.debug('No formula for {}'.format(metabolite.id))
+            logger.debug('no formula for {}'.format(metabolite.id))
+        if self.metabolite_mapping is not None:
+            mapped_id = find_key_for_id(metabolite.id[:-2], self.metabolite_mapping)
+            if mapped_id is not None:
+                metabolite.annotation['CHEBI'] = add_prefix(
+                    self.metabolite_mapping[mapped_id].get('chebi', []), 'CHEBI')
+                metabolite.annotation['metanetx.chemical'] = self.metabolite_mapping[mapped_id].get('mnx', [])
+                metabolite.annotation['bigg.metabolite'] = self.metabolite_mapping[mapped_id].get('bigg', [])
+            else:
+                logger.debug('no cross-references for {}'.format(metabolite.id))
+        logger.info('new annotation: {}'.format(metabolite.annotation))
 
     def annotate_new_metabolites(self, reaction):
         """Annotate new metabolites with chem_prop information and keep track of them
@@ -197,9 +218,8 @@ class ModelModificationMixin(object):
                 self.annotate_new_metabolite(metabolite)
                 self.changes['added']['metabolites'].add(metabolite)
 
-    async def model_metabolite(self, metabolite_id, compartment='_e'):
 
-def map_equation_to_model(equation, metabolite_mapping, compartment=''):
+def map_equation_to_model(equation, metabolite_mapping, native_namespace='bigg', compartment=''):
     """Map given equation with some metabolite identifiers to those used in the model's namespace.
 
     If compartment is given, metabolites ids will have it as postfix.
@@ -211,8 +231,16 @@ def map_equation_to_model(equation, metabolite_mapping, compartment=''):
     :param equation: string
     :param compartment: f.e. "_c"
     :param metabolite_mapping: A dict that maps metabolite identifiers to those used in the model
+    :param native_namespace: string, the model's namespace to prefer for the identifiers
     :return:
     """
+
+    def map_metabolite(met_id):
+        for namespace in [native_namespace, 'mnx']:
+            if namespace in metabolite_mapping[met_id]:
+                return metabolite_mapping[met_id][namespace][0]
+        return met_id
+
     array = equation.split()
     re_id = re.compile("^[A-Za-z0-9_-]+$")
     result = []
@@ -220,7 +248,7 @@ def map_equation_to_model(equation, metabolite_mapping, compartment=''):
         if el.isdigit() or not re.match(re_id, el):
             result.append(el)
         else:
-            result.append(metabolite_mapping.get(el, [el])[0] + compartment)
+            result.append(map_metabolite(el) + compartment)
     return ' '.join(result)
 
 
@@ -279,34 +307,42 @@ class GenotypeChangeModel(ModelModificationMixin):
     Applies genotype change on cameo model
     """
 
-    def __init__(self, model, genotype_changes, genes_to_reactions, namespace):
+    def __init__(self, model, genotype_changes, genes_to_reactions, namespace, metabolite_re=r'\bC[0-9]{5}\b'):
         """Initialize change model
 
         :param model: cameo model
         :param genotype_changes: gnomic.Genotype object
         :param genes_to_reactions: dictionary like {<gene name>: {<reaction id>: <reactions equation>, ...}, ...}
         :param namespace: the namespace for the model's identifiers
+        :param metabolite_re: regular expression for finding metabolite identifiers in the gene-to-reactions mapping.
+        Defaults to re for kegg metabolites.
         """
         self.compartment = '_c'
         self.model = model
         self.genes_to_reactions = genes_to_reactions
         self.genotype_changes = genotype_changes
         self.namespace = namespace
-        self.metabolite_mapping = {}
+        self.metabolite_mapping = defaultdict(dict)
+        re_id = re.compile(metabolite_re)
+        self.metabolite_identifiers = list(set(itertools.chain.from_iterable(re.findall(re_id, eq)
+                                                                             for _, gene_set in
+                                                                             self.genes_to_reactions.items()
+                                                                             for _, eq in gene_set.items())))
         self.changes = {
             'added': {'reactions': set(), 'metabolites': set()},  # reaction contain information about genes
             'removed': {'genes': set(), 'reactions': set()},
         }
 
-    async def map_metabolites(self, from_namespace='kegg', template=r'\bC[0-9]{5}\b'):
-        re_id = re.compile(template)
-        met_ids = list(set(chain.from_iterable(re.findall(re_id, eq)
-                                               for _, gene_set in self.genes_to_reactions.items()
-                                               for _, eq in gene_set.items())))
-        logger.info(met_ids)
-        self.metabolite_mapping = await query_identifiers(met_ids, from_namespace, self.namespace)
-        unmapped = [mid for mid in met_ids if mid not in self.metabolite_mapping]
-        self.metabolite_mapping.update(await query_identifiers(unmapped, from_namespace, 'mnx'))
+    async def map_metabolites(self, from_namespace='kegg'):
+        logger.info(self.metabolite_identifiers)
+        map_to = list({self.namespace, 'mnx', 'chebi'})
+        mappings = await asyncio.gather(*[query_identifiers(self.metabolite_identifiers, from_namespace, db_to)
+                                          for db_to in map_to])
+        for met_id in self.metabolite_identifiers:
+            self.metabolite_mapping[met_id][from_namespace] = met_id
+            for db_name, mapping in zip(map_to, mappings):
+                if met_id in mapping:
+                    self.metabolite_mapping[met_id][db_name] = mapping[met_id]
         logger.info('Using metabolite mapping: {}'.format(self.metabolite_mapping))
 
     def apply_changes(self):
@@ -384,8 +420,9 @@ class GenotypeChangeModel(ModelModificationMixin):
             return
         reaction = Reaction(reaction_id)
         self.model.add_reactions([reaction])
-        equation = map_equation_to_model(equation, self.metabolite_mapping, compartment)
-        logger.info('New reaction: {}'.format(equation))
+        logger.info('New reaction to add: {}'.format(equation))
+        equation = map_equation_to_model(equation, self.metabolite_mapping, self.model.notes['namespace'], compartment)
+        logger.info('New adjusted reaction: {}'.format(equation))
         # TODO: adjust when build_reaction_from_string returns the new metabolites >>
         metabolites_before = {m.id for m in self.model.metabolites}
         reaction.build_reaction_from_string(equation)
@@ -398,6 +435,7 @@ class GenotypeChangeModel(ModelModificationMixin):
         if gene_name:
             reaction.gene_reaction_rule = gene_name
         self.changes['added']['reactions'].add(reaction)
+        self.annotate_new_metabolites(reaction)
 
 
 class MediumChangeModel(ModelModificationMixin):
@@ -417,15 +455,16 @@ class MediumChangeModel(ModelModificationMixin):
             'added': {'reactions': set()},
         }
 
-    async def apply_medium(self):
+    def apply_medium(self):
         """For each metabolite in medium try to find corresponding metabolite in e compartment of the model.
         If metabolite is found, change the lower limit of the reaction to a negative number,
         so the model would be able to consume this compound.
         If metabolite is not found in e compartment, log and continue.
         """
         for compound in self.medium:
-            existing_metabolite = await self.model_metabolite(compound['id'], '_e')
-            if not existing_metabolite:
+            try:
+                existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
+            except NoIDMapping:
                 logger.info('No metabolite {} in external compartment'.format(compound['id']))
                 continue
             logger.info('Found metabolite {}'.format(compound['id']))
@@ -452,7 +491,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         }
         self.missing_in_model = []
 
-    async def apply_flux_bounds(self):
+    def apply_flux_bounds(self):
         """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
         bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
         normal distribution range i.e., mean +- 1.96 * stdev. """
@@ -468,17 +507,16 @@ class MeasurementChangeModel(ModelModificationMixin):
                 continue
             reaction = None
             if scalar['type'] == 'compound':
-                model_metabolite = await self.model_metabolite(scalar['id'], '_e')
-                if not model_metabolite:
+                try:
+                    model_metabolite = get_unique_metabolite(self.model, scalar['id'], 'e', 'CHEBI')
+                except NoIDMapping:
                     self.missing_in_model.append(scalar['id'])
                     logger.info('Model is missing metabolite {}, cannot apply measurement'.format(scalar['id']))
                     return
                 possible_reactions = list(set(model_metabolite.reactions).intersection(self.model.exchanges))
-                try:
-                    reaction = get_only_element(possible_reactions)
-                except IndexError:
-                    logger.info('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
-                    reaction = possible_reactions[0]
+                if len(possible_reactions) > 1:
+                    logger.warn('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
+                reaction = possible_reactions[0]
                 # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
                 # have <-- x, then multiply with -1
                 direction = reaction.metabolites[model_metabolite]
