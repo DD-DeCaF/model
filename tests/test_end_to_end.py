@@ -62,14 +62,14 @@ async def test_websocket():
     response = requests.post(URL + 'iJO1366', json={'message': MESSAGE_MODIFY})
     response.raise_for_status()
     model_id = response.json()['model-id']
-    session = aiohttp.ClientSession()
-    async with session.ws_connect(WS_URL + model_id) as ws:
-        ws.send_json(MESSAGE_TMY_FLUXES)
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                assert msg.json()['fluxes']
-                assert msg.json()['tmy']
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                raise ws.exception()
-            await ws.close()
-            break
+    async with aiohttp.ClientSession() as session:
+        async with session.ws_connect(WS_URL + model_id) as ws:
+            ws.send_json(MESSAGE_TMY_FLUXES)
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    assert msg.json()['fluxes']
+                    assert msg.json()['tmy']
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    raise ws.exception()
+                await ws.close()
+                break

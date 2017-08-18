@@ -1,7 +1,7 @@
 import pytest
 from deepdiff import DeepDiff
 from model.app import (call_genes_to_reactions, modify_model, restore_model,
-                       METHODS, Response, SIMULATION_METHOD, ProblemCache,
+                       METHODS, Response, SIMULATION_METHOD,
                        restore_from_db, save_changes_to_db, find_in_memory, EMPTY_CHANGES, apply_reactions_add)
 from model.adapter import full_genotype
 from copy import deepcopy
@@ -92,8 +92,7 @@ async def test_simulation_methods():
         print(method)
         message = {SIMULATION_METHOD: method}
         model = (await restore_model('iJO1366')).copy()
-        cache = ProblemCache(model)
-        response = Response(model, message, cache=cache)
+        response = Response(model, message)
         if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in model.reactions]
             assert set(response.fluxes().keys()) == set(reactions_ids)

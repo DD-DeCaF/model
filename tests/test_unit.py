@@ -1,14 +1,18 @@
 import pytest
 import random
 from copy import deepcopy
-from cobra.io.dict import model_to_dict
-from model.app import (existing_metabolite, NoIDMapping, restore_model, find_in_memory, product_reaction_variable,
+from cobra.io import model_to_dict, read_sbml_model
+from tempfile import mkdtemp
+import os
+
+from model.app import (NoIDMapping, restore_model, find_in_memory, product_reaction_variable,
                        phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond,
                        save_changes_to_db,
                        key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol,
                        convert_measurements_to_mmol,
                        modify_model, restore_from_db, add_reactions, EMPTY_CHANGES)
-from model.adapter import full_genotype
+from model.adapter import full_genotype, get_unique_metabolite
+from model.update_models import update_local_models
 
 
 def almost_equal(a, b):
@@ -74,26 +78,25 @@ async def test_model_immutability():
 @pytest.mark.asyncio
 async def test_existing_metabolite():
     ecoli = find_in_memory('iJO1366')
-    assert (await existing_metabolite(ecoli, 'chebi:17790')) == (await existing_metabolite(ecoli, 'bigg:meoh'))
-    assert (await existing_metabolite(ecoli, 'bigg:succ')).formula == 'C4H4O4'
+    assert get_unique_metabolite(ecoli, 'chebi:17790') == get_unique_metabolite(
+        ecoli, 'meoh', db_name='bigg.metabolite')
+    assert get_unique_metabolite(ecoli, 'succ', db_name='bigg.metabolite').formula == 'C4H4O4'
     with pytest.raises(NoIDMapping):
-        await existing_metabolite(ecoli, 'wrong_id')
+        await get_unique_metabolite(ecoli, 'wrong_id')
 
 
-@pytest.mark.asyncio
-async def test_product_reaction_variable():
+def test_product_reaction_variable():
     ecoli = find_in_memory('iJO1366')
-    assert (await product_reaction_variable(ecoli, 'bigg:akg')).id == 'EX_akg_e'
-    assert (await product_reaction_variable(ecoli, 'bigg:e4p')) is None
+    assert product_reaction_variable(ecoli, 'bigg:akg').id == 'EX_akg_e'
+    assert product_reaction_variable(ecoli, 'bigg:e4p') is None
 
 
-@pytest.mark.asyncio
-async def test_phase_plane_to_dict():
+def test_phase_plane_to_dict():
     ecoli = find_in_memory('iJO1366')
-    result = await phase_plane_to_dict(ecoli, 'bigg:glu__L')
+    result = phase_plane_to_dict(ecoli, 'bigg:glu__L')
     assert set(result.keys()) == {'EX_glu__L_e', 'objective_lower_bound', 'objective_upper_bound'}
     assert len(set([len(v) for v in result.values()])) == 1
-    assert (await phase_plane_to_dict(ecoli, 'bigg:g3p')) == {}
+    assert phase_plane_to_dict(ecoli, 'bigg:g3p') == {}
 
 
 def test_new_features_identifiers():
@@ -133,7 +136,7 @@ async def test_reactions_knockouts():
 async def test_convert_measurements_to_mmol():
     ecoli = find_in_memory('iJO1366').copy()
     measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg', 'type': 'compound'}]
-    assert (await convert_measurements_to_mmol(measurements, ecoli)) == [
+    assert convert_measurements_to_mmol(measurements, ecoli) == [
         {'id': 'chebi:17790', 'measurements': [1.0], 'unit': 'mmol', 'type': 'compound'}]
 
 
@@ -143,3 +146,12 @@ def test_add_reactions():
     info = ('newid', '', {}, 0, 0, '')
     changes = [dict(zip(keys, info))] * 2
     add_reactions(ecoli, changes)
+
+
+def test_update_models():
+    tempdir = mkdtemp()
+    update_local_models(['e_coli_core'], tempdir)
+    model = read_sbml_model(os.path.join(tempdir, 'e_coli_core.sbml.gz'))
+    glucose = get_unique_metabolite(model, 'CHEBI:42758')
+    assert glucose.id == 'glc__D_e'
+    assert glucose.annotation['bigg.metabolite'] == 'glc__D'
