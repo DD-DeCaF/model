@@ -289,7 +289,7 @@ async def apply_genotype_changes(model, genotype_changes):
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
     logger.info('Genes to reaction: {}'.format(genes_to_reactions))
     change_model = GenotypeChangeModel(model, genotype_features, genes_to_reactions, model.notes['namespace'])
-    await change_model.map_metabolites(from_namespace='kegg')
+    await change_model.map_metabolites()
     change_model.apply_changes()
     return change_model
 
@@ -354,8 +354,11 @@ def convert_measurements_to_mmol(measurements, model):
         if 'unit' not in value:
             continue
         if value['unit'] == 'mg':
-            metabolite = get_unique_metabolite(model, value['id'], 'e', 'CHEBI')
-            if metabolite:
+            try:
+                metabolite = get_unique_metabolite(model, value['id'], 'e', 'CHEBI')
+            except NoIDMapping:
+                continue
+            else:
                 value['measurements'] = [convert_mg_to_mmol(
                     point,
                     metabolite.formula_weight
@@ -433,9 +436,8 @@ async def add_reaction_from_universal(model, reaction_id):
         [],
         {None: {reaction_id: reaction_string}},
         model.notes['namespace'],
-        metabolite_re=r'MNXM[\d]+'
     )
-    await adapter.map_metabolites(from_namespace='mnx')
+    await adapter.map_metabolites()
     adapter.add_reaction(reaction_id, reaction_string, None)
     return collect_changes(adapter)
 
