@@ -307,15 +307,13 @@ class GenotypeChangeModel(ModelModificationMixin):
     Applies genotype change on cameo model
     """
 
-    def __init__(self, model, genotype_changes, genes_to_reactions, namespace, metabolite_re=r'\bC[0-9]{5}\b'):
+    def __init__(self, model, genotype_changes, genes_to_reactions, namespace):
         """Initialize change model
 
         :param model: cameo model
         :param genotype_changes: gnomic.Genotype object
         :param genes_to_reactions: dictionary like {<gene name>: {<reaction id>: <reactions equation>, ...}, ...}
         :param namespace: the namespace for the model's identifiers
-        :param metabolite_re: regular expression for finding metabolite identifiers in the gene-to-reactions mapping.
-        Defaults to re for kegg metabolites.
         """
         self.compartment = '_c'
         self.model = model
@@ -323,26 +321,39 @@ class GenotypeChangeModel(ModelModificationMixin):
         self.genotype_changes = genotype_changes
         self.namespace = namespace
         self.metabolite_mapping = defaultdict(dict)
-        re_id = re.compile(metabolite_re)
-        self.metabolite_identifiers = list(set(itertools.chain.from_iterable(re.findall(re_id, eq)
-                                                                             for _, gene_set in
-                                                                             self.genes_to_reactions.items()
-                                                                             for _, eq in gene_set.items())))
+        self.metabolite_identifiers = defaultdict(list)
+
+        # TODO: the metabolite identifiers in genes_to_reactions should be prefixed by the db_name
+        re_id = re.compile("^[A-Za-z0-9_-]+$")
+        re_id_map = {'mnx': re.compile(r'MNXM[\d]+'),
+                     'kegg': re.compile(r'\bC[0-9]{5}\b'),
+                     'bigg': re.compile(r'[a-z0-9_]+', re.IGNORECASE)}
+        for reactions in self.genes_to_reactions.values():
+            for equation in reactions.values():
+                for element in equation.split():
+                    if not element.isdigit() and re.match(re_id, element):
+                        for db_key, pattern in re_id_map.items():
+                            if re.match(pattern, element):
+                                self.metabolite_identifiers[db_key].append(element)
+                                break
         self.changes = {
             'added': {'reactions': set(), 'metabolites': set()},  # reaction contain information about genes
             'removed': {'genes': set(), 'reactions': set()},
         }
 
-    async def map_metabolites(self, from_namespace='kegg'):
-        logger.info(self.metabolite_identifiers)
-        map_to = list({self.namespace, 'mnx', 'chebi'})
-        mappings = await asyncio.gather(*[query_identifiers(self.metabolite_identifiers, from_namespace, db_to)
-                                          for db_to in map_to])
-        for met_id in self.metabolite_identifiers:
-            self.metabolite_mapping[met_id][from_namespace] = met_id
-            for db_name, mapping in zip(map_to, mappings):
+    async def map_metabolites(self):
+        logger.info("Metabolites to map: {}".format(self.metabolite_identifiers))
+        from_db_key = list(self.metabolite_identifiers.keys())
+        to_db_key = list({self.namespace, 'mnx', 'chebi'})
+        queries = [(db_from, db_to) for db_from, db_to in itertools.product(from_db_key, to_db_key) if db_from != db_to]
+        mappings = await asyncio.gather(*[query_identifiers(self.metabolite_identifiers[db_from], db_from, db_to)
+                                          for db_from, db_to in queries])
+        for query, mapping in zip(queries, mappings):
+            db_from, db_to = query
+            for met_id in self.metabolite_identifiers[db_from]:
+                self.metabolite_mapping[met_id][db_from] = [met_id]
                 if met_id in mapping:
-                    self.metabolite_mapping[met_id][db_name] = mapping[met_id]
+                    self.metabolite_mapping[met_id][db_to] = mapping[met_id]
         logger.info('Using metabolite mapping: {}'.format(self.metabolite_mapping))
 
     def apply_changes(self):
