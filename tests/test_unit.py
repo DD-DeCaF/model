@@ -40,6 +40,16 @@ def test_key_from_model_info():
 
 
 @pytest.mark.asyncio
+async def test_b_number():
+    model_id = 'iJO1366'
+    message = {
+        GENOTYPE_CHANGES: ['-b3067,-b3172,-b1084'],
+    }
+    model = await modify_model(message, (await restore_model(model_id)).copy())
+    assert not model.genes.b3172.functional
+
+
+@pytest.mark.asyncio
 async def test_save_and_restore():
     model_id = 'e_coli_core'
     await save_changes_to_db(find_in_memory(model_id), model_id, {})
