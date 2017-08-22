@@ -391,6 +391,8 @@ class GenotypeChangeModel(ModelModificationMixin):
         :return:
         """
         genes = self.model.genes.query(feature.name, attribute="name")
+        if feature.name in self.model.genes:
+            genes += self.model.genes.get_by_any(feature.name)
         if genes:
             gene = genes[0]
             gene.knock_out()
