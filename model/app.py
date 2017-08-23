@@ -249,8 +249,10 @@ def product_reaction_variable(model, metabolite_id):
     """
     db_name, compound_id = metabolite_id.split(':')
     try:
+        logger.info('product reaction for {} {}'.format(compound_id, db_name))
         metabolite = get_unique_metabolite(model, compound_id, 'e', db_name)
     except NoIDMapping:
+        logger.info('no product reaction found for {} {}'.format(compound_id, db_name))
         return None
     exchange_reactions = list(set(metabolite.reactions).intersection(model.exchanges))
     if len(exchange_reactions) != 1:
