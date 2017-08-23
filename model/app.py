@@ -218,7 +218,7 @@ def key_from_model_info(wild_type_id, message):
     :param message: dict
     :return: str
     """
-    d = {k: message.get(k, []) for k in {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS}}
+    d = {k: message.get(k, []) for k in {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT}}
     d['model_id'] = wild_type_id
     return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
 
