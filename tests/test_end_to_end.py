@@ -14,12 +14,13 @@ MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
 MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
-    "reactions-add": [
+    'reactions-add': [
         {'id': 'MNXR69355', 'string': None},
         {'id': 'MNXR83321', 'string': None},
+        {'id': 'MagicCarrot', 'string': 'glc__D_c <=> caro_c'}
     ],
     'to-return': ['tmy', 'fluxes', 'model', 'added-reactions', 'removed-reactions'],
-    'objectives': ['chebi:17790'],
+    'objectives': ['chebi:17790', 'chebi:17579'],
     'genotype-changes': ['+Aac', '-pta'],
     'measurements': MEASUREMENTS,
 }
@@ -43,7 +44,9 @@ def test_http():
         assert abs(response.json()['fluxes']['EX_etoh_e'] - 4.64) < 0.001  # lower bound
         assert response.json()['fluxes']['PFK'] == 5
         if query == 'modify':
+            tmy = response.json()['tmy']
             changes = response.json()['model']['notes']['changes']
+            assert sum(tmy['chebi:17579']['DM_caro_e']) > 10.
             assert 'PTA2' in {rxn['id'] for rxn in changes['removed']['reactions']}
             assert 'EX_etoh_e' in {rxn['id'] for rxn in changes['measured']['reactions']}
             assert 'PFK' in {rxn['id'] for rxn in changes['measured']['reactions']}
