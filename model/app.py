@@ -444,7 +444,7 @@ async def add_reaction_from_universal(model, reaction_id):
     return collect_changes(adapter)
 
 
-def add_reaction_from_string(model, reaction_id, reaction_string):
+async def add_reaction_from_string(model, reaction_id, reaction_string):
     reaction_string = reaction_string.strip()
     adapter = GenotypeChangeModel(
         model,
@@ -452,6 +452,7 @@ def add_reaction_from_string(model, reaction_id, reaction_string):
         {None: {reaction_id: reaction_string}},
         model.notes['namespace']
     )
+    await adapter.map_metabolites()
     adapter.add_reaction(reaction_id, reaction_string, None, '')
     return collect_changes(adapter)
 
@@ -494,7 +495,7 @@ async def add_apply(model, to_apply):
     added = []
     for rn in to_apply:
         if rn['string']:
-            model = add_reaction_from_string(model, rn['id'], rn['string'])
+            model = await add_reaction_from_string(model, rn['id'], rn['string'])
         else:
             model = await add_reaction_from_universal(model, rn['id'])
         for reaction in model.notes['changes']['added']['reactions']:
