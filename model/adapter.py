@@ -86,6 +86,10 @@ def contains_carbon(metabolite):  # TODO: use method from Metabolite class when 
     return 'C' in metabolite.elements
 
 
+def strip_compartment(x):
+    return x[:-2] if re.match('.*_[cepm]$', x) else x
+
+
 def find_metabolite_info(met_id):
     """Find chemical formula of metabolite in metanetx.chem_prop dictionary
 
@@ -93,7 +97,7 @@ def find_metabolite_info(met_id):
     a Metanetx id
     :returns: pandas row or None
     """
-    met_id = met_id[:-2]
+    met_id = strip_compartment(met_id)
     try:
         if met_id in metanetx.chem_prop.index:
             return metanetx.chem_prop.loc[met_id]
@@ -202,7 +206,7 @@ class ModelModificationMixin(object):
         else:
             logger.debug('no formula for {}'.format(metabolite.id))
         if self.metabolite_mapping is not None:
-            mapped_id = find_key_for_id(metabolite.id[:-2], self.metabolite_mapping)
+            mapped_id = find_key_for_id(strip_compartment(metabolite.id), self.metabolite_mapping)
             if mapped_id is not None:
                 metabolite.annotation['CHEBI'] = add_prefix(
                     self.metabolite_mapping[mapped_id].get('chebi', []), 'CHEBI')
@@ -335,6 +339,7 @@ class GenotypeChangeModel(ModelModificationMixin):
         for reactions in self.genes_to_reactions.values():
             for equation in reactions.values():
                 for element in equation.split():
+                    element = strip_compartment(element)
                     if not element.isdigit() and re.match(re_id, element):
                         for db_key, pattern in re_id_map.items():
                             if re.match(pattern, element):
