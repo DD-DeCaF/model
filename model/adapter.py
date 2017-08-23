@@ -60,8 +60,12 @@ def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
     # TODO: change id-mapper to use miriam db_names
     key_to_db_name = {'bigg': 'bigg.metabolite', 'chebi': 'CHEBI', 'mnx': 'metanetx.chemical'}
     db_name = key_to_db_name.get(db_name, db_name)
-    # TODO: change to only use upper-case chebi everywhere instead
-    compound_id = compound_id.replace('chebi:', 'CHEBI:')
+    # TODO: change to only use upper-case chebi everywhere, and always prefix id's with db_name thereby removing the
+    # need for the db_name parameter
+    if db_name == 'CHEBI':
+        compound_id = compound_id.replace('chebi:', 'CHEBI:')
+        if re.match('^[0-9]+$', compound_id):
+            compound_id = 'CHEBI:' + compound_id
 
     def query_fun(m):
         xrefs = m.annotation.get(db_name, [])
