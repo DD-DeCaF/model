@@ -540,7 +540,7 @@ class MeasurementChangeModel(ModelModificationMixin):
                 if direction > 0:
                     lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
             elif scalar['type'] == 'reaction':
-                if scalar['db_name'] != 'BiGG':
+                if scalar['db_name'] != 'bigg.reaction':
                     raise NotImplementedError('only supporting bigg reaction identifiers not %s' % scalar['db_name'])
                 try:
                     reaction = self.model.reactions.get_by_id(scalar['id'])
