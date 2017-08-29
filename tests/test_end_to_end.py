@@ -15,9 +15,9 @@ MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:1779
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
     'reactions-add': [
-        {'id': 'MNXR69355', 'string': None},
-        {'id': 'MNXR83321', 'string': None},
-        {'id': 'MagicCarrot', 'string': 'glc__D_c <=> caro_c'}
+        {'id': 'MNXR69355', 'metabolites': None},
+        {'id': 'MNXR83321', 'metabolites': None},
+        {'id': 'MagicCarrot', 'metabolites': {'glc__D_c': -1, 'caro_c': 1}}
     ],
     'to-return': ['tmy', 'fluxes', 'model', 'added-reactions', 'removed-reactions'],
     'objectives': ['chebi:17790', 'chebi:17579'],

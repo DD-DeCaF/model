@@ -20,9 +20,9 @@ async def test_reactions_additions():
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
     reactions = [
-        {'id': 'MNXR69355', 'string': None},
-        {'id': 'MNXR81835', 'string': None},
-        {'id': 'MNXR83321', 'string': None},
+        {'id': 'MNXR69355', 'metabolites': None},
+        {'id': 'MNXR81835', 'metabolites': None},
+        {'id': 'MNXR83321', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
     added_reactions = {'DM_12dgr182_9_12_e', 'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
@@ -34,8 +34,8 @@ async def test_reactions_additions():
     for reaction in ecoli.notes['changes']['added']['reactions']:
         assert ecoli.reactions.has_id(reaction['id'])
     reactions = [
-        {'id': 'MNXR69355', 'string': None},
-        {'id': 'MNXR81835', 'string': None},
+        {'id': 'MNXR69355', 'metabolites': None},
+        {'id': 'MNXR81835', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
     ecoli = await apply_reactions_add(ecoli, reactions)
@@ -50,9 +50,9 @@ async def test_reactions_additions():
     for reaction in removed_reactions:
         assert not ecoli.reactions.has_id(reaction)
     reactions = [
-        {'id': 'MNXR69355', 'string': None},
-        {'id': 'MNXR81835', 'string': None},
-        {'id': 'MNXR83321', 'string': None},
+        {'id': 'MNXR69355', 'metabolites': None},
+        {'id': 'MNXR81835', 'metabolites': None},
+        {'id': 'MNXR83321', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
     ecoli = await apply_reactions_add(ecoli, reactions)
@@ -60,7 +60,7 @@ async def test_reactions_additions():
     reaction_ids = {}
     ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
-    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'string': None}, {'id': 'SUCR', 'string': ' h2o_c +  sucr_c  <=>  fru_c +  glc__D_c '}])
+    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None}, {'id': 'SUCR', 'metabolites': {'h2o_c': -1, 'sucr_c': -1, 'fru_c': 1, 'glc__D_c': 1}}])
 
 
 @pytest.mark.asyncio
