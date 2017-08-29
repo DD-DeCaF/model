@@ -506,7 +506,7 @@ def build_string_from_metabolites(metabolites):
         else:
             reactant_bits.append(format(abs(coefficient)) + name)
 
-    return ' <=> '.format(reactant_bits, product_bits)
+    return '{} <=> {}'.format(' + '.join(reactant_bits), ' + '.join(product_bits))
 
 
 async def add_apply(model, to_apply):
