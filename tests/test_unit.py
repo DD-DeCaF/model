@@ -10,7 +10,8 @@ from model.app import (NoIDMapping, restore_model, find_in_memory, product_react
                        save_changes_to_db,
                        key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol,
                        convert_measurements_to_mmol,
-                       modify_model, restore_from_db, add_reactions, EMPTY_CHANGES)
+                       modify_model, restore_from_db, add_reactions, EMPTY_CHANGES,
+                       build_string_from_metabolites)
 from model.adapter import full_genotype, get_unique_metabolite
 from model.update_models import update_local_models
 
@@ -165,3 +166,9 @@ def test_update_models():
     glucose = get_unique_metabolite(model, 'CHEBI:42758')
     assert glucose.id == 'glc__D_e'
     assert glucose.annotation['bigg.metabolite'] == 'glc__D'
+
+
+def test_build_string_from_metabolites():
+    metabolites = {'glc__D_c': -1, 'caro_c': 1}
+    string = 'glc__D_c <=> caro_c'
+    assert build_string_from_metabolites(metabolites) == string

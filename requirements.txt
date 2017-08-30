@@ -5,7 +5,7 @@ msgpack-python
 cobra==0.8.2
 cameo==0.11.0
 swiglpk==1.4.3
-gnomic
+gnomic==0.7.0
 requests
 redis
 codecov

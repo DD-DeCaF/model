@@ -491,11 +491,33 @@ def count_metabolites(reactions):
     return metabolites_count
 
 
+# TODO: eliminate when cobrapy is refactored
+def build_string_from_metabolites(metabolites):
+    """Generate a human readable reaction string"""
+
+    def format(number):
+        return "" if number == 1 else str(number).rstrip(".") + " "
+
+    reactant_bits = []
+    product_bits = []
+    for name, coefficient in metabolites.items():
+        if coefficient >= 0:
+            product_bits.append(format(coefficient) + name)
+        else:
+            reactant_bits.append(format(abs(coefficient)) + name)
+
+    return '{} <=> {}'.format(' + '.join(reactant_bits), ' + '.join(product_bits))
+
+
 async def add_apply(model, to_apply):
     added = []
     for rn in to_apply:
-        if rn['string']:
-            model = await add_reaction_from_string(model, rn['id'], rn['string'])
+        if rn['metabolites']:
+            model = await add_reaction_from_string(
+                model,
+                rn['id'],
+                build_string_from_metabolites(rn['metabolites'])
+            )
         else:
             model = await add_reaction_from_universal(model, rn['id'])
         for reaction in model.notes['changes']['added']['reactions']:
