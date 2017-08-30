@@ -511,6 +511,7 @@ def build_string_from_metabolites(metabolites):
 
 async def add_apply(model, to_apply):
     added = []
+    before = {r['id'] for r in model.notes['changes']['added']['reactions']}
     for rn in to_apply:
         if rn['metabolites']:
             model = await add_reaction_from_string(
@@ -520,7 +521,8 @@ async def add_apply(model, to_apply):
             )
         else:
             model = await add_reaction_from_universal(model, rn['id'])
-        for reaction in model.notes['changes']['added']['reactions']:
+    for reaction in model.notes['changes']['added']['reactions']:
+        if reaction['id'] not in before:
             added.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
     return added
 

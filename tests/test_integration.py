@@ -30,7 +30,9 @@ async def test_reactions_additions():
                        'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e',
                        'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
     ecoli = await apply_reactions_add(ecoli, reactions)
-    assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == added_reactions
+    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
+    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    assert added_reactions_unique_ids - reaction_ids == added_reactions
     for reaction in ecoli.notes['changes']['added']['reactions']:
         assert ecoli.reactions.has_id(reaction['id'])
     reactions = [
@@ -39,7 +41,9 @@ async def test_reactions_additions():
     ]
     reaction_ids = set([i['id'] for i in reactions])
     ecoli = await apply_reactions_add(ecoli, reactions)
-    assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == \
+    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
+    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    assert added_reactions_unique_ids - reaction_ids == \
            {'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
             'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e'}
     for reaction in ecoli.notes['changes']['added']['reactions']:
@@ -56,7 +60,9 @@ async def test_reactions_additions():
     ]
     reaction_ids = set([i['id'] for i in reactions])
     ecoli = await apply_reactions_add(ecoli, reactions)
-    assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == added_reactions
+    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
+    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    assert added_reactions_unique_ids - reaction_ids == added_reactions
     reaction_ids = {}
     ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
