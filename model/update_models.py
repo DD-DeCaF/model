@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import re
 from tqdm import tqdm
 
 from cobra.io import read_sbml_model, write_sbml_model
@@ -11,7 +12,7 @@ from model.app import MODELS, MODEL_NAMESPACE
 from model.settings import ID_MAPPER_API
 
 
-LOCAL_MODELS = ['ecYeast7']
+LOCAL_MODELS = ['ecYeast7', 'ecYeast7_proteomics']
 MODEL_METABOLITE_NAMESPACE = {
     'iJO1366': 'bigg.metabolite',
     'iMM904': 'bigg.metabolite',
@@ -19,7 +20,8 @@ MODEL_METABOLITE_NAMESPACE = {
     'iNJ661': 'bigg.metabolite',
     'iJN746': 'bigg.metabolite',
     'e_coli_core': 'bigg.metabolite',
-    'ecYeast7': 'yeast7'
+    'ecYeast7': 'yeast7',
+    'ecYeast7_proteomics': 'yeast7',
 }
 
 strip_compartment = {'yeast7': lambda mid: mid[:-2],
@@ -67,7 +69,11 @@ def update_local_models(model_id, model_store=None):
                 metabolite.annotation[metabolite_namespace] = []
             metabolite.annotation[metabolite_namespace].append(compound_id)
 
-        write_sbml_model(model, annotated_sbml_file)
+    # gecko protein exchanges
+    db_name = 'uniprot'
+    protein_exchanges = model.reactions.query(lambda rxn: re.match(r'^prot_.*_exchange$', rxn.id))
+    for rxn in protein_exchanges:
+        rxn.annotation[db_name] = [re.findall('^prot_(.*)_exchange$', rxn.id)[0]]
     write_sbml_model(model, os.path.join(model_store, model_id + '.sbml.gz'))
 
 if '__main__' in __name__:
