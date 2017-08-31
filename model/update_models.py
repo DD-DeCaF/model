@@ -27,6 +27,8 @@ MODEL_METABOLITE_NAMESPACE = {
 strip_compartment = {'yeast7': lambda mid: mid[:-2],
                      'bigg': lambda mid: mid[:-2]}
 
+GLUCOSE = {'s_0563', 's_0565', 'glc__D', 's_0563', 's_0565', 's_0566', 's_0567', 's_0568', 's_1543'}
+
 
 def sync_query_identifiers(object_ids, db_from, db_to):
     query = json.dumps({'ids': object_ids, 'dbFrom': db_from.lower(), 'dbTo': db_to.lower(), 'type': 'Metabolite'})
@@ -63,7 +65,7 @@ def update_local_models(model_id, model_store=None):
                 metabolite.annotation[db_name] = []
             metabolite.annotation[db_name].extend(add_prefix(model_xref[compound_id], db_name))
             # TODO: For some reason, id-mapper doesn't make this link, add manually for now
-            if compound_id in {'s_0563', 'glc__D'} and db_name == 'CHEBI':
+            if compound_id in GLUCOSE and db_name == 'CHEBI':
                 metabolite.annotation[db_name].append('CHEBI:42758')
             if metabolite_namespace not in metabolite.annotation:
                 metabolite.annotation[metabolite_namespace] = []

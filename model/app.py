@@ -251,10 +251,10 @@ def product_reaction_variable(model, metabolite_id):
     """
     db_name, compound_id = metabolite_id.split(':')
     try:
-        logger.info('product reaction for {} {}'.format(compound_id, db_name))
         metabolite = get_unique_metabolite(model, compound_id, 'e', db_name)
+        logger.info('found model metabolite for {} {}'.format(compound_id, db_name))
     except NoIDMapping:
-        logger.info('no product reaction found for {} {}'.format(compound_id, db_name))
+        logger.info('no model metabolite for {} {}'.format(compound_id, db_name))
         return None
     exchange_reactions = list(set(metabolite.reactions).intersection(model.exchanges))
     if len(exchange_reactions) != 1:
@@ -772,10 +772,7 @@ async def respond(message, model, db_key=None):
     t = time.time()
     response = Response(model, message)
     for key in message['to-return']:
-        if key == TMY:
-            result[key] = response.theoretical_maximum_yield()
-        else:
-            result[key] = getattr(response, RETURN_FUNCTIONS[key])()
+        result[key] = getattr(response, RETURN_FUNCTIONS[key])()
     if db_key:
         result['model-id'] = db_key
     if REQUEST_ID in message:
