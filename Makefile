@@ -38,6 +38,11 @@ clean:
 logs:
 	docker-compose logs --tail="all" -f
 
+## Update saved models by downloading and annotating reactions / metabolites
+update_models: start
+	docker exec -it model_web_1 python -m model.update_models
+
+
 #################################################################################
 # PROJECT RULES                                                                 #
 #################################################################################
