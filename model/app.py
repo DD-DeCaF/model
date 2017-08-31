@@ -27,7 +27,7 @@ from model.settings import ANNOTATIONS_API
 
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
-    'YEAST': ['iMM904', 'ecYeast7'],
+    'YEAST': ['iMM904', 'ecYeast7', 'ecYeast7_proteomics'],
     'CRIGR': ['iMM1415'],
     'CORGT': ['iNJ661'],
     'PSEPU': ['iJN746'],
@@ -42,7 +42,8 @@ MODEL_NAMESPACE = {
     'iNJ661': 'bigg',
     'iJN746': 'bigg',
     'e_coli_core': 'bigg',
-    'ecYeast7': 'yeast7'
+    'ecYeast7': 'yeast7',
+    'ecYeast7_proteomics': 'yeast7',
 }
 
 MODEL_GROWTH_RATE = {
@@ -52,7 +53,8 @@ MODEL_GROWTH_RATE = {
     'iNJ661': 'BIOMASS_Mtb_9_60atp',
     'iJN746': 'BIOMASS_KT_TEMP',
     'e_coli_core': 'BIOMASS_Ecoli_core_w_GAM',
-    'ecYeast7': 'r_2111'
+    'ecYeast7': 'r_2111',
+    'ecYeast7_proteomics': 'r_2111',
 }
 
 
@@ -347,7 +349,7 @@ async def apply_measurement_changes(model, measurements):
     measurement = convert_measurements_to_mmol(measurements, model)
     measurements = fix_measurements_ids(measurement)
     change_model = MeasurementChangeModel(model, measurements)
-    change_model.apply_flux_bounds()
+    change_model.apply_measurements()
     return change_model
 
 

@@ -513,7 +513,55 @@ class MeasurementChangeModel(ModelModificationMixin):
         }
         self.missing_in_model = []
 
-    def apply_flux_bounds(self):
+    def reaction_for_compound(self, compound, lower_bound, upper_bound):
+        try:
+            model_metabolite = get_unique_metabolite(self.model, compound, 'e', 'CHEBI')
+        except NoIDMapping:
+            self.missing_in_model.append(compound)
+            logger.info('Model is missing metabolite {}, cannot apply measurement'.format(compound))
+            return
+        possible_reactions = list(set(model_metabolite.reactions).intersection(self.model.exchanges))
+        if len(possible_reactions) > 1:
+            logger.warn('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
+        reaction = possible_reactions[0]
+        # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
+        # have <-- x, then multiply with -1
+        direction = reaction.metabolites[model_metabolite]
+        if direction > 0:
+            lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
+        reaction.bounds = lower_bound, upper_bound
+        return reaction
+
+    def reaction_for_scalar(self, scalar, lower_bound, upper_bound):
+        reaction = None
+        if scalar['db_name'] != 'bigg.reaction':
+            raise NotImplementedError('only supporting bigg reaction identifiers not %s' % scalar['db_name'])
+        try:
+            reaction = self.model.reactions.get_by_id(scalar['id'])
+        except KeyError:
+            self.changes['measured-missing']['reactions'].add(Reaction(scalar['id']))
+        else:
+            reaction.bounds = lower_bound, upper_bound
+        return reaction
+
+    def protein_exchange_reaction_for_scalar(self, scalar, upper_bound):
+        reaction = None
+        if scalar['db_name'] != 'uniprot':
+            raise NotImplementedError('only supporting uniprot protein identifiers not %s' % scalar['db_name'])
+        try:
+            def query_fun(rxn):
+                xrefs = rxn.annotation.get(scalar['db_name'], [])
+                xrefs = xrefs if isinstance(xrefs, list) else [xrefs]
+                return scalar['id'] in xrefs
+
+            reaction = self.model.reactions.query(query_fun)[0]
+        except (IndexError, KeyError):
+            self.changes['measured-missing']['reactions'].add(Reaction('prot_{}_exchange'.format(scalar['id'])))
+        else:
+            reaction.bounds = 0, upper_bound
+        return reaction
+
+    def apply_measurements(self):
         """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
         bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
         normal distribution range i.e., mean +- 1.96 * stdev. """
@@ -529,30 +577,13 @@ class MeasurementChangeModel(ModelModificationMixin):
                 continue
             reaction = None
             if scalar['type'] == 'compound':
-                try:
-                    model_metabolite = get_unique_metabolite(self.model, scalar['id'], 'e', 'CHEBI')
-                except NoIDMapping:
-                    self.missing_in_model.append(scalar['id'])
-                    logger.info('Model is missing metabolite {}, cannot apply measurement'.format(scalar['id']))
-                    return
-                possible_reactions = list(set(model_metabolite.reactions).intersection(self.model.exchanges))
-                if len(possible_reactions) > 1:
-                    logger.warn('using first of {}'.format(', '.join([r.id for r in possible_reactions])))
-                reaction = possible_reactions[0]
-                # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
-                # have <-- x, then multiply with -1
-                direction = reaction.metabolites[model_metabolite]
-                if direction > 0:
-                    lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
+                reaction = self.reaction_for_compound(scalar['id'], lower_bound, upper_bound)
             elif scalar['type'] == 'reaction':
-                if scalar['db_name'] != 'bigg.reaction':
-                    raise NotImplementedError('only supporting bigg reaction identifiers not %s' % scalar['db_name'])
-                try:
-                    reaction = self.model.reactions.get_by_id(scalar['id'])
-                except KeyError:
-                    self.changes['measured-missing']['reactions'].add(Reaction(scalar['id']))
+                reaction = self.reaction_for_scalar(scalar, lower_bound, upper_bound)
+            elif scalar['type'] == 'protein' and scalar['mode'] == 'quantitative':
+                reaction = self.protein_exchange_reaction_for_scalar(scalar, upper_bound)
             else:
                 logger.info('scalar for measured type {} not supported'.format(scalar['type']))
             if reaction:
                 self.changes['measured']['reactions'].add(reaction)
-                reaction.bounds = lower_bound, upper_bound
+
