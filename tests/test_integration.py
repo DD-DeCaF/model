@@ -81,7 +81,11 @@ async def test_modify_model():
                          {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
-    assert await modify_model(message, (await restore_model('iJO1366')).copy())
+    wildtype = await restore_model('iJO1366')
+    modified = await modify_model(message, wildtype.copy())
+    assert len(wildtype.medium) > 1
+    assert len(modified.medium) == 1
+    assert 'EX_meoh_e' in modified.medium
 
 
 FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', 'ACACT5r', 'ECOAH2', 'BUTCT',

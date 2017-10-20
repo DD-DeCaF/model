@@ -483,6 +483,8 @@ class MediumChangeModel(ModelModificationMixin):
         so the model would be able to consume this compound.
         If metabolite is not found in e compartment, log and continue.
         """
+        for r in self.model.medium:
+            self.model.reactions.get_by_id(r).lower_bound = 0
         for compound in self.medium:
             try:
                 existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
