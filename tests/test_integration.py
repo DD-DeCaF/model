@@ -75,7 +75,35 @@ async def test_modify_model():
         'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
         'objectives': ['chebi:17790'],
         'genotype-changes': ['+Aac'],
-        'medium': [{'id': 'chebi:44080', 'concentration': 0.01}],
+        'medium': [
+            {'id': 'chebi:44080', 'concentration': 0.01},
+            {'id': 'chebi:15075', 'concentration': 0.01},
+            {'id': 'chebi:15377', 'concentration': 0.01},
+            {'id': 'chebi:15378', 'concentration': 0.01},
+            {'id': 'chebi:15379', 'concentration': 0.01},
+            {'id': 'chebi:15982', 'concentration': 0.01},
+            {'id': 'chebi:16189', 'concentration': 0.01},
+            {'id': 'chebi:16526', 'concentration': 0.01},
+            {'id': 'chebi:16643', 'concentration': 0.01},
+            {'id': 'chebi:17883', 'concentration': 0.01},
+            {'id': 'chebi:18212', 'concentration': 0.01},
+            {'id': 'chebi:18367', 'concentration': 0.01},
+            {'id': 'chebi:18420', 'concentration': 0.01},
+            {'id': 'chebi:25371', 'concentration': 0.01},
+            {'id': 'chebi:27638', 'concentration': 0.01},
+            {'id': 'chebi:28938', 'concentration': 0.01},
+            {'id': 'chebi:29033', 'concentration': 0.01},
+            {'id': 'chebi:29034', 'concentration': 0.01},
+            {'id': 'chebi:29035', 'concentration': 0.01},
+            {'id': 'chebi:29036', 'concentration': 0.01},
+            {'id': 'chebi:29101', 'concentration': 0.01},
+            {'id': 'chebi:29103', 'concentration': 0.01},
+            {'id': 'chebi:29105', 'concentration': 0.01},
+            {'id': 'chebi:29108', 'concentration': 0.01},
+            {'id': 'chebi:36271', 'concentration': 0.01},
+            {'id': 'chebi:42758', 'concentration': 0.01},
+            {'id': 'chebi:49786', 'concentration': 0.01}
+        ],
         'measurements': [{'id': 'chebi:44080', 'measurements': [-15, -11, -14, -12], 'unit': 'mg', 'name': 'glucose',
                           'type': 'compound'},
                          {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}],
@@ -83,9 +111,11 @@ async def test_modify_model():
     }
     wildtype = await restore_model('iJO1366')
     modified = await modify_model(message, wildtype.copy())
-    assert len(wildtype.medium) > 1
-    assert len(modified.medium) == 1
+    assert len(modified.medium) == 26
     assert 'EX_meoh_e' in modified.medium
+    db_key = await save_changes_to_db(modified, 'iJO1366', message)
+    restored_model = (await restore_from_db(db_key)).copy()
+    assert restored_model.medium == modified.medium
 
 
 FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', 'ACACT5r', 'ECOAH2', 'BUTCT',
