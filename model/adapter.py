@@ -171,8 +171,11 @@ class ModelModificationMixin(object):
         :param metabolite: cobra.Metabolite, metabolite from e compartment, f.e. melatn_e
         """
         exchange_reaction = list(set(metabolite.reactions).intersection(self.model.exchanges))[0]
+        print(exchange_reaction)
+        print(exchange_reaction.lower_bound)
         if exchange_reaction.lower_bound >= 0:
             exchange_reaction.lower_bound = -1 if contains_carbon(metabolite) else -1000
+        print(exchange_reaction.lower_bound)
         self.changes['added']['reactions'].add(exchange_reaction)
         self.annotate_new_metabolites(exchange_reaction)
 
@@ -483,8 +486,11 @@ class MediumChangeModel(ModelModificationMixin):
         so the model would be able to consume this compound.
         If metabolite is not found in e compartment, log and continue.
         """
+        old_medium = []
         for r in self.model.medium:
-            self.model.reactions.get_by_id(r).lower_bound = 0
+            reaction = self.model.reactions.get_by_id(r)
+            reaction.lower_bound = 0
+            old_medium.append(reaction)
         for compound in self.medium:
             try:
                 existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
@@ -493,6 +499,9 @@ class MediumChangeModel(ModelModificationMixin):
                 continue
             logger.info('Found metabolite {}'.format(compound['id']))
             self.make_consumable(existing_metabolite)
+        for reaction in old_medium:
+            if reaction.id not in self.changes['added']['reactions']:
+                self.changes['added']['reactions'].add(reaction)
 
 
 class MeasurementChangeModel(ModelModificationMixin):
