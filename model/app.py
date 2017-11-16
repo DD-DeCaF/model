@@ -606,10 +606,11 @@ def all_maps_reactions_list(model_name):
 
 
 class Response(object):
-    def __init__(self, model, message):
+    def __init__(self, model, message, wild_type_model=None):
         self.model = model
         self.message = message
         self.method_name = message.get(SIMULATION_METHOD, 'fba')
+        self.wild_type_model = wild_type_model
         if self.method_name in {'fva', 'pfba-fva'}:
             try:
                 solution = self.solve_fva()
@@ -668,7 +669,10 @@ class Response(object):
         return solution
 
     def model_json(self):
-        return model_to_dict(self.model)
+        if self.wild_type_model is not None:
+            return jsonpatch.make_patch(model_to_dict(self.wild_type_model), model_to_dict(self.model)).patch
+        else:
+            return model_to_dict(self.model)
 
     def fluxes(self):
         return self.flux
@@ -815,10 +819,11 @@ def remove_reactions(model, changes):
     return model
 
 
-async def respond(model, message=None, mutated_model_id=None):
+async def respond(model, message=None, mutated_model_id=None, wild_type_model=None):
     message = message if message is not None else {}
     t = time.time()
-    response = Response(model, message)
+    response = Response(model, message, wild_type_model)
+    # Is it ok, to leave to-return optional?
     to_return = message.get('to-return', None)
     if to_return is not None:
         result = {}
@@ -888,7 +893,7 @@ async def model_handler(request):
 async def model_get_handler(request):
     wild_type_id = request.match_info['model_id']
     wild_type_model = find_in_memory(wild_type_id)
-    return web.json_response(await respond(wild_type_model))
+    return web.json_response(model_to_dict(wild_type_model))
 
 
 async def model_diff_handler(request):
@@ -914,11 +919,8 @@ async def model_diff_handler(request):
         mutated_model = await modify_model(message, mutated_model)
         mutated_model_id = await save_changes_to_db(mutated_model, wild_type_id, message, version=1)
 
-    diff = jsonpatch.make_patch(
-        await respond(wild_type_model),
-        await respond(mutated_model, message, mutated_model_id)
-    )
-    return web.json_response(json.loads(diff.to_string()))
+    diff = await respond(mutated_model, message, mutated_model_id, wild_type_model)
+    return web.json_response(diff)
 
 
 async def maps_handler(request):
