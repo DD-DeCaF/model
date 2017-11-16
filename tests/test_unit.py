@@ -119,7 +119,7 @@ def test_new_features_identifiers():
 @pytest.mark.asyncio
 async def test_respond():
     message = {'to-return': ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions'], 'objectives': ['bigg:akg']}
-    assert set((await respond(message, find_in_memory('iJO1366'))).keys()) == set(message['to-return'])
+    assert set((await respond(find_in_memory('iJO1366'), message)).keys()) == set(message['to-return'])
 
 
 @pytest.mark.asyncio

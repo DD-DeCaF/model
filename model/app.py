@@ -3,13 +3,14 @@ import aiohttp_cors
 import aiohttp
 import gnomic
 import json
+import jsonpatch
 import hashlib
 import time
 import aioredis
 import os
 import re
 from copy import deepcopy
-from collections import namedtuple
+from collections import namedtuple, Counter
 from itertools import chain
 from functools import lru_cache
 from aiohttp import web, WSMsgType
@@ -25,6 +26,22 @@ from model.adapter import (GenotypeChangeModel, MediumChangeModel, NoIDMapping,
 from model import logger
 from model.settings import ANNOTATIONS_API
 
+import pickle
+from functools import wraps
+
+# TODO @matyasfodor move to a utils module
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+        print('func:%r args:[%r, %r] took: %2.4f sec' % \
+          (f.__name__, args, kw, te-ts))
+        return result
+    return wrap
+
+
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
     'YEAST': ['iMM904', 'ecYeast7', 'ecYeast7_proteomics'],
@@ -33,7 +50,11 @@ SPECIES_TO_MODEL = {
     'PSEPU': ['iJN746'],
 }
 
-MODELS = frozenset(chain.from_iterable(models for _, models in SPECIES_TO_MODEL.items()))
+MODELS = frozenset(chain.from_iterable(SPECIES_TO_MODEL.values()))
+
+ENV_PROD = 'PROD'
+ENV_DEV = 'DEV'
+ENV = os.environ.get('ENV', ENV_PROD)
 
 MODEL_NAMESPACE = {
     'iJO1366': 'bigg',
@@ -154,10 +175,29 @@ def read_model(model_id):
 
 
 class Models(object):
-    MODELS = {
-        model_id: read_model(model_id) for model_id in MODELS
-    }
-    print('Models are ready')
+    @timing
+    def load_model():
+        def _load_model():
+            return {
+                model_id: read_model(model_id) for model_id in MODELS
+            }
+
+        if ENV == ENV_DEV:
+            try:
+                with open('models.pk', 'rb') as fp:
+                    models = pickle.load(fp)
+            except FileNotFoundError:
+                models = _load_model()
+                with open('models.pk', 'wb') as fp:
+                    pickle.dump(models, fp)
+            else:
+                print('Models loaded from cache')
+        else:
+            models = _load_model()
+            print('Models loaded from file')
+        return models
+
+    MODELS = load_model()
 
 
 async def find_changes_in_db(model_id):
@@ -213,7 +253,7 @@ async def restore_model(model_id):
     return None
 
 
-def key_from_model_info(wild_type_id, message):
+def key_from_model_info(wild_type_id, message, version=None):
     """Generate hash string from model information which will later be used as db key
 
     :param wild_type_id: str
@@ -222,24 +262,28 @@ def key_from_model_info(wild_type_id, message):
     """
     d = {k: message.get(k, []) for k in {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT}}
     d['model_id'] = wild_type_id
+
+    if version:
+        d['version'] = version
+
     return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
 
 
-async def save_changes_to_db(model, wild_type_id, message):
+async def save_changes_to_db(model, wild_type_id, message, version=None):
     """Store model in cache database
 
     :param model: Cameo model
     :param wild_type_id: str
     :param message: dict
-    :return: str (cache database key)
+    :return: mutated_model_id (cache database key)
     """
-    db_key = key_from_model_info(wild_type_id, message)
+    mutated_model_id = key_from_model_info(wild_type_id, message, version)
     redis = await redis_client()
-    await redis.set(db_key,
+    await redis.set(mutated_model_id,
                     json.dumps({'model': model.id, 'changes': model.notes.get('changes', deepcopy(EMPTY_CHANGES))}))
     redis.close()
-    logger.info('Model created on the base of {} with message {} saved as {}'.format(wild_type_id, message, db_key))
-    return db_key
+    logger.info('Model created on the base of {} with message {} saved as {}'.format(wild_type_id, message, mutated_model_id))
+    return mutated_model_id
 
 
 def product_reaction_variable(model, metabolite_id):
@@ -485,12 +529,9 @@ def add_undo(model, to_undo):
 
 
 def count_metabolites(reactions):
-    metabolites_count = {}
-    for reaction in reactions:
-        if not is_dummy(reaction['id']):
-            for metabolite in reaction['metabolites']:
-                metabolites_count[metabolite] = metabolites_count.get(metabolite, 0) + 1
-    return metabolites_count
+    reactions = [r for r in reactions if not is_dummy(r['id'])]
+    metabolites = [m for reaction in reactions for m in reaction['metabolites']]
+    return dict(Counter(metabolites).most_common())
 
 
 # TODO: eliminate when cobrapy is refactored
@@ -565,10 +606,11 @@ def all_maps_reactions_list(model_name):
 
 
 class Response(object):
-    def __init__(self, model, message):
+    def __init__(self, model, message, wild_type_model=None):
         self.model = model
         self.message = message
         self.method_name = message.get(SIMULATION_METHOD, 'fba')
+        self.wild_type_model = wild_type_model
         if self.method_name in {'fva', 'pfba-fva'}:
             try:
                 solution = self.solve_fva()
@@ -627,13 +669,17 @@ class Response(object):
         return solution
 
     def model_json(self):
-        return model_to_dict(self.model)
+        if self.wild_type_model is not None:
+            return jsonpatch.make_patch(model_to_dict(self.wild_type_model), model_to_dict(self.model)).patch
+        else:
+            return model_to_dict(self.model)
 
     def fluxes(self):
         return self.flux
 
     def theoretical_maximum_yield(self):
-        res = {key: phase_plane_to_dict(self.model, key) for key in self.message[OBJECTIVES]}
+        objectives = self.message.get(OBJECTIVES, [])
+        res = {key: phase_plane_to_dict(self.model, key) for key in objectives}
         logger.info(res)
         return res
 
@@ -655,6 +701,12 @@ class Response(object):
             [i['id'] for i in self.model.notes.get('changes', deepcopy(EMPTY_CHANGES))['added']['reactions']
              if not is_dummy(i['id'])]
         ))
+
+    def full_response(self):
+        ret = {}
+        for key, func in RETURN_FUNCTIONS.items():
+            ret[key] = getattr(self, RETURN_FUNCTIONS[key])()
+        return ret
 
 
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
@@ -767,14 +819,20 @@ def remove_reactions(model, changes):
     return model
 
 
-async def respond(message, model, db_key=None):
-    result = {}
+async def respond(model, message=None, mutated_model_id=None, wild_type_model=None):
+    message = message if message is not None else {}
     t = time.time()
-    response = Response(model, message)
-    for key in message['to-return']:
-        result[key] = getattr(response, RETURN_FUNCTIONS[key])()
-    if db_key:
-        result['model-id'] = db_key
+    response = Response(model, message, wild_type_model)
+    # Is it ok, to leave to-return optional?
+    to_return = message.get('to-return', None)
+    if to_return is not None:
+        result = {}
+        for key in message['to-return']:
+            result[key] = getattr(response, RETURN_FUNCTIONS[key])()
+    else:
+        result = response.full_response()
+    if mutated_model_id:
+        result['model-id'] = mutated_model_id
     if REQUEST_ID in message:
         result[REQUEST_ID] = message[REQUEST_ID]
     logger.info('Response for {} is ready in {} sec'.format(message, time.time() - t))
@@ -800,7 +858,7 @@ async def model_ws_handler(request):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(await respond(message, model))
+                    ws.send_json(await respond(model, message))
             elif msg.type == WSMsgType.ERROR:
                 logger.error('Websocket for model_id {} closed with exception {}'.format(model_id, ws.exception()))
     except asyncio.CancelledError:
@@ -812,11 +870,14 @@ async def model_ws_handler(request):
 async def model_handler(request):
     wild_type_id = request.match_info['model_id']
     data = await request.json()
-    if 'message' not in data:
+
+    try:
+        message = data['message']
+    except KeyError:
         return web.HTTPBadRequest()
-    message = data['message']
-    db_key = key_from_model_info(wild_type_id, message)
-    model = await restore_from_db(db_key)
+
+    mutated_model_id = key_from_model_info(wild_type_id, message)
+    model = await restore_from_db(mutated_model_id)
     logger.info(model_from_changes.cache_info())
     if not model:
         model = find_in_memory(wild_type_id)
@@ -825,8 +886,41 @@ async def model_handler(request):
         model = model.copy()
         model.notes = deepcopy(model.notes)
         model = await modify_model(message, model)
-        db_key = await save_changes_to_db(model, wild_type_id, message)
-    return web.json_response(await respond(message, model, db_key))
+        mutated_model_id = await save_changes_to_db(model, wild_type_id, message)
+    return web.json_response(await respond(model, message, mutated_model_id))
+
+
+async def model_get_handler(request):
+    wild_type_id = request.match_info['model_id']
+    wild_type_model = find_in_memory(wild_type_id)
+    return web.json_response(model_to_dict(wild_type_model))
+
+
+async def model_diff_handler(request):
+    wild_type_id = request.match_info['model_id']
+    data = await request.json()
+
+    try:
+        message = data['message']
+    except KeyError:
+        return web.HTTPBadRequest()
+
+    wild_type_model = find_in_memory(wild_type_id)
+    if not wild_type_model:
+        return web.HTTPNotFound()
+    mutated_model_id = key_from_model_info(wild_type_id, message, version=1)
+    mutated_model = await restore_from_db(mutated_model_id)
+    logger.info(model_from_changes.cache_info())
+
+    if not mutated_model:
+        mutated_model = wild_type_model.copy()
+        # Remove this once model.copy gets fixed in Cameo
+        mutated_model.notes = deepcopy(wild_type_model.notes)
+        mutated_model = await modify_model(message, mutated_model)
+        mutated_model_id = await save_changes_to_db(mutated_model, wild_type_id, message, version=1)
+
+    diff = await respond(mutated_model, message, mutated_model_id, wild_type_model)
+    return web.json_response(diff)
 
 
 async def maps_handler(request):
@@ -852,6 +946,8 @@ app.router.add_route('GET', '/maps', maps_handler)
 app.router.add_route('GET', '/map', map_handler)
 app.router.add_route('GET', '/model-options/{species}', model_options_handler)
 app.router.add_route('POST', '/models/{model_id}', model_handler)
+app.router.add_route('GET', '/v1/models/{model_id}', model_get_handler)
+app.router.add_route('POST', '/v1/models/{model_id}', model_diff_handler)
 
 # Configure default CORS settings.
 cors = aiohttp_cors.setup(app, defaults={

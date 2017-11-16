@@ -1,6 +1,11 @@
 import aiohttp
+from copy import deepcopy
 import pytest
 import requests
+import json
+import jsonpatch
+import unittest
+from cobra.io.dict import model_to_dict
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
                  'type': 'compound'},
@@ -76,3 +81,26 @@ async def test_websocket():
                     raise ws.exception()
                 await ws.close()
                 break
+
+
+@pytest.mark.asyncio
+async def test_diff_model_api():
+    original_message = deepcopy(MESSAGE_MODIFY)
+    original_message['to-return'] = ["fluxes", "model", "added-reactions", "removed-reactions"]
+    original_response = requests.post('{url}{model}'.format(url=URL, model='iJO1366'), json={'message': original_message})
+    original_response.raise_for_status()
+    original_data = original_response.json()
+
+    wild_type_model_response = requests.get('{url}{model}'.format(url='http://localhost:8000/v1/models/', model='iJO1366'))
+    wild_type_model_response.raise_for_status()
+    wild_type_model = wild_type_model_response.json()
+
+    diff_response = requests.post('{url}{model}'.format(url='http://localhost:8000/v1/models/', model='iJO1366'), json={'message': original_message})
+    diff_response.raise_for_status()
+    patch = jsonpatch.JsonPatch(diff_response.json()['model'])
+    result = patch.apply(wild_type_model)
+
+    del result['notes']['changes']
+    del original_data['model']['notes']['changes']
+    tc = unittest.TestCase()
+    tc.assertDictEqual(result, original_data['model'])
