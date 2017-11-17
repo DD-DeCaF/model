@@ -940,32 +940,39 @@ async def map_handler(request):
         return web.json_response(json.load(f))
 
 
-app = web.Application()
-app.router.add_route('GET', '/wsmodels/{model_id}', model_ws_handler)
-app.router.add_route('GET', '/maps', maps_handler)
-app.router.add_route('GET', '/map', map_handler)
-app.router.add_route('GET', '/model-options/{species}', model_options_handler)
-app.router.add_route('POST', '/models/{model_id}', model_handler)
-app.router.add_route('GET', '/v1/models/{model_id}', model_get_handler)
-app.router.add_route('POST', '/v1/models/{model_id}', model_diff_handler)
+def get_app():
+    """
+        Construct the the application
+    """
+    app = web.Application()
+    app.router.add_route('GET', '/wsmodels/{model_id}', model_ws_handler)
+    app.router.add_route('GET', '/maps', maps_handler)
+    app.router.add_route('GET', '/map', map_handler)
+    app.router.add_route('GET', '/model-options/{species}', model_options_handler)
+    app.router.add_route('POST', '/models/{model_id}', model_handler)
+    app.router.add_route('GET', '/v1/models/{model_id}', model_get_handler)
+    app.router.add_route('POST', '/v1/models/{model_id}', model_diff_handler)
 
-# Configure default CORS settings.
-cors = aiohttp_cors.setup(app, defaults={
-    "*": aiohttp_cors.ResourceOptions(
-        allow_credentials=True,
-        expose_headers="*",
-        allow_headers="*",
-    )
-})
+    # Configure default CORS settings.
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
 
-# Configure CORS on all routes.
-for route in list(app.router.routes()):
-    cors.add(route)
+    # Configure CORS on all routes.
+    for route in list(app.router.routes()):
+        cors.add(route)
+    return app
 
 
 async def start(loop):
-    await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
+    app = get_app()
+    server = await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
     logger.info('Web server is up')
+    return app
 
 
 if __name__ == '__main__':
