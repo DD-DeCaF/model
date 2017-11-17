@@ -1,0 +1,137 @@
+import aioredis
+import asyncio
+from copy import deepcopy
+from functools import lru_cache
+import hashlib
+import json
+import os
+import pickle
+import time
+
+from cobra.io import read_sbml_model
+
+import model.consts as consts
+from model.logger import logger
+from model.utils import timing
+from model.model_operations import restore_changes
+
+
+def key_from_model_info(wild_type_id, message, version=None):
+    """Generate hash string from model information which will later be used as db key
+
+    :param wild_type_id: str
+    :param message: dict
+    :return: str
+    """
+    d = {k: message.get(k, []) for k in consts.MESSAGE_HASH_KEYS}
+    d['model_id'] = wild_type_id
+
+    if version:
+        d['version'] = version
+
+    return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
+
+
+async def redis_client():
+    return await aioredis.create_redis((os.environ['REDIS_ADDR'], os.environ['REDIS_PORT']),
+                                       loop=asyncio.get_event_loop())
+
+
+async def save_changes_to_db(model, wild_type_id, message, version=None):
+    """Store model in cache database
+
+    :param model: Cameo model
+    :param wild_type_id: str
+    :param message: dict
+    :return: mutated_model_id (cache database key)
+    """
+    mutated_model_id = key_from_model_info(wild_type_id, message, version)
+    redis = await redis_client()
+    await redis.set(mutated_model_id,
+                    json.dumps({'model': model.id, 'changes': model.notes.get('changes', consts.get_empty_changes())}))
+    redis.close()
+    logger.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
+    return mutated_model_id
+
+def read_model(model_id):
+    model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz'))
+    model.notes['namespace'] = consts.MODEL_NAMESPACE[model_id]
+    return model
+
+@timing
+def load_model():
+    def _load_model():
+        return {
+            model_id: read_model(model_id) for model_id in consts.MODELS
+        }
+
+    if consts.ENV == consts.ENV_DEV:
+        try:
+            with open('models.pk', 'rb') as fp:
+                models = pickle.load(fp)
+        except FileNotFoundError:
+            models = _load_model()
+            with open('models.pk', 'wb') as fp:
+                pickle.dump(models, fp)
+        else:
+            logger.info('Models loaded from cache')
+    else:
+        models = _load_model()
+        logger.info('Models loaded from file')
+    return models
+
+class Models(object):
+    MODELS = load_model()
+
+
+async def find_changes_in_db(model_id):
+    dumped_changes = None
+    redis = await redis_client()
+    if await redis.exists(model_id):
+        dumped_changes = (await redis.get(model_id)).decode('utf-8')
+    redis.close()
+    return dumped_changes
+
+
+async def restore_from_db(model_id):
+    t = time.time()
+    changes = await find_changes_in_db(model_id)
+    if not changes:
+        return None
+    model = model_from_changes(changes)
+    t = time.time() - t
+    logger.info('Model with db key %s is ready in %s sec', model_id, t)
+    return model
+
+
+@lru_cache(maxsize=2 ** 6)
+def model_from_changes(changes):
+    changes = json.loads(changes)
+    model = find_in_memory(changes['model']).copy()
+    model.notes = deepcopy(model.notes)
+    model = restore_changes(model, changes['changes'])
+    model.notes['changes'] = changes['changes']
+    return model
+
+
+def find_in_memory(model_id):
+    return Models.MODELS.get(model_id)
+
+
+async def restore_model(model_id):
+    """Try to restore model by model id.
+    NOTE: if model is found in memory, the original model is returned - to modify, make a copy
+
+    :param model_id: str
+    :return: Cameo model or None
+    """
+    model = find_in_memory(model_id)
+    if model:
+        logger.info('Wild type model with id %s is found', model_id)
+        return model
+    model = await restore_from_db(model_id)
+    if model:
+        logger.info('Model with id %s found in database', model_id)
+        return model
+    logger.info('No model with id %s', model_id)
+    return None
