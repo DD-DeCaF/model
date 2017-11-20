@@ -1,6 +1,5 @@
 import aioredis
 import asyncio
-from copy import deepcopy
 from functools import lru_cache
 import hashlib
 import json
@@ -46,6 +45,7 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
     :return: mutated_model_id (cache database key)
     """
     mutated_model_id = key_from_model_info(wild_type_id, message, version)
+    
     redis = await redis_client()
     await redis.set(mutated_model_id,
                     json.dumps({'model': model.id, 'changes': model.notes.get('changes', consts.get_empty_changes())}))
@@ -108,7 +108,6 @@ async def restore_from_db(model_id):
 def model_from_changes(changes):
     changes = json.loads(changes)
     model = find_in_memory(changes['model']).copy()
-    model.notes = deepcopy(model.notes)
     model = restore_changes(model, changes['changes'])
     model.notes['changes'] = changes['changes']
     return model
