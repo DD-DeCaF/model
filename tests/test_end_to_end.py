@@ -9,7 +9,8 @@ import unittest
 from cobra.io.dict import model_to_dict
 
 from model.app import get_app
-
+from model.logger import logging
+logging.disable(logging.CRITICAL)
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
                  'type': 'compound'},

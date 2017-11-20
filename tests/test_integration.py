@@ -1,10 +1,14 @@
 import pytest
 from deepdiff import DeepDiff
-from model.app import (call_genes_to_reactions, modify_model, restore_model,
-                       METHODS, Response, SIMULATION_METHOD,
-                       restore_from_db, save_changes_to_db, find_in_memory, EMPTY_CHANGES, apply_reactions_add)
+
 from model.adapter import full_genotype
-from copy import deepcopy
+from model.consts import METHODS, SIMULATION_METHOD, get_empty_changes
+from model.memory_storage import (restore_model, restore_from_db, save_changes_to_db, 
+                                  find_in_memory)
+from model.model_operations import call_genes_to_reactions, modify_model,apply_reactions_add
+from model.response import Response
+from model.logger import logging
+logging.disable(logging.CRITICAL)
 
 
 @pytest.mark.asyncio
@@ -18,7 +22,7 @@ async def test_call_genes_to_reactions():
 async def test_reactions_additions():
     ecoli_original = find_in_memory('iJO1366').copy()
     ecoli = ecoli_original.copy()
-    ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
+    ecoli.notes['changes'] = get_empty_changes()
     reactions = [
         {'id': 'MNXR69355', 'metabolites': None},
         {'id': 'MNXR81835', 'metabolites': None},
@@ -129,7 +133,6 @@ FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', '
 @pytest.mark.asyncio
 async def test_simulation_methods():
     for method in METHODS:
-        print(method)
         message = {SIMULATION_METHOD: method}
         model = (await restore_model('iJO1366')).copy()
         response = Response(model, message)
