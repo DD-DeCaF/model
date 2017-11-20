@@ -17,7 +17,7 @@ async def model_ws(request):
     cached_model = await restore_model(model_id)
     logger.info(model_from_changes.cache_info())
     if not cached_model:
-        raise KeyError('No such model: {}'.format(model_id))
+        raise KeyError('No such model: %s', model_id)
     model = cached_model.copy()
     model.notes = deepcopy(model.notes)
     await ws.prepare(request)
@@ -34,7 +34,7 @@ async def model_ws(request):
             elif msg.type == WSMsgType.ERROR:
                 logger.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
     except asyncio.CancelledError:
-        logger.info('Websocket for model_id {} cancelled'.format(model_id))
+        logger.info('Websocket for model_id %s cancelled', model_id)
     await ws.close()
     return ws
 
