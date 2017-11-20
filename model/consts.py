@@ -58,24 +58,24 @@ MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
 MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT}
 
 def get_empty_changes():
-  return {
-      'added': {
-          'reactions': [],
-          'metabolites': [],
-      },
-      'removed': {
-          'genes': [],
-          'reactions': [],
-      },
-      'measured': {
-          'genes': [],
-          'reactions': []
-      },
-      'measured-missing': {
-          'genes': [],
-          'reactions': []
-      }
-  }
+    return {
+        'added': {
+            'reactions': [],
+            'metabolites': [],
+        },
+        'removed': {
+            'genes': [],
+            'reactions': [],
+        },
+        'measured': {
+            'genes': [],
+            'reactions': []
+        },
+        'measured-missing': {
+            'genes': [],
+            'reactions': []
+        }
+}
 
 MAPS_DIR = 'maps'
 

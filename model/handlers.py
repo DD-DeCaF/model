@@ -1,6 +1,5 @@
 import asyncio
 from aiohttp import web, WSMsgType
-from copy import deepcopy
 import json
 
 from cobra.io.dict import model_to_dict
@@ -19,7 +18,6 @@ async def model_ws(request):
     if not cached_model:
         raise KeyError('No such model: %s', model_id)
     model = cached_model.copy()
-    model.notes = deepcopy(model.notes)
     await ws.prepare(request)
     try:
         async for msg in ws:
@@ -56,7 +54,6 @@ async def model(request):
         if not model:
             return web.HTTPNotFound()
         model = model.copy()
-        model.notes = deepcopy(model.notes)
         model = await modify_model(message, model)
         mutated_model_id = await save_changes_to_db(model, wild_type_id, message)
     return web.json_response(await respond(model, message, mutated_model_id))
@@ -85,14 +82,12 @@ async def model_diff(request):
     logger.info(model_from_changes.cache_info())
 
     if not mutated_model:
-        # Not sure about how this will perform, copy is an expensive operation
-        # We could just modify the previous state (get it from LRU cache)
+        # @matyasfodor Not sure about how this will perform, copy is an expensive
+        # operation. We could just modify the previous state (get it from LRU cache)
         # but then we'd modify the returned object, it should not be accessed more
-        # than once. One idea is to delete the retrieved obejct, it is possible with
-        # https://pypi.python.org/pypi/pylru
+        # than once. One idea is to delete the retrieved obejct (only use it once).
+        # It is possible with https://pypi.python.org/pypi/pylru
         mutated_model = wild_type_model.copy()
-        # Remove this once model.copy gets fixed in Cameo
-        mutated_model.notes = deepcopy(wild_type_model.notes)
         mutated_model = await modify_model(message, mutated_model)
         mutated_model_id = await save_changes_to_db(mutated_model, wild_type_id, message, version=1)
 
