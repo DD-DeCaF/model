@@ -5,15 +5,18 @@ from cobra.io import model_to_dict, read_sbml_model
 from tempfile import mkdtemp
 import os
 
-from model.app import (NoIDMapping, restore_model, find_in_memory, product_reaction_variable,
-                       phase_plane_to_dict, new_features_identifiers, apply_reactions_knockouts, respond,
-                       save_changes_to_db,
-                       key_from_model_info, GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, convert_mg_to_mmol,
-                       convert_measurements_to_mmol,
-                       modify_model, restore_from_db, add_reactions, EMPTY_CHANGES,
-                       build_string_from_metabolites)
-from model.adapter import full_genotype, get_unique_metabolite
+from model.adapter import NoIDMapping, full_genotype, get_unique_metabolite
+from model.consts import GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, get_empty_changes
+from model.memory_storage import (restore_model, find_in_memory, save_changes_to_db, 
+                                  key_from_model_info, restore_from_db)
+from model.model_operations import (product_reaction_variable, phase_plane_to_dict, 
+                                    new_features_identifiers, apply_reactions_knockouts, 
+                                    convert_mg_to_mmol, convert_measurements_to_mmol, modify_model,
+                                    add_reactions, build_string_from_metabolites)
+from model.response import respond
 from model.update_models import update_local_models
+from model.logger import logging
+logging.disable(logging.CRITICAL)
 
 
 def almost_equal(a, b):
@@ -126,7 +129,7 @@ async def test_respond():
 async def test_reactions_knockouts():
     ecoli_original = find_in_memory('iJO1366').copy()
     ecoli = ecoli_original.copy()
-    ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
+    ecoli.notes['changes'] = get_empty_changes()
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
     GLUDy_upper_bound = ecoli.reactions.get_by_id('GLUDy').upper_bound
     assert GLUDy_upper_bound != 0
