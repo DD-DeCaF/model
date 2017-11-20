@@ -184,7 +184,7 @@ async def query_genes_to_reaction(gene):
     :param gene: gene identifier
     :return: reactions mapping {<rn ID>: <reaction string>}
     """
-    logger.info('Annotated gene at {}: {}'.format(ANNOTATIONS_API, gene))
+    logger.info('Annotated gene at %s: %s', ANNOTATIONS_API, gene)
     async with aiohttp.ClientSession() as session:
         async with session.get(ANNOTATIONS_API, params={'geneId': gene}) as r:
             assert r.status == 200
@@ -199,10 +199,10 @@ async def apply_genotype_changes(model, genotype_changes):
     :param genotype_changes: list of strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
     :return:
     """
-    logger.info('Genotype changes {}'.format(genotype_changes))
+    logger.info('Genotype changes %s', genotype_changes)
     genotype_features = full_genotype(genotype_changes)
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
-    logger.info('Genes to reaction: {}'.format(genes_to_reactions))
+    logger.info('Genes to reaction: %s', genes_to_reactions)
     change_model = GenotypeChangeModel(model, genotype_features, genes_to_reactions, model.notes['namespace'])
     await change_model.map_metabolites()
     change_model.apply_changes()
@@ -232,7 +232,7 @@ def convert_measurements_to_mmol(measurements, model):
                     metabolite.formula_weight
                 ) for point in value['measurements']]
                 value['unit'] = 'mmol'
-                logger.info('Converted metabolite {} from mg to mmol'.format(value['id']))
+                logger.info('Converted metabolite %s from mg to mmol', value['id'])
     return measurements
 
 
@@ -254,18 +254,17 @@ async def apply_measurement_changes(model, measurements):
     return change_model
 
 
-APPLY_FUNCTIONS = {
-    consts.GENOTYPE_CHANGES: apply_genotype_changes,
-    consts.MEDIUM: apply_medium_changes,
-    consts.MEASUREMENTS: apply_measurement_changes,
-}
-
-
 async def modify_model(message, model):
+    apply_functions = {
+        consts.GENOTYPE_CHANGES: apply_genotype_changes,
+        consts.MEDIUM: apply_medium_changes,
+        consts.MEASUREMENTS: apply_measurement_changes,
+    }
+
     for key in consts.REQUEST_KEYS:
         data = message.get(key, [])
         if data:
-            modifications = await APPLY_FUNCTIONS[key](model, data)
+            modifications = await apply_functions[key](model, data)
             model = collect_changes(modifications)
     if consts.REACTIONS_ADD in message:
         model = await apply_reactions_add(model, message[consts.REACTIONS_ADD])
@@ -274,7 +273,7 @@ async def modify_model(message, model):
     return model
 
 def restore_changes(model, changes):
-    logger.info('Changes to restore: {}'.format(changes))
+    logger.info('Changes to restore: %s', changes)
     model = apply_additions(model, changes['added'])
     model = apply_removals(model, changes['removed'])
     model = apply_measurements(model, changes['measured'])
@@ -347,13 +346,13 @@ def product_reaction_variable(model, metabolite_id):
     db_name, compound_id = metabolite_id.split(':')
     try:
         metabolite = get_unique_metabolite(model, compound_id, 'e', db_name)
-        logger.info('found model metabolite for {} {}'.format(compound_id, db_name))
+        logger.info('found model metabolite for %s %s', compound_id, db_name)
     except NoIDMapping:
-        logger.info('no model metabolite for {} {}'.format(compound_id, db_name))
+        logger.info('no model metabolite for %s %s', compound_id, db_name)
         return None
     exchange_reactions = list(set(metabolite.reactions).intersection(model.exchanges))
     if len(exchange_reactions) != 1:
-        logger.info('More than one exchange reaction in model {} for metabolite {}'.format(model.id, metabolite_id))
+        logger.info('More than one exchange reaction in model %s for metabolite %s', model.id, metabolite_id)
     return exchange_reactions[0]
 
 

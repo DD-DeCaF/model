@@ -8,7 +8,7 @@ from cobra.io.dict import model_to_dict
 import model.consts as consts
 from model.logger import logger
 import model.utils as utils
-from model.model_operations import is_dummy
+from model.model_operations import is_dummy, phase_plane_to_dict
 
 class Response(object):
     def __init__(self, model, message, wild_type_model=None):
@@ -70,7 +70,7 @@ class Response(object):
             solution = consts.METHODS[self.method_name](self.model, reference=pfba(self.model))
         else:
             solution = consts.METHODS[self.method_name](self.model)
-        logger.info('Model solved with method {} in {} sec'.format(self.method_name, time.time() - t))
+        logger.info('Model solved with method %s in %s sec', self.method_name, time.time() - t)
         return solution
 
     def model_json(self):
@@ -130,5 +130,5 @@ async def respond(model, message=None, mutated_model_id=None, wild_type_model=No
         result['model-id'] = mutated_model_id
     if consts.REQUEST_ID in message:
         result[consts.REQUEST_ID] = message[consts.REQUEST_ID]
-    logger.info('Response for {} is ready in {} sec'.format(message, time.time() - t))
+    logger.info('Response for %s is ready in %s sec', message, time.time() - t)
     return result
