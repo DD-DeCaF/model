@@ -1,38 +1,42 @@
 import asyncio
 from aiohttp import web, WSMsgType
 import json
+import logging
+import os
 
 from cobra.io.dict import model_to_dict
 
-import model.consts as consts
-from model.logger import logger
-from model.memory_storage import restore_model, model_from_changes, key_from_model_info, restore_from_db, find_in_memory, save_changes_to_db
-from model.model_operations import modify_model
+import model.constants as constants
+from model.storage import (restore_model, model_from_changes, key_from_model_info,
+                           restore_from_db, find_in_memory, save_changes_to_db)
+from model.operations import modify_model
 from model.response import respond
+
+LOGGER = logging.getLogger(__name__)
 
 async def model_ws(request):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
     cached_model = await restore_model(model_id)
-    logger.info(model_from_changes.cache_info())
+    LOGGER.info(model_from_changes.cache_info())
     if not cached_model:
         raise KeyError('No such model: %s', model_id)
     model = cached_model.copy()
     await ws.prepare(request)
     try:
         async for msg in ws:
-            logger.debug(msg)
+            LOGGER.debug(msg)
             if msg.type == WSMsgType.TEXT:
                 if msg.data == 'close':
                     await ws.close()
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(await respond(model, message))
+                    ws.send_json(await respond(model, message, wild_type_model=cached_model))
             elif msg.type == WSMsgType.ERROR:
-                logger.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
-    except asyncio.CancelledError:
-        logger.info('Websocket for model_id %s cancelled', model_id)
+                LOGGER.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
+    except asyncio.CancelledError as ex:
+        LOGGER.exception('Websocket for model_id %s cancelled, %s', model_id, str(ex))
     await ws.close()
     return ws
 
@@ -48,7 +52,7 @@ async def model(request):
 
     mutated_model_id = key_from_model_info(wild_type_id, message)
     model = await restore_from_db(mutated_model_id)
-    logger.info(model_from_changes.cache_info())
+    LOGGER.info(model_from_changes.cache_info())
     if not model:
         model = find_in_memory(wild_type_id)
         if not model:
@@ -79,7 +83,7 @@ async def model_diff(request):
         return web.HTTPNotFound()
     mutated_model_id = key_from_model_info(wild_type_id, message, version=1)
     mutated_model = await restore_from_db(mutated_model_id)
-    logger.info(model_from_changes.cache_info())
+    LOGGER.info(model_from_changes.cache_info())
 
     if not mutated_model:
         # @matyasfodor Not sure about how this will perform, copy is an expensive
@@ -95,17 +99,22 @@ async def model_diff(request):
     return web.json_response(diff)
 
 async def maps(request):
-    return web.json_response(consts.MAP_DICTIONARY)
+    return web.json_response(constants.MAP_DICTIONARY)
 
 
 async def model_options(request):
-    return web.json_response(consts.SPECIES_TO_MODEL[request.match_info['species']])
+    return web.json_response(constants.SPECIES_TO_MODEL[request.match_info['species']])
 
 
 async def map(request):
-    # FIXME: A malicious user can access any JSON file in the system this way.
-    filepath = '{}/{}/{}.{}.json'.format(
-        consts.MAPS_DIR, request.GET['model'], request.GET['model'], request.GET['map']
-    )
-    with open(filepath) as f:
-        return web.json_response(json.load(f))
+    modelId = request.GET['model']
+    mapId = request.GET['map']
+    directory = os.path.realpath(constants.MAPS_DIR)
+    filepath = os.path.join(directory, modelId, '{}.{}.json'.format(modelId, mapId))
+    if os.path.commonprefix((os.path.realpath(filepath), directory)) != directory:
+        return web.HTTPBadRequest()
+    try:
+        with open(filepath) as f:
+            return web.json_response(json.load(f))
+    except FileNotFoundError:
+        return web.HTTPNotFound()

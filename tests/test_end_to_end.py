@@ -5,11 +5,12 @@ import pytest
 import requests
 import json
 import jsonpatch
+import logging
 import unittest
 from cobra.io.dict import model_to_dict
 
 from model.app import get_app
-from model.logger import logging
+
 logging.disable(logging.CRITICAL)
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
@@ -45,6 +46,22 @@ WS_URL = '/wsmodels/{}'
 class EndToEndTestCase(AioHTTPTestCase):
     async def get_application(self):
         return get_app()
+
+    @unittest_run_loop
+    async def test_map_success(self):
+        params = {'model': 'e_coli_core', 'map': 'Core metabolism'}
+        response = await self.client.get('/map', params=params)
+        response.raise_for_status()
+
+    @unittest_run_loop
+    async def test_map_traversal_attempt(self):
+        response = await self.client.get('/map', params={'model': '../../e_coli_core', 'map': 'Core metabolism'})
+        assert response.status == 400
+
+    @unittest_run_loop
+    async def test_map_not_found(self):
+        response = await self.client.get('/map', params={'model': 'e_coli_core', 'map': 'Non existing'})
+        assert response.status == 404
 
     @unittest_run_loop
     async def test_http(self):

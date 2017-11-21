@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: "-w 1 -b 0.0.0.0:8000 -t 150 -k aiohttp.worker.GunicornWebWorker --reload model.app:get_app()"
+    command: "-w 2 -b 0.0.0.0:8000 -t 150 -k aiohttp.worker.GunicornWebWorker --reload model.app:get_app()"
     ports:
       - "${MODEL_PORT:-8000}:8000"
     links:

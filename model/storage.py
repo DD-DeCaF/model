@@ -3,16 +3,19 @@ import asyncio
 from functools import lru_cache
 import hashlib
 import json
+import logging
 import os
 import pickle
 import time
 
 from cobra.io import read_sbml_model
 
-import model.consts as consts
-from model.logger import logger
+import model.constants as constants
 from model.utils import timing
-from model.model_operations import restore_changes
+from model.operations import restore_changes
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def key_from_model_info(wild_type_id, message, version=None):
@@ -22,7 +25,7 @@ def key_from_model_info(wild_type_id, message, version=None):
     :param message: dict
     :return: str
     """
-    d = {k: message.get(k, []) for k in consts.MESSAGE_HASH_KEYS}
+    d = {k: message.get(k, []) for k in constants.MESSAGE_HASH_KEYS}
     d['model_id'] = wild_type_id
 
     if version:
@@ -48,24 +51,24 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
     
     redis = await redis_client()
     await redis.set(mutated_model_id,
-                    json.dumps({'model': model.id, 'changes': model.notes.get('changes', consts.get_empty_changes())}))
+                    json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())}))
     redis.close()
-    logger.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
+    LOGGER.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
     return mutated_model_id
 
 def read_model(model_id):
     model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz'))
-    model.notes['namespace'] = consts.MODEL_NAMESPACE[model_id]
+    model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
     return model
 
 @timing
 def load_model():
     def _load_model():
         return {
-            model_id: read_model(model_id) for model_id in consts.MODELS
+            model_id: read_model(model_id) for model_id in constants.MODELS
         }
 
-    if consts.ENV == consts.ENV_DEV:
+    if constants.ENV == constants.ENV_DEV:
         try:
             with open('models.pk', 'rb') as fp:
                 models = pickle.load(fp)
@@ -74,10 +77,10 @@ def load_model():
             with open('models.pk', 'wb') as fp:
                 pickle.dump(models, fp)
         else:
-            logger.info('Models loaded from cache')
+            LOGGER.info('Models loaded from cache')
     else:
         models = _load_model()
-        logger.info('Models loaded from file')
+        LOGGER.info('Models loaded from file')
     return models
 
 class Models(object):
@@ -100,7 +103,7 @@ async def restore_from_db(model_id):
         return None
     model = model_from_changes(changes)
     t = time.time() - t
-    logger.info('Model with db key %s is ready in %s sec', model_id, t)
+    LOGGER.info('Model with db key %s is ready in %s sec', model_id, t)
     return model
 
 
@@ -126,11 +129,11 @@ async def restore_model(model_id):
     """
     model = find_in_memory(model_id)
     if model:
-        logger.info('Wild type model with id %s is found', model_id)
+        LOGGER.info('Wild type model with id %s is found', model_id)
         return model
     model = await restore_from_db(model_id)
     if model:
-        logger.info('Model with id %s found in database', model_id)
+        LOGGER.info('Model with id %s found in database', model_id)
         return model
-    logger.info('No model with id %s', model_id)
+    LOGGER.info('No model with id %s', model_id)
     return None

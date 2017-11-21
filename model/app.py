@@ -1,15 +1,15 @@
 import asyncio
 import aiohttp_cors
 from aiohttp import web
+import logging
 
 import model.handlers as handlers
-from model.logger import logger
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def get_app():
-    """
-        Construct the the application
-    """
     app = web.Application()
     app.router.add_route('GET', '/wsmodels/{model_id}', handlers.model_ws)
     app.router.add_route('GET', '/maps', handlers.maps)
@@ -37,7 +37,7 @@ def get_app():
 async def start(loop):
     app = get_app()
     server = await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
-    logger.info('Web server is up')
+    LOGGER.info('Web server is up')
     return app
 
 
