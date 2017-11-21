@@ -8,7 +8,7 @@ from cobra.io import read_sbml_model, write_sbml_model
 from cameo import load_model
 
 from model.adapter import add_prefix
-from model.consts import MODELS, MODEL_NAMESPACE
+from model.constants import MODELS, MODEL_NAMESPACE
 from model.settings import ID_MAPPER_API
 
 

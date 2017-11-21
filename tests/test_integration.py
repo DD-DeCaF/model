@@ -1,13 +1,13 @@
 import pytest
 from deepdiff import DeepDiff
+import logging
 
 from model.adapter import full_genotype
-from model.consts import METHODS, SIMULATION_METHOD, get_empty_changes
-from model.memory_storage import (restore_model, restore_from_db, save_changes_to_db, 
-                                  find_in_memory)
-from model.model_operations import call_genes_to_reactions, modify_model,apply_reactions_add
+from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
+from model.storage import (restore_model, restore_from_db, save_changes_to_db, find_in_memory)
+from model.operations import call_genes_to_reactions, modify_model,apply_reactions_add
 from model.response import Response
-from model.logger import logging
+
 logging.disable(logging.CRITICAL)
 
 

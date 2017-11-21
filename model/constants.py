@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import time
@@ -7,7 +8,8 @@ from itertools import chain
 from cobra.flux_analysis import pfba, flux_variability_analysis
 from cobra.flux_analysis.moma import add_moma
 
-from model.logger import logger
+LOGGER = logging.getLogger(__name__)
+
 
 def pfba_fva(model, reactions=None):
     return flux_variability_analysis(
@@ -19,13 +21,13 @@ def pfba_fva(model, reactions=None):
 
 
 def moma(model, reference, linear=False):
-    start_time = time.time()
     with model:
+        start_time = time.time()
         add_moma(model, solution=reference, linear=linear)
-        logger.info('moma addition finished in %s s', time.time() - start_time)
+        LOGGER.info('moma addition finished in %s s', time.time() - start_time)
         start_time = time.time()
         solution = model.optimize()
-        logger.info('moma optimization finished in %s s', time.time() - start_time)
+        LOGGER.info('moma optimization finished in %s s', time.time() - start_time)
     return solution
 
 
