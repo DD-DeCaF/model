@@ -48,11 +48,11 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
     :return: mutated_model_id (cache database key)
     """
     mutated_model_id = key_from_model_info(wild_type_id, message, version)
-    
+
+    value = json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())})
     redis = await redis_client()
-    await redis.set(mutated_model_id,
-                    json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())}))
-    redis.close()
+    with (await redis) as connection:
+        await connection.set(mutated_model_id, value)
     LOGGER.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
     return mutated_model_id
 
@@ -90,10 +90,12 @@ class Models(object):
 async def find_changes_in_db(model_id):
     dumped_changes = None
     redis = await redis_client()
-    if await redis.exists(model_id):
-        dumped_changes = (await redis.get(model_id)).decode('utf-8')
-    redis.close()
-    return dumped_changes
+    with (await redis) as connection:
+        dumped_changes = await connection.get(model_id)
+
+    if dumped_changes is not None:
+        return dumped_changes.decode('utf-8')
+    return None
 
 
 async def restore_from_db(model_id):
