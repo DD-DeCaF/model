@@ -1,6 +1,17 @@
 import aiohttp
+from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+from copy import deepcopy
 import pytest
 import requests
+import json
+import jsonpatch
+import logging
+import unittest
+from cobra.io import model_to_dict
+
+from model.app import get_app
+
+logging.disable(logging.CRITICAL)
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
                  'type': 'compound'},
@@ -25,54 +36,98 @@ MESSAGE_MODIFY = {
     'measurements': MEASUREMENTS,
 }
 
-URL = 'http://localhost:8000/models/'
-MODEL_OPTIONS_URL = 'http://localhost:8000/model-options/ECOLX'
-URL_MAPS = 'http://localhost:8000/maps'
-WS_URL = 'http://localhost:8000/wsmodels/'
+MODELS_URL = '/models/{}'
+V1_MODELS_URL = '/v1/models/{}'
+MODEL_OPTIONS_URL = '/model-options/{}'
+MAPS_URL = '/maps'
+WS_URL = '/wsmodels/{}'
 
 
-def test_http():
-    response = requests.get(MODEL_OPTIONS_URL)
-    response.raise_for_status()
-    response = requests.get(URL_MAPS)
-    response.raise_for_status()
-    for query, message in {'modify': MESSAGE_MODIFY, 'fluxes': MESSAGE_FLUXES}.items():
-        response = requests.post(URL + 'iJO1366', json={'message': message})
+class EndToEndTestCase(AioHTTPTestCase):
+    async def get_application(self):
+        return get_app()
+
+    @unittest_run_loop
+    async def test_map_success(self):
+        params = {'model': 'e_coli_core', 'map': 'Core metabolism'}
+        response = await self.client.get('/map', params=params)
         response.raise_for_status()
-        assert set(response.json().keys()) == set(message['to-return'] + ['model-id'])
-        assert response.json()['fluxes']['EX_glc__D_e'] == -9.0
-        assert abs(response.json()['fluxes']['EX_etoh_e'] - 4.64) < 0.001  # lower bound
-        assert response.json()['fluxes']['PFK'] == 5
-        if query == 'modify':
-            tmy = response.json()['tmy']
-            changes = response.json()['model']['notes']['changes']
-            assert sum(tmy['chebi:17579']['DM_caro_e']) > 10.
-            assert 'PTA2' in {rxn['id'] for rxn in changes['removed']['reactions']}
-            assert 'EX_etoh_e' in {rxn['id'] for rxn in changes['measured']['reactions']}
-            assert 'PFK' in {rxn['id'] for rxn in changes['measured']['reactions']}
-            assert 'b2297' in {rxn['id'] for rxn in changes['removed']['genes']}
-            assert 'BAD_ID' in {rxn['id'] for rxn in changes['measured-missing']['reactions']}
-    response = requests.post(URL + 'iJO1366', json={'message': MESSAGE_FLUXES_INFEASIBLE})
-    assert response.json()['fluxes']['ATPM'] == 100
-    response = requests.post(URL + 'wrong_id', json={'message': {}})
-    assert response.status_code == 404
-    response = requests.post(URL + 'iJO1366', json={})
-    assert response.status_code == 400
 
+    @unittest_run_loop
+    async def test_map_traversal_attempt(self):
+        response = await self.client.get('/map', params={'model': '../../e_coli_core', 'map': 'Core metabolism'})
+        assert response.status == 400
 
-@pytest.mark.asyncio
-async def test_websocket():
-    response = requests.post(URL + 'iJO1366', json={'message': MESSAGE_MODIFY})
-    response.raise_for_status()
-    model_id = response.json()['model-id']
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(WS_URL + model_id) as ws:
-            ws.send_json(MESSAGE_TMY_FLUXES)
-            async for msg in ws:
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    assert msg.json()['fluxes']
-                    assert msg.json()['tmy']
-                elif msg.type == aiohttp.WSMsgType.ERROR:
-                    raise ws.exception()
-                await ws.close()
-                break
+    @unittest_run_loop
+    async def test_map_not_found(self):
+        response = await self.client.get('/map', params={'model': 'e_coli_core', 'map': 'Non existing'})
+        assert response.status == 404
+
+    @unittest_run_loop
+    async def test_http(self):
+        response = await self.client.get(MODEL_OPTIONS_URL.format('ECOLX'))
+        response.raise_for_status()
+        response = await self.client.get(MAPS_URL)
+        response.raise_for_status()
+        for query, message in {'modify': MESSAGE_MODIFY, 'fluxes': MESSAGE_FLUXES}.items():
+            response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': message})
+            response.raise_for_status()
+            model = await response.json()
+            assert set(model.keys()) == set(message['to-return'] + ['model-id'])
+            assert model['fluxes']['EX_glc__D_e'] == -9.0
+            assert abs(model['fluxes']['EX_etoh_e'] - 4.64) < 0.001  # lower bound
+            assert model['fluxes']['PFK'] == 5
+            if query == 'modify':
+                tmy = model['tmy']
+                changes = model['model']['notes']['changes']
+                assert sum(tmy['chebi:17579']['DM_caro_e']) > 10.
+                assert 'PTA2' in {rxn['id'] for rxn in changes['removed']['reactions']}
+                assert 'EX_etoh_e' in {rxn['id'] for rxn in changes['measured']['reactions']}
+                assert 'PFK' in {rxn['id'] for rxn in changes['measured']['reactions']}
+                assert 'b2297' in {rxn['id'] for rxn in changes['removed']['genes']}
+                assert 'BAD_ID' in {rxn['id'] for rxn in changes['measured-missing']['reactions']}
+        response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_FLUXES_INFEASIBLE})
+        model = await response.json()
+        assert model['fluxes']['ATPM'] == 100
+        response = await self.client.post(MODELS_URL.format('wrong_id'), json={'message': {}})
+        assert response.status == 404
+        response = await self.client.post(MODELS_URL.format('iJO1366'), json={})
+        assert response.status == 400
+
+    @unittest_run_loop
+    async def test_websocket(self):
+        response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_MODIFY})
+        response.raise_for_status()
+        model_id = (await response.json())['model-id']
+        ws = await self.client.ws_connect(WS_URL.format(model_id))
+        ws.send_json(MESSAGE_TMY_FLUXES)
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                msg_content = msg.json()
+                assert msg_content['fluxes']
+                assert msg_content['tmy']
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                raise ws.exception()
+            await ws.close()
+            break
+
+    @unittest_run_loop
+    async def test_diff_model_api(self):
+        original_message = deepcopy(MESSAGE_MODIFY)
+        original_message['to-return'] = ["fluxes", "model", "added-reactions", "removed-reactions"]
+        original_response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': original_message})
+        original_response.raise_for_status()
+        original_model = (await original_response.json())['model']
+
+        wild_type_model_response = await self.client.get(V1_MODELS_URL.format('iJO1366'))
+        wild_type_model_response.raise_for_status()
+        wild_type_model = await wild_type_model_response.json()
+
+        diff_response = await self.client.post(V1_MODELS_URL.format('iJO1366'), json={'message': original_message})
+        diff_response.raise_for_status()
+        patch = jsonpatch.JsonPatch((await diff_response.json())['model'])
+        result = patch.apply(wild_type_model)
+
+        del result['notes']['changes']
+        del original_model['notes']['changes']
+        assert result == original_model
