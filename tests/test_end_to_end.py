@@ -38,7 +38,7 @@ MESSAGE_MODIFY = {
 
 MODELS_URL = '/models/{}'
 V1_MODELS_URL = '/v1/models/{}'
-MODEL_OPTIONS_URL = '/model-options/{}' #URL
+MODEL_OPTIONS_URL = '/model-options/{}'
 MAPS_URL = '/maps'
 WS_URL = '/wsmodels/{}'
 

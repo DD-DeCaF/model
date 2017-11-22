@@ -11,6 +11,7 @@ from model.storage import (key_from_model_info, save_changes_to_db, find_in_memo
 
 logging.disable(logging.CRITICAL)
 
+
 def test_key_from_model_info():
     model_id = 'model_id'
     for _ in range(50):

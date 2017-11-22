@@ -12,6 +12,7 @@ from model.storage import restore_model, find_in_memory
 
 logging.disable(logging.CRITICAL)
 
+
 def is_close(x, y):
     return isclose(x, y, abs_tol=10e-6)
 
@@ -30,10 +31,12 @@ async def test_b_number():
     model = await modify_model(message, (await restore_model(model_id)).copy())
     assert not model.genes.b3172.functional
 
+
 def test_product_reaction_variable():
     ecoli = find_in_memory('iJO1366')
     assert product_reaction_variable(ecoli, 'bigg:akg').id == 'EX_akg_e'
     assert product_reaction_variable(ecoli, 'bigg:e4p') is None
+
 
 def test_phase_plane_to_dict():
     ecoli = find_in_memory('iJO1366')
@@ -42,10 +45,12 @@ def test_phase_plane_to_dict():
     assert len(set([len(v) for v in result.values()])) == 1
     assert phase_plane_to_dict(ecoli, 'bigg:g3p') == {}
 
+
 def test_new_features_identifiers():
     changes = full_genotype(['-A -B +promoter.C:#D:#E:terminator.F', '+G', '+Y -H'])
     result = new_features_identifiers(changes)
     assert set(result) == {'C', 'D', 'E', 'F', 'G', 'Y'}
+
 
 @pytest.mark.asyncio
 async def test_reactions_knockouts():
@@ -82,6 +87,7 @@ def test_add_reactions():
     info = ('newid', '', {}, 0, 0, '')
     changes = [dict(zip(keys, info))] * 2
     add_reactions(ecoli, changes)
+
 
 def test_build_string_from_metabolites():
     metabolites = {'glc__D_c': -1, 'caro_c': 1}

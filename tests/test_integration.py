@@ -5,7 +5,7 @@ import logging
 from model.adapter import full_genotype
 from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
 from model.storage import (restore_model, restore_from_db, save_changes_to_db, find_in_memory)
-from model.operations import call_genes_to_reactions, modify_model,apply_reactions_add
+from model.operations import call_genes_to_reactions, modify_model, apply_reactions_add
 from model.response import Response
 
 logging.disable(logging.CRITICAL)
@@ -47,9 +47,10 @@ async def test_reactions_additions():
     ecoli = await apply_reactions_add(ecoli, reactions)
     added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
     assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
-    assert added_reactions_unique_ids - reaction_ids == \
-           {'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
-            'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e'}
+    assert added_reactions_unique_ids - reaction_ids == {
+        'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
+        'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e'
+    }
     for reaction in ecoli.notes['changes']['added']['reactions']:
         assert ecoli.reactions.has_id(reaction['id'])
     removed_reactions = {'DM_12dgr182_9_12_e',

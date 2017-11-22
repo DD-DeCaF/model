@@ -9,6 +9,7 @@ from model.update_models import update_local_models
 
 logging.disable(logging.CRITICAL)
 
+
 def test_update_models():
     tempdir = mkdtemp()
     update_local_models('e_coli_core', tempdir)

@@ -59,6 +59,7 @@ MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
 
 MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT}
 
+
 def get_empty_changes():
     return {
         'added': {
@@ -77,7 +78,7 @@ def get_empty_changes():
             'genes': [],
             'reactions': []
         }
-}
+    }
 
 MAPS_DIR = 'maps'
 
@@ -128,6 +129,7 @@ RETURN_FUNCTIONS = {
     ADDED_REACTIONS: 'added_reactions',
     MISSING_MEASURED_REACTIONS: 'measured_missing_reactions',
 }
+
 
 def generate_map_dictionary():
     """Generate model-maps lookup depending on the folder structure

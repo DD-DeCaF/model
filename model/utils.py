@@ -11,7 +11,7 @@ def timing(f):
         result = f(*args, **kw)
         time_end = time.time()
         # Get the appropriate logger for the file
-        
+
         try:
             logger_name = inspect.getmodule(f).__name__
         except TypeError:

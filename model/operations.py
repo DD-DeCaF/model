@@ -5,7 +5,7 @@ import logging
 
 from cameo import models, phenotypic_phase_plane
 from cobra.io.dict import (reaction_to_dict, gene_to_dict, metabolite_to_dict,
-                          reaction_from_dict, metabolite_from_dict)
+                           reaction_from_dict, metabolite_from_dict)
 import gnomic
 
 from model.adapter import (GenotypeChangeModel, full_genotype, MediumChangeModel,
@@ -85,8 +85,6 @@ def build_string_from_metabolites(metabolites):
     return '{} <=> {}'.format(' + '.join(reactant_bits), ' + '.join(product_bits))
 
 
-
-
 async def add_apply(model, to_apply):
     added = []
     before = {r['id'] for r in model.notes['changes']['added']['reactions']}
@@ -126,7 +124,6 @@ def add_undo(model, to_undo):
     model.notes['changes']['added']['metabolites'] = [m for m in model.notes['changes']['added']['metabolites'] if
                                                       m['id'] in metabolites_after]
     return final_undo
-
 
 
 async def add_reaction_from_string(model, reaction_id, reaction_string):
@@ -216,8 +213,10 @@ async def apply_medium_changes(model, medium):
     change_model.apply_medium()
     return change_model
 
+
 def convert_mg_to_mmol(mg, formula_weight):
     return mg * (1 / formula_weight)
+
 
 def convert_measurements_to_mmol(measurements, model):
     for value in measurements:
@@ -273,6 +272,7 @@ async def modify_model(message, model):
     if constants.REACTIONS_KNOCKOUT in message:
         model = await apply_reactions_knockouts(model, message[constants.REACTIONS_KNOCKOUT])
     return model
+
 
 def restore_changes(model, changes):
     LOGGER.info('Changes to restore: %s', changes)

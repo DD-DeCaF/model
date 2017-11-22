@@ -596,4 +596,3 @@ class MeasurementChangeModel(ModelModificationMixin):
                 LOGGER.info('scalar for measured type %s not supported', scalar['type'])
             if reaction:
                 self.changes['measured']['reactions'].add(reaction)
-

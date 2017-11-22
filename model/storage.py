@@ -56,6 +56,7 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
     LOGGER.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
     return mutated_model_id
 
+
 def read_model(model_id):
     model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz'))
     model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
