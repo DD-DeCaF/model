@@ -32,7 +32,7 @@ async def model_ws(request):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(await respond(model, message, wild_type_model=cached_model))
+                    ws.send_json(await respond(model, message, wild_type_model_id=model_id))
             elif msg.type == WSMsgType.ERROR:
                 LOGGER.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
     except asyncio.CancelledError as ex:
@@ -60,7 +60,7 @@ async def model(request):
         model = model.copy()
         model = await modify_model(message, model)
         mutated_model_id = await save_changes_to_db(model, wild_type_id, message)
-    return web.json_response(await respond(model, message, mutated_model_id))
+    return web.json_response(await respond(model, message, mutated_model_id=mutated_model_id))
 
 
 async def model_get(request):
@@ -95,7 +95,7 @@ async def model_diff(request):
         mutated_model = await modify_model(message, mutated_model)
         mutated_model_id = await save_changes_to_db(mutated_model, wild_type_id, message, version=1)
 
-    diff = await respond(mutated_model, message, mutated_model_id, wild_type_model)
+    diff = await respond(mutated_model, message, mutated_model_id, wild_type_model_id=wild_type_id)
     return web.json_response(diff)
 
 async def maps(request):

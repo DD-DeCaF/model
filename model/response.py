@@ -1,3 +1,4 @@
+from functools import lru_cache
 import json
 import jsonpatch
 import logging
@@ -10,6 +11,7 @@ from cobra.io.dict import model_to_dict
 
 import model.constants as constants
 from model.operations import is_dummy, phase_plane_to_dict
+from model.storage import Models
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,11 +29,11 @@ def map_reactions_list(map_path):
 
 
 class Response(object):
-    def __init__(self, model, message, wild_type_model=None):
+    def __init__(self, model, message, wild_type_model_id=None):
         self.model = model
         self.message = message
         self.method_name = message.get(constants.SIMULATION_METHOD, 'fba')
-        self.wild_type_model = wild_type_model
+        self.wild_type_model_id = wild_type_model_id
         if self.method_name in {'fva', 'pfba-fva'}:
             try:
                 solution = self.solve_fva()
@@ -90,8 +92,8 @@ class Response(object):
         return solution
 
     def model_json(self):
-        if self.wild_type_model is not None:
-            return jsonpatch.make_patch(model_to_dict(self.wild_type_model), model_to_dict(self.model)).patch
+        if self.wild_type_model_id is not None:
+            return jsonpatch.make_patch(Models.get_dict(self.wild_type_model_id), model_to_dict(self.model)).patch
         else:
             return model_to_dict(self.model)
 
@@ -130,10 +132,10 @@ class Response(object):
         return ret
 
 
-async def respond(model, message=None, mutated_model_id=None, wild_type_model=None):
+async def respond(model, message=None, mutated_model_id=None, wild_type_model_id=None):
     message = message if message is not None else {}
     t = time.time()
-    response = Response(model, message, wild_type_model)
+    response = Response(model, message, wild_type_model_id)
     # Is it ok, to leave to-return optional?
     to_return = message.get('to-return', None)
     if to_return is not None:

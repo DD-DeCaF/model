@@ -8,7 +8,7 @@ import os
 import pickle
 import time
 
-from cobra.io import read_sbml_model
+from cobra.io import read_sbml_model, model_to_dict
 
 import model.constants as constants
 from model.utils import timing
@@ -61,30 +61,32 @@ def read_model(model_id):
     model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
     return model
 
-@timing
-def load_model():
-    def _load_model():
-        return {
-            model_id: read_model(model_id) for model_id in constants.MODELS
-        }
-
-    if constants.ENV == constants.ENV_DEV:
-        try:
-            with open('models.pk', 'rb') as fp:
-                models = pickle.load(fp)
-        except FileNotFoundError:
-            models = _load_model()
-            with open('models.pk', 'wb') as fp:
-                pickle.dump(models, fp)
-        else:
-            LOGGER.info('Models loaded from cache')
-    else:
-        models = _load_model()
-        LOGGER.info('Models loaded from file')
-    return models
 
 class Models(object):
-    MODELS = load_model()
+    @classmethod
+    @lru_cache()
+    def get(cls, model_id):
+        try:
+            return read_model(model_id)
+        except FileNotFoundError:
+            return None
+
+    @classmethod
+    @lru_cache()
+    def get_dict(cls, model_id):
+        model = cls.get(model_id)
+        if model is not None:
+            return model_to_dict(model)
+        return None
+
+
+def preload_cache():
+    for model_id in constants.MODELS:
+        Models.get_dict(model_id)
+
+
+if constants.ENV == constants.ENV_PROD:
+    preload_cache()
 
 
 async def find_changes_in_db(model_id):
@@ -119,7 +121,7 @@ def model_from_changes(changes):
 
 
 def find_in_memory(model_id):
-    return Models.MODELS.get(model_id)
+    return Models.get(model_id)
 
 
 async def restore_model(model_id):
