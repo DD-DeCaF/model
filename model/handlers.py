@@ -8,7 +8,7 @@ from cobra.io.dict import model_to_dict
 
 import model.constants as constants
 from model.storage import (restore_model, model_from_changes, key_from_model_info,
-                           restore_from_db, find_in_memory, save_changes_to_db)
+                           restore_from_db, Models, save_changes_to_db)
 from model.operations import modify_model
 from model.response import respond
 
@@ -54,7 +54,7 @@ async def model(request):
     model = await restore_from_db(mutated_model_id)
     LOGGER.info(model_from_changes.cache_info())
     if not model:
-        model = find_in_memory(wild_type_id)
+        model = Models.get(wild_type_id)
         if not model:
             return web.HTTPNotFound()
         model = model.copy()
@@ -65,7 +65,7 @@ async def model(request):
 
 async def model_get(request):
     wild_type_id = request.match_info['model_id']
-    wild_type_model = find_in_memory(wild_type_id)
+    wild_type_model = Models.get(wild_type_id)
     return web.json_response(model_to_dict(wild_type_model))
 
 
@@ -78,7 +78,7 @@ async def model_diff(request):
     except KeyError:
         return web.HTTPBadRequest()
 
-    wild_type_model = find_in_memory(wild_type_id)
+    wild_type_model = Models.get(wild_type_id)
     if not wild_type_model:
         return web.HTTPNotFound()
     mutated_model_id = key_from_model_info(wild_type_id, message, version=1)

@@ -115,14 +115,10 @@ async def restore_from_db(model_id):
 @lru_cache(maxsize=2 ** 6)
 def model_from_changes(changes):
     changes = json.loads(changes)
-    model = find_in_memory(changes['model']).copy()
+    model = Models.get(changes['model']).copy()
     model = restore_changes(model, changes['changes'])
     model.notes['changes'] = changes['changes']
     return model
-
-
-def find_in_memory(model_id):
-    return Models.get(model_id)
 
 
 async def restore_model(model_id):
@@ -132,7 +128,7 @@ async def restore_model(model_id):
     :param model_id: str
     :return: Cameo model or None
     """
-    model = find_in_memory(model_id)
+    model = Models.get(model_id)
     if model:
         LOGGER.info('Wild type model with id %s is found', model_id)
         return model

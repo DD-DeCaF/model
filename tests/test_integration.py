@@ -4,7 +4,7 @@ import logging
 
 from model.adapter import full_genotype
 from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
-from model.storage import (restore_model, restore_from_db, save_changes_to_db, find_in_memory)
+from model.storage import (restore_model, restore_from_db, save_changes_to_db, Models)
 from model.operations import call_genes_to_reactions, modify_model, apply_reactions_add
 from model.response import Response
 
@@ -20,7 +20,7 @@ async def test_call_genes_to_reactions():
 
 @pytest.mark.asyncio
 async def test_reactions_additions():
-    ecoli_original = find_in_memory('iJO1366').copy()
+    ecoli_original = Models.get('iJO1366').copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
     reactions = [

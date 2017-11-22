@@ -8,7 +8,7 @@ from model.operations import (convert_mg_to_mmol, modify_model, product_reaction
                               phase_plane_to_dict, new_features_identifiers, add_reactions,
                               apply_reactions_knockouts, convert_measurements_to_mmol,
                               build_string_from_metabolites)
-from model.storage import restore_model, find_in_memory
+from model.storage import restore_model, Models
 
 logging.disable(logging.CRITICAL)
 
@@ -33,13 +33,13 @@ async def test_b_number():
 
 
 def test_product_reaction_variable():
-    ecoli = find_in_memory('iJO1366')
+    ecoli = Models.get('iJO1366')
     assert product_reaction_variable(ecoli, 'bigg:akg').id == 'EX_akg_e'
     assert product_reaction_variable(ecoli, 'bigg:e4p') is None
 
 
 def test_phase_plane_to_dict():
-    ecoli = find_in_memory('iJO1366')
+    ecoli = Models.get('iJO1366')
     result = phase_plane_to_dict(ecoli, 'bigg:glu__L')
     assert set(result.keys()) == {'EX_glu__L_e', 'objective_lower_bound', 'objective_upper_bound'}
     assert len(set([len(v) for v in result.values()])) == 1
@@ -54,7 +54,7 @@ def test_new_features_identifiers():
 
 @pytest.mark.asyncio
 async def test_reactions_knockouts():
-    ecoli_original = find_in_memory('iJO1366').copy()
+    ecoli_original = Models.get('iJO1366').copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
@@ -75,14 +75,14 @@ async def test_reactions_knockouts():
 
 @pytest.mark.asyncio
 async def test_convert_measurements_to_mmol():
-    ecoli = find_in_memory('iJO1366').copy()
+    ecoli = Models.get('iJO1366').copy()
     measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg', 'type': 'compound'}]
     assert convert_measurements_to_mmol(measurements, ecoli) == [
         {'id': 'chebi:17790', 'measurements': [1.0], 'unit': 'mmol', 'type': 'compound'}]
 
 
 def test_add_reactions():
-    ecoli = find_in_memory('iJO1366').copy()
+    ecoli = Models.get('iJO1366').copy()
     keys = ('id', 'name', 'metabolites', 'lower_bound', 'upper_bound', 'gene_reaction_rule')
     info = ('newid', '', {}, 0, 0, '')
     changes = [dict(zip(keys, info))] * 2

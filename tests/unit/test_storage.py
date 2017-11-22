@@ -6,7 +6,7 @@ from cobra.io import model_to_dict
 
 from model.constants import GENOTYPE_CHANGES, MEASUREMENTS, MEDIUM
 from model.operations import modify_model
-from model.storage import (key_from_model_info, save_changes_to_db, find_in_memory, restore_model,
+from model.storage import (key_from_model_info, save_changes_to_db, Models, restore_model,
                            restore_from_db)
 
 logging.disable(logging.CRITICAL)
@@ -30,7 +30,7 @@ def test_key_from_model_info():
 @pytest.mark.asyncio
 async def test_save_and_restore():
     model_id = 'e_coli_core'
-    await save_changes_to_db(find_in_memory(model_id), model_id, {})
+    await save_changes_to_db(Models.get(model_id), model_id, {})
     message = {
         GENOTYPE_CHANGES: [
             '-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
