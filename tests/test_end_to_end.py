@@ -7,7 +7,7 @@ import json
 import jsonpatch
 import logging
 import unittest
-from cobra.io.dict import model_to_dict
+from cobra.io import model_to_dict
 
 from model.app import get_app
 
