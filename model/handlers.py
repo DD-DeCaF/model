@@ -106,6 +106,7 @@ async def model_options(request):
     return web.json_response(constants.SPECIES_TO_MODEL[request.match_info['species']])
 
 
+# TODO @matyasfodor This really shouldn't live here. This is basically a static file service
 async def map(request):
     modelId = request.GET['model']
     mapId = request.GET['map']
