@@ -64,6 +64,19 @@ class EndToEndTestCase(AioHTTPTestCase):
         assert response.status == 404
 
     @unittest_run_loop
+    async def test_model_info(self):
+        response = await self.client.get('/v1/model-info/{}'.format('e_coli_core'))
+        assert (await response.json())['medium'] == [
+            {'id': 'EX_co2_e', 'name': 'CO2'},
+            {'id': 'EX_glc__D_e', 'name': 'D-Glucose'},
+            {'id': 'EX_h2o_e', 'name': 'H2O'},
+            {'id': 'EX_h_e', 'name': 'H+'},
+            {'id': 'EX_nh4_e', 'name': 'Ammonia'},
+            {'id': 'EX_o2_e', 'name': 'O2'},
+            {'id': 'EX_pi_e', 'name': 'Phosphate'}
+        ]
+
+    @unittest_run_loop
     async def test_http(self):
         response = await self.client.get(MODEL_OPTIONS_URL.format('ECOLX'))
         response.raise_for_status()
