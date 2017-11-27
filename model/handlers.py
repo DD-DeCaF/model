@@ -102,10 +102,11 @@ async def model_diff(request):
 async def model_info(request):
     wild_type_id = request.match_info['model_id']
     wild_type_model = Models.get(wild_type_id)
-    return web.json_response({'medium': [dict(
-        id=reaction_id,
-        name=wild_type_model.reactions.get_by_id(reaction_id).name.replace('exchange', '').strip(),
-    ) for reaction_id in wild_type_model.medium]})
+    medium = [{
+        'id': reaction_id,
+        'name': wild_type_model.reactions.get_by_id(reaction_id).name.replace('exchange', '').strip()
+    } for reaction_id in wild_type_model.medium]
+    return web.json_response({'medium': medium})
 
 
 async def maps(request):
