@@ -11,7 +11,8 @@ LOGGER = logging.getLogger(__name__)
 
 def get_app():
     app = web.Application()
-    app.router.add_route('GET', '/wsmodels/{model_id}', handlers.model_ws)
+    app.router.add_route('GET', '/wsmodels/{model_id}', handlers.model_ws_full)
+    app.router.add_route('GET', '/v1/wsmodels/{model_id}', handlers.model_ws_json_diff)
     app.router.add_route('GET', '/maps', handlers.maps)
     app.router.add_route('GET', '/map', handlers.map)
     app.router.add_route('GET', '/model-options/{species}', handlers.model_options)

@@ -14,7 +14,13 @@ from model.response import respond
 
 LOGGER = logging.getLogger(__name__)
 
-async def model_ws(request):
+async def model_ws_full(request):
+    return await model_ws(request, False)
+
+async def model_ws_json_diff(request):
+    return await model_ws(request, True)
+
+async def model_ws(request, diff=False):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
     cached_model = await restore_model(model_id)
@@ -32,7 +38,7 @@ async def model_ws(request):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(await respond(model, message, wild_type_model_id=model_id))
+                    ws.send_json(await respond(model, message, wild_type_model_id=model_id if diff else None))
             elif msg.type == WSMsgType.ERROR:
                 LOGGER.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
     except asyncio.CancelledError as ex:

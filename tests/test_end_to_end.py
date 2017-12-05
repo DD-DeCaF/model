@@ -22,7 +22,7 @@ MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:4275
 MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': MEASUREMENTS}
 MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
     {'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]}
-MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
+MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy', 'model'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
     'reactions-add': [
@@ -106,6 +106,25 @@ class EndToEndTestCase(AioHTTPTestCase):
                 msg_content = msg.json()
                 assert msg_content['fluxes']
                 assert msg_content['tmy']
+                assert isinstance(msg_content['model'], dict)
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                raise ws.exception()
+            await ws.close()
+            break
+
+    @unittest_run_loop
+    async def test_websocket_v1(self):
+        response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_MODIFY})
+        response.raise_for_status()
+        model_id = (await response.json())['model-id']
+        ws = await self.client.ws_connect('/v1{}'.format(WS_URL.format(model_id)))
+        ws.send_json(MESSAGE_TMY_FLUXES)
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                msg_content = msg.json()
+                assert msg_content['fluxes']
+                assert msg_content['tmy']
+                assert isinstance(msg_content['model'], list)
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 raise ws.exception()
             await ws.close()
@@ -116,7 +135,11 @@ class EndToEndTestCase(AioHTTPTestCase):
         original_message = deepcopy(MESSAGE_MODIFY)
         original_message['to-return'] = ["fluxes", "model", "added-reactions", "removed-reactions"]
         original_response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': original_message})
-        original_response.raise_for_status()
+        try:
+            original_response.raise_for_status()
+        except Exception as ex:
+            print('Original resp: ', await original_response.text())
+            raise ex
         original_model = (await original_response.json())['model']
 
         wild_type_model_response = await self.client.get(V1_MODELS_URL.format('iJO1366'))

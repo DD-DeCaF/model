@@ -186,7 +186,12 @@ async def query_genes_to_reaction(gene):
     LOGGER.info('Annotated gene at %s: %s', ANNOTATIONS_API, gene)
     async with aiohttp.ClientSession() as session:
         async with session.get(ANNOTATIONS_API, params={'geneId': gene}) as r:
-            assert r.status == 200
+            try:
+                assert r.status == 200
+            except Exception as ex:
+                print('######## ANNOTATIONS_API params: ', ANNOTATIONS_API, {'geneId': gene})
+                print('######## ANNOTATIONS_API exception:', await r.text())
+                raise ex
             result = await r.json()
             return result.get('response', {})
 
