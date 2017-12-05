@@ -18,12 +18,14 @@ start:
 
 
 ## Run the tests
-test: start
+test:
 	@echo "**********************************************************************"
 	@echo "* Running tests."
 	@echo "**********************************************************************"
-	docker-compose exec web /bin/bash -c "py.test -vxs --cov=./model tests/"
+	docker-compose run --entrypoint "py.test -vxs --cov=./model tests/" web
 
+unit_tests:
+	docker-compose run --entrypoint "py.test -vxs --duration=0 --cov=./model tests/unit" web
 
 ## Shut down the Docker containers.
 stop:
@@ -37,6 +39,11 @@ clean:
 ## Read the logs.
 logs:
 	docker-compose logs --tail="all" -f
+
+## Update saved models by downloading and annotating reactions / metabolites
+update_models: start
+	docker exec -it model_web_1 python -m model.update_models
+
 
 #################################################################################
 # PROJECT RULES                                                                 #

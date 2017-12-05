@@ -1,11 +1,14 @@
 import pytest
 from deepdiff import DeepDiff
-from model.app import (call_genes_to_reactions, modify_model, restore_model,
-                       METHODS, Response, SIMULATION_METHOD,
-                       restore_from_db, save_changes_to_db, find_in_memory, EMPTY_CHANGES, apply_reactions_add)
-from model.adapter import full_genotype
-from copy import deepcopy
+import logging
 
+from model.adapter import full_genotype
+from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
+from model.storage import (restore_model, restore_from_db, save_changes_to_db, Models)
+from model.operations import call_genes_to_reactions, modify_model, apply_reactions_add
+from model.response import Response
+
+logging.disable(logging.CRITICAL)
 
 @pytest.mark.asyncio
 async def test_call_genes_to_reactions():
@@ -16,13 +19,13 @@ async def test_call_genes_to_reactions():
 
 @pytest.mark.asyncio
 async def test_reactions_additions():
-    ecoli_original = find_in_memory('iJO1366').copy()
+    ecoli_original = Models.get('iJO1366').copy()
     ecoli = ecoli_original.copy()
-    ecoli.notes['changes'] = deepcopy(EMPTY_CHANGES)
+    ecoli.notes['changes'] = get_empty_changes()
     reactions = [
-        {'id': 'MNXR69355', 'string': None},
-        {'id': 'MNXR81835', 'string': None},
-        {'id': 'MNXR83321', 'string': None},
+        {'id': 'MNXR69355', 'metabolites': None},
+        {'id': 'MNXR81835', 'metabolites': None},
+        {'id': 'MNXR83321', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
     added_reactions = {'DM_12dgr182_9_12_e', 'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
@@ -30,18 +33,23 @@ async def test_reactions_additions():
                        'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e',
                        'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
     ecoli = await apply_reactions_add(ecoli, reactions)
-    assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == added_reactions
+    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
+    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    assert added_reactions_unique_ids - reaction_ids == added_reactions
     for reaction in ecoli.notes['changes']['added']['reactions']:
         assert ecoli.reactions.has_id(reaction['id'])
     reactions = [
-        {'id': 'MNXR69355', 'string': None},
-        {'id': 'MNXR81835', 'string': None},
+        {'id': 'MNXR69355', 'metabolites': None},
+        {'id': 'MNXR81835', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
     ecoli = await apply_reactions_add(ecoli, reactions)
-    assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == \
-           {'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
-            'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e'}
+    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
+    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    assert added_reactions_unique_ids - reaction_ids == {
+        'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
+        'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e'
+    }
     for reaction in ecoli.notes['changes']['added']['reactions']:
         assert ecoli.reactions.has_id(reaction['id'])
     removed_reactions = {'DM_12dgr182_9_12_e',
@@ -50,17 +58,19 @@ async def test_reactions_additions():
     for reaction in removed_reactions:
         assert not ecoli.reactions.has_id(reaction)
     reactions = [
-        {'id': 'MNXR69355', 'string': None},
-        {'id': 'MNXR81835', 'string': None},
-        {'id': 'MNXR83321', 'string': None},
+        {'id': 'MNXR69355', 'metabolites': None},
+        {'id': 'MNXR81835', 'metabolites': None},
+        {'id': 'MNXR83321', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
     ecoli = await apply_reactions_add(ecoli, reactions)
-    assert {i['id'] for i in ecoli.notes['changes']['added']['reactions']} - reaction_ids == added_reactions
+    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
+    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    assert added_reactions_unique_ids - reaction_ids == added_reactions
     reaction_ids = {}
     ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
-    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'string': None}, {'id': 'SUCR', 'string': ' h2o_c +  sucr_c  <=>  fru_c +  glc__D_c '}])
+    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None}, {'id': 'SUCR', 'metabolites': {'h2o_c': -1, 'sucr_c': -1, 'fru_c': 1, 'glc__D_c': 1}}])
 
 
 @pytest.mark.asyncio
@@ -69,13 +79,47 @@ async def test_modify_model():
         'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
         'objectives': ['chebi:17790'],
         'genotype-changes': ['+Aac'],
-        'medium': [{'id': 'chebi:44080', 'concentration': 0.01}],
+        'medium': [
+            {'id': 'chebi:44080', 'concentration': 0.01},
+            {'id': 'chebi:15075', 'concentration': 0.01},
+            {'id': 'chebi:15377', 'concentration': 0.01},
+            {'id': 'chebi:15378', 'concentration': 0.01},
+            {'id': 'chebi:15379', 'concentration': 0.01},
+            {'id': 'chebi:15982', 'concentration': 0.01},
+            {'id': 'chebi:16189', 'concentration': 0.01},
+            {'id': 'chebi:16526', 'concentration': 0.01},
+            {'id': 'chebi:16643', 'concentration': 0.01},
+            {'id': 'chebi:17883', 'concentration': 0.01},
+            {'id': 'chebi:18212', 'concentration': 0.01},
+            {'id': 'chebi:18367', 'concentration': 0.01},
+            {'id': 'chebi:18420', 'concentration': 0.01},
+            {'id': 'chebi:25371', 'concentration': 0.01},
+            {'id': 'chebi:27638', 'concentration': 0.01},
+            {'id': 'chebi:28938', 'concentration': 0.01},
+            {'id': 'chebi:29033', 'concentration': 0.01},
+            {'id': 'chebi:29034', 'concentration': 0.01},
+            {'id': 'chebi:29035', 'concentration': 0.01},
+            {'id': 'chebi:29036', 'concentration': 0.01},
+            {'id': 'chebi:29101', 'concentration': 0.01},
+            {'id': 'chebi:29103', 'concentration': 0.01},
+            {'id': 'chebi:29105', 'concentration': 0.01},
+            {'id': 'chebi:29108', 'concentration': 0.01},
+            {'id': 'chebi:36271', 'concentration': 0.01},
+            {'id': 'chebi:42758', 'concentration': 0.01},
+            {'id': 'chebi:49786', 'concentration': 0.01}
+        ],
         'measurements': [{'id': 'chebi:44080', 'measurements': [-15, -11, -14, -12], 'unit': 'mg', 'name': 'glucose',
                           'type': 'compound'},
                          {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
-    assert await modify_model(message, (await restore_model('iJO1366')).copy())
+    wildtype = await restore_model('iJO1366')
+    modified = await modify_model(message, wildtype.copy())
+    assert len(modified.medium) == len(message['medium'])
+    assert 'EX_meoh_e' in modified.medium
+    db_key = await save_changes_to_db(modified, 'iJO1366', message)
+    restored_model = (await restore_from_db(db_key)).copy()
+    assert restored_model.medium == modified.medium
 
 
 FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', 'ACACT5r', 'ECOAH2', 'BUTCT',
@@ -89,7 +133,6 @@ FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', '
 @pytest.mark.asyncio
 async def test_simulation_methods():
     for method in METHODS:
-        print(method)
         message = {SIMULATION_METHOD: method}
         model = (await restore_model('iJO1366')).copy()
         response = Response(model, message)

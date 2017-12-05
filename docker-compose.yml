@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    command: "-w 2 -b 0.0.0.0:8000 -t 150 -k aiohttp.worker.GunicornWebWorker --reload model.app:get_app()"
     ports:
       - "${MODEL_PORT:-8000}:8000"
     links:
@@ -15,6 +16,10 @@ services:
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      - ENV=dev
+    volumes:
+      - ./:/io
+      - .:/model
     networks:
       default:
       iloop:
