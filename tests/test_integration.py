@@ -1,4 +1,3 @@
-from aiohttp.test_utils import loop_context
 import pytest
 from deepdiff import DeepDiff
 import logging
@@ -10,11 +9,6 @@ from model.operations import call_genes_to_reactions, modify_model, apply_reacti
 from model.response import Response
 
 logging.disable(logging.CRITICAL)
-
-@pytest.yield_fixture
-def loop():
-    with loop_context() as loop:
-        yield loop
 
 @pytest.mark.asyncio
 async def test_call_genes_to_reactions():
