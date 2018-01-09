@@ -4,7 +4,7 @@ from aiohttp import web
 import logging
 
 import model.handlers as handlers
-from .raven_middleware import raven_middleware
+from .middleware import raven_middleware
 
 
 LOGGER = logging.getLogger(__name__)
