@@ -85,7 +85,9 @@ def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
 
 def contains_carbon(metabolite):  # TODO: use method from Metabolite class when this change is merged
     if not metabolite.formula:
-        raise ValueError("No formula for metabolite {}, it's unknown if there is carbon in it")
+        LOGGER.warning("No formula for metabolite {}, it's unknown if there is carbon in it."
+                       "Assuming that there is no carbon".format(metabolite.id))
+        return False
     return 'C' in metabolite.elements
 
 
