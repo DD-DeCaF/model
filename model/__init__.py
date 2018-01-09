@@ -1,4 +1,5 @@
 import logging
+import requests
 import sys
 
 from raven import Client
@@ -16,3 +17,13 @@ raven_client = Client(settings.SENTRY_DSN)
 handler = SentryHandler(raven_client)
 handler.setLevel(logging.WARNING)
 setup_logging(handler)
+
+# Retrieve JWT public key from authentication service
+try:
+    response = requests.get(settings.JWT_PUBLIC_KEY_URL)
+    response.raise_for_status()
+    settings.JWT_PUBLIC_KEY = response.body
+except requests.exceptions.RequestException:
+    logger.critical("Could not retrieve JWT public key from authentication service",
+                    exc_info=sys.exc_info())
+    raise
