@@ -23,7 +23,7 @@ def require_role(role):
             if role not in request.jwt_token.get('roles', ()):
                 return web.json_response({
                     'code': 'unauthorized',
-                    'description': "Missing required role 'admin'",
+                    'description': "Missing required role '{}'".format(role),
                 }, status=401)
             return await f(request, *args, **kwargs)
         return wrapper
