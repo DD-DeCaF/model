@@ -4,14 +4,14 @@ from aiohttp import web
 import logging
 
 import model.handlers as handlers
-from .middleware import raven_middleware
+from .middleware import raven_middleware, auth_middleware
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 def get_app():
-    app = web.Application(middlewares=[raven_middleware])
+    app = web.Application(middlewares=[raven_middleware, auth_middleware])
     app.router.add_route('GET', '/wsmodels/{model_id}', handlers.model_ws_full)
     app.router.add_route('GET', '/v1/wsmodels/{model_id}', handlers.model_ws_json_diff)
     app.router.add_route('GET', '/maps', handlers.maps)

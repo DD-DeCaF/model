@@ -3,6 +3,7 @@ from aiohttp import web, WSMsgType
 import json
 import logging
 import os
+from functools import wraps
 
 from cobra.io.dict import model_to_dict
 
@@ -14,6 +15,22 @@ from model.response import respond
 
 LOGGER = logging.getLogger(__name__)
 
+
+def require_role(role):
+    def decorator(f):
+        @wraps(f)
+        async def wrapper(request, *args, **kwargs):
+            if role not in request.jwt_token.get('roles', ()):
+                return web.json_response({
+                    'code': 'unauthorized',
+                    'description': "Missing required role '{}'".format(role),
+                }, status=403)
+            return await f(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@require_role('admin')
 async def model_ws_full(request):
     return await model_ws(request, False)
 

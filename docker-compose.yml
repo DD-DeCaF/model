@@ -16,6 +16,7 @@ services:
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      - JWT_PUBLIC_KEY_URL=http://${IAM_API}/.well-known/jwt-rs256.pub
       - ENV=dev
     volumes:
       - ./:/io
