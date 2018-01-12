@@ -26,7 +26,7 @@ async def auth_middleware(app, handler):
             decoded_token = jwt.decode(token, settings.get_jwt_public_key(), algorithms=['RS256'])
         except jwt.exceptions.InvalidTokenError:
             return web.json_response({
-                'code': 'unauthorized',
+                'code': 'unauthenticated',
                 'message': "Missing or invalid token",
             }, status=401)
         request.jwt_token = decoded_token

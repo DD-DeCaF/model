@@ -24,7 +24,7 @@ def require_role(role):
                 return web.json_response({
                     'code': 'unauthorized',
                     'description': "Missing required role '{}'".format(role),
-                }, status=401)
+                }, status=403)
             return await f(request, *args, **kwargs)
         return wrapper
     return decorator
