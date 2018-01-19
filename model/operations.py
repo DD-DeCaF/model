@@ -1,5 +1,6 @@
 import asyncio
 import aiohttp
+import math
 from collections import Counter
 import logging
 
@@ -378,7 +379,7 @@ def phase_plane_to_dict(model, metabolite_id):
     for k, v in ppp.items():
         if k not in {'c_yield_lower_bound', 'c_yield_upper_bound',
                      'mass_yield_lower_bound', 'mass_yield_upper_bound'}:
-            result[k] = [float(v[point]) for point in sorted(v.keys())]
+            result[k] = [float(v[point]) if not math.isnan(float(v[point])) else None for point in sorted(v.keys())]
     return result
 
 

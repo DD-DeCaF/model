@@ -21,3 +21,4 @@ aioredis==1.0
 deepdiff==1.0.0
 tqdm==4.19.4
 raven==6.3.0
+yarl==0.18.0
