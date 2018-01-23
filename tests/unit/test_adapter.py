@@ -1,7 +1,8 @@
 import logging
 import pytest
 
-from model.adapter import NoIDMapping, full_genotype, get_unique_metabolite
+from model.adapter import (NoIDMapping, get_unique_metabolite,
+    MediumChangeModel, MediumSalts)
 from model.storage import Models
 
 logging.disable(logging.CRITICAL)
@@ -15,3 +16,24 @@ async def test_existing_metabolite():
     assert get_unique_metabolite(ecoli, 'succ', db_name='bigg.metabolite').formula == 'C4H4O4'
     with pytest.raises(NoIDMapping):
         await get_unique_metabolite(ecoli, 'wrong_id')
+
+
+def test_medium_salts():
+    salts = MediumSalts.get()
+    assert len(salts) > 2000
+    assert salts['75832'] == [['29033'], ['16189']]
+
+
+def test_medium_change_model():
+    ecoli = Models.get('iJO1366')
+    medium = [
+        {'id': 'chebi:63041'},
+        {'id': 'chebi:91249'},
+        {'id': 'chebi:86244'},
+        {'id': 'chebi:131387'},
+    ]
+    changes = MediumChangeModel(ecoli.copy(), medium)
+    changes.apply_medium()
+    model = changes.model
+    assert 5 <= len(model.medium) <= 10
+    assert {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e'} <= set(list(model.medium.keys()))

@@ -1,11 +1,12 @@
+import os
 import requests
 from urllib import request
 from multiprocessing import Pool
 from functools import partial
 import xml.etree.ElementTree as ET
-from pubchempy import get_compounds
 
 
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 FILE_PATH = 'ftp://ftp.ebi.ac.uk/pub/databases/chebi/ontology/nightly/chebi.obo'
 N_PROCESSES = 20
 
@@ -20,14 +21,6 @@ def create_salts_mapping():
         smiles_to_chebi = revert_mapping(chebi_to_smiles)
         ###
         smiles_to_chebi['[NH4+]'] = [28938]
-        smiles_to_chebi['[Ca+2]'] = [29108]
-        smiles_to_chebi['[Cu+2]'] = [29036]
-        smiles_to_chebi['[Co+2]'] = [48828]
-        smiles_to_chebi['[Mn+2]'] = [29035]
-        smiles_to_chebi['[Ba+2]'] = [37136]
-        smiles_to_chebi['[Zn+2]'] = [29105]
-        smiles_to_chebi['[Fe+2]'] = [29033]
-        smiles_to_chebi['[Mg+2]'] = [18420]
         ###
         inchi_to_chebi = revert_mapping(chebi_to_inchi)
         salts = [k for k in smiles_to_chebi if '.' in k]
@@ -35,13 +28,6 @@ def create_salts_mapping():
         with Pool(processes=N_PROCESSES) as pool:
             for result in pool.imap_unordered(
                     partial(smiles_through_inchi, inchi_to_chebi),
-                    [compounds_not_found[i::N_PROCESSES] for i in range(N_PROCESSES)]
-            ):
-                smiles_to_chebi.update(result)
-        compounds_not_found = missing_compounds(salts, smiles_to_chebi)
-        with Pool(processes=N_PROCESSES) as pool:
-            for result in pool.imap_unordered(
-                    find_smiles_in_pubchempy,
                     [compounds_not_found[i::N_PROCESSES] for i in range(N_PROCESSES)]
             ):
                 smiles_to_chebi.update(result)
@@ -54,9 +40,9 @@ def create_salts_mapping():
 
 
 def save_salts(salts_mapping):
-    with open('data/salts.csv', 'w') as f:
+    with open(DIR_PATH + '/data/salts.csv', 'w') as f:
         for k, v in salts_mapping.items():
-            f.write('{};{}\n'.format(k, ';'.join(
+            f.write('{}:{}\n'.format(k, ';'.join(
                 [','.join(map(str, i)) for i in v])))
 
 
@@ -95,8 +81,11 @@ def identifier_mapping(all_chemicals, term):
 def revert_mapping(mapping):
     reverse_mapping = {}
     for k, v in mapping.items():
-        reverse_mapping[v] = reverse_mapping.get(v, [])
-        reverse_mapping[v].append(k)
+        synonyms = [v, v.replace('+2]', '++]')]
+        for syn in synonyms:
+            reverse_mapping[syn] = reverse_mapping.get(syn, [])
+            if k not in reverse_mapping[syn]:
+                reverse_mapping[syn].append(k)
     return reverse_mapping
 
 
@@ -120,30 +109,6 @@ def smiles_through_inchi(inchi_to_chebi, smiles_strings):
     return smiles_to_chebi
 
 
-def find_smiles_in_pubchempy(smiles_strings):
-    print(smiles_strings)
-    print(f'Retrieving {len(smiles_strings)} smiles strings '
-          f'from pubchempy')
-    smiles_to_chebi = {}
-    i = j = 0
-    for string in smiles_strings:
-        try:
-            comps = get_compounds(string.replace('+2]', '++]'), 'smiles')
-            result = [
-                int(syn.replace('CHEBI:', '')) for comp in comps
-                for syn in comp.synonyms if syn.startswith('CHEBI:')
-            ]
-            if result:
-                j += 1
-                smiles_to_chebi[string] = result
-        except Exception:
-            pass
-        i += 1
-        if i % 10 == 0:
-            print(f'{i} entries queried, {j} found')
-    return smiles_to_chebi
-
-
 def map_salts(smiles_to_chebi):
     salts_mapping = {}
     for smiles_string, chebi_ids in smiles_to_chebi.items():
@@ -158,3 +123,7 @@ def map_salts(smiles_to_chebi):
             for ch_id in chebi_ids:
                 salts_mapping[ch_id] = result
     return salts_mapping
+
+
+if __name__ == '__main__':
+    create_salts_mapping()
