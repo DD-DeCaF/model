@@ -44,6 +44,9 @@ logs:
 update_models: start
 	docker exec -it model_web_1 python -m model.update_models
 
+## Update the salts dissociation mapping
+update_salts: start
+	docker exec -it model_web_1 python -m model.update_salts
 
 #################################################################################
 # PROJECT RULES                                                                 #

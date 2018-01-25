@@ -1,4 +1,5 @@
 import re
+import os
 
 import aiohttp
 import asyncio
@@ -464,6 +465,28 @@ class GenotypeChangeModel(ModelModificationMixin):
         self.annotate_new_metabolites(reaction)
 
 
+def load_salts():
+    result = {}
+    path = os.path.join(os.path.dirname(__file__), 'data', 'salts.csv')
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                salt, compounds = line.split(':')
+                result[salt] = [comp.split(',') for comp in compounds.split(';')]
+    return result
+
+
+class MediumSalts(object):
+    _cache = None
+
+    @classmethod
+    def get(cls):
+        if cls._cache is None:
+            cls._cache = load_salts()
+        return cls._cache
+
+
 class MediumChangeModel(ModelModificationMixin):
     """
     Applies medium on cameo model
@@ -481,6 +504,26 @@ class MediumChangeModel(ModelModificationMixin):
             'measured': {'reactions': set()},
         }
 
+    def detect_salt_compounds(self):
+        result = []
+        salts = MediumSalts.get()
+        chebi_ids = [c['id'] for c in self.medium]
+        for compound in chebi_ids:
+            chebi_id = compound.replace('chebi:', '')
+            if chebi_id in salts:
+                compounds = salts[chebi_id]
+                n_not_found = len([i for i in compounds if not i])
+                LOGGER.info('Metabolite %s can be splitted up to %s', chebi_id, str(compounds))
+                if n_not_found:
+                    LOGGER.info('For %s %d mappings of %d is not found', chebi_id, n_not_found, len(compounds))
+                for array in compounds:
+                    for compound in array:
+                        if compound:
+                            result.append({
+                                'id': 'chebi:' + compound,
+                            })
+        return result
+
     def apply_medium(self):
         """For each metabolite in medium try to find corresponding metabolite in e compartment of the model.
         If metabolite is found, change the lower limit of the reaction to a negative number,
@@ -492,6 +535,7 @@ class MediumChangeModel(ModelModificationMixin):
             reaction = self.model.reactions.get_by_id(r)
             reaction.lower_bound = 0
             old_medium.append(reaction)
+        self.medium.extend(self.detect_salt_compounds())
         for compound in self.medium:
             try:
                 existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
