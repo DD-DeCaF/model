@@ -19,9 +19,9 @@ def create_salts_mapping():
         chebi_to_smiles = identifier_mapping(all_chemicals, 'smiles')
         chebi_to_inchi = identifier_mapping(all_chemicals, 'inchi')
         smiles_to_chebi = revert_mapping(chebi_to_smiles)
-        ###
+        # NH4+ is a part of many media but is not found automatically
         smiles_to_chebi['[NH4+]'] = [28938]
-        ###
+        #
         inchi_to_chebi = revert_mapping(chebi_to_inchi)
         salts = [k for k in smiles_to_chebi if '.' in k]
         compounds_not_found = missing_compounds(salts, smiles_to_chebi)
