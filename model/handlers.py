@@ -26,7 +26,7 @@ async def model_ws(request, diff=False):
     cached_model = await restore_model(model_id)
     LOGGER.info(model_from_changes.cache_info())
     if not cached_model:
-        raise KeyError('No such model: %s', model_id)
+        raise KeyError('No such model: {}'.format(model_id))
     model = cached_model.copy()
     await ws.prepare(request)
     try:
