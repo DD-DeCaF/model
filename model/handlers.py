@@ -42,7 +42,7 @@ async def model_ws(request, diff=False):
             elif msg.type == WSMsgType.ERROR:
                 LOGGER.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
     except asyncio.CancelledError as ex:
-        LOGGER.exception('Websocket for model_id %s cancelled, %s', model_id, str(ex))
+        LOGGER.debug('Websocket for model_id %s cancelled, %s', model_id, str(ex))
     await ws.close()
     return ws
 
