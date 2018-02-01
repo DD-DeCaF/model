@@ -38,7 +38,7 @@ async def model_ws(request, diff=False):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(await respond(model, message, wild_type_model_id=model_id if diff else None))
+                    await ws.send_json(await respond(model, message, wild_type_model_id=model_id if diff else None))
             elif msg.type == WSMsgType.ERROR:
                 LOGGER.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
     except asyncio.CancelledError as ex:
