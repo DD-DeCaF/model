@@ -26,7 +26,7 @@ async def model_ws(request, diff=False):
     cached_model = await restore_model(model_id)
     LOGGER.info(model_from_changes.cache_info())
     if not cached_model:
-        raise KeyError('No such model: %s', model_id)
+        raise KeyError('No such model: {}'.format(model_id))
     model = cached_model.copy()
     await ws.prepare(request)
     try:
@@ -38,11 +38,11 @@ async def model_ws(request, diff=False):
                 else:
                     message = msg.json()
                     model = await modify_model(message, model)
-                    ws.send_json(await respond(model, message, wild_type_model_id=model_id if diff else None))
+                    await ws.send_json(await respond(model, message, wild_type_model_id=model_id if diff else None))
             elif msg.type == WSMsgType.ERROR:
                 LOGGER.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
     except asyncio.CancelledError as ex:
-        LOGGER.exception('Websocket for model_id %s cancelled, %s', model_id, str(ex))
+        LOGGER.debug('Websocket for model_id %s cancelled, %s', model_id, str(ex))
     await ws.close()
     return ws
 

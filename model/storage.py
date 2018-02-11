@@ -5,13 +5,11 @@ import hashlib
 import json
 import logging
 import os
-import pickle
 import time
 
 from cobra.io import read_sbml_model, model_to_dict
 
 import model.constants as constants
-from model.utils import timing
 from model.operations import restore_changes
 
 
