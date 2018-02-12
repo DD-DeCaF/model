@@ -2,7 +2,7 @@ import logging
 import pytest
 
 from model.adapter import (NoIDMapping, get_unique_metabolite,
-    MediumChangeModel, MediumSalts)
+    MediumChangeModel, MediumSalts, MeasurementChangeModel)
 from model.storage import Models
 
 logging.disable(logging.CRITICAL)
@@ -37,3 +37,18 @@ def test_medium_change_model():
     model = changes.model
     assert 5 <= len(model.medium) <= 10
     assert {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e'} <= set(list(model.medium.keys()))
+
+
+def test_transport_reaction():
+    ecoli = Models.get('iJO1366')
+    changes = MeasurementChangeModel(ecoli.copy(), [])
+    assert changes.has_transport('o2', 1)
+    assert changes.has_transport('fe2', -1)
+    assert not changes.has_transport('btn', 1)
+    changes.model.reactions.EX_btn_e.bounds = (0.1, 0.1)
+    solution = changes.model.optimize()
+    assert solution.status == 'infeasible'
+    changes.allow_transport(changes.model.metabolites.btn_e, 1)
+    assert changes.has_transport('btn', 1)
+    solution = changes.model.optimize()
+    assert solution.status == 'optimal'
