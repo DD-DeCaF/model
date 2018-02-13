@@ -36,6 +36,9 @@ def create_salts_mapping():
         print(f'{len(salts)} salts is mapped, '
               f'but one or more compounds are not present for '
               f'{len({k for k, v in salts.items() if [] in v})}')
+        # Iron trichloride hack until the proper solution is implemented
+        salts[30808] = [[29034], [13291]]
+        #
         save_salts(salts)
 
 

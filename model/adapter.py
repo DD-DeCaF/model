@@ -492,6 +492,7 @@ class MediumChangeModel(ModelModificationMixin):
     """
     Applies medium on cameo model
     """
+    TRACE_METALS = [{'id': 'chebi:25517', 'name': 'nickel'}]
 
     def __init__(self, model, medium):
         """
@@ -537,6 +538,7 @@ class MediumChangeModel(ModelModificationMixin):
             reaction.lower_bound = 0
             old_medium.append(reaction)
         self.medium.extend(self.detect_salt_compounds())
+        self.medium.extend(self.TRACE_METALS)
         for compound in self.medium:
             try:
                 existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
