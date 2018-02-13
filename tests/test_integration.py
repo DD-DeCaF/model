@@ -115,7 +115,7 @@ async def test_modify_model():
     }
     wildtype = await restore_model('iJO1366')
     modified = await modify_model(message, wildtype.copy())
-    assert len(modified.medium) == len(message['medium'])
+    assert len(modified.medium) + 1 == len(message['medium'])
     assert 'EX_meoh_e' in modified.medium
     db_key = await save_changes_to_db(modified, 'iJO1366', message)
     restored_model = (await restore_from_db(db_key)).copy()
