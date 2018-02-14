@@ -9,6 +9,7 @@ import json
 import logging
 import time
 import itertools
+import networkx as nx
 from collections import defaultdict
 
 from cobra import Metabolite, Reaction
@@ -491,6 +492,10 @@ class MediumChangeModel(ModelModificationMixin):
     """
     Applies medium on cameo model
     """
+    TRACE_METALS = [
+        {'id': 'chebi:25517', 'name': 'nickel'},
+        {'id': 'chebi:25368', 'name': 'molybdate'},
+    ]
 
     def __init__(self, model, medium):
         """
@@ -536,6 +541,7 @@ class MediumChangeModel(ModelModificationMixin):
             reaction.lower_bound = 0
             old_medium.append(reaction)
         self.medium.extend(self.detect_salt_compounds())
+        self.medium.extend(self.TRACE_METALS)
         for compound in self.medium:
             try:
                 existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
@@ -565,9 +571,70 @@ class MeasurementChangeModel(ModelModificationMixin):
         self.model = model
         self.changes = {
             'measured': {'reactions': set()},
+            'added': {'reactions': set()},
             'measured-missing': {'reactions': set()}
         }
         self.missing_in_model = []
+
+    def has_transport(self, metabolite_id, direction):
+        """
+        Check if transport between cytosol and extracellular space in desired direction exists.
+        Use the graph of the transport reaction between the same metabolite
+        in different compartments.
+        """
+        G = nx.DiGraph()
+        m_c, m_e = metabolite_id + '_c', metabolite_id + '_e'
+        G.add_node(m_c)
+        G.add_node(m_e)
+        metabolites = []
+        for c in self.model.compartments:
+            m_id = metabolite_id + '_' + c
+            if self.model.metabolites.has_id(m_id):
+                metabolites.append(self.model.metabolites.get_by_id(m_id))
+        for a, b in itertools.combinations(metabolites, 2):
+            for reaction in set(a.reactions).intersection(set(b.reactions)):
+                a_coef, b_coef = reaction.metabolites[a], reaction.metabolites[b]
+                if a_coef * b_coef < 0:
+                    l_bound, r_bound = reaction.bounds
+                    if l_bound < 0 and r_bound > 0:
+                        G.add_edge(a.id, b.id)
+                        G.add_edge(b.id, a.id)
+                    else:
+                        if b_coef > 0:
+                            pair = a.id, b.id
+                        else:
+                            pair = b.id, a.id
+                        if l_bound < 0:
+                            G.add_edge(pair[1], pair[0])
+                        else:
+                            G.add_edge(*pair)
+        if direction > 0:
+            return nx.has_path(G, m_c, m_e)
+        return nx.has_path(G, m_e, m_c)
+
+    def allow_transport(self, metabolite_e, direction):
+        """
+        If transport between cytosol and extracellular space in desired direction
+        does not already exist, create a helper transport reaction.
+        """
+        met_id = metabolite_e.id.replace('_e', '')
+        metabolite_c = self.model.metabolites.get_by_id(met_id + '_c')
+        if self.has_transport(met_id, direction):
+            return
+        if direction > 0:
+            m_from, m_to = metabolite_c, metabolite_e
+        else:
+            m_from, m_to = metabolite_e, metabolite_c
+        LOGGER.info('Transport reaction for %s is not found, '
+                    'creating a transport reaction from %s to %s',
+                    met_id, m_from, m_to)
+        transport_reaction = Reaction('adapter_' + met_id)
+        transport_reaction.bounds = -1000, 1000
+        transport_reaction.add_metabolites(
+            {m_from: -1, m_to: 1}
+        )
+        self.model.add_reactions([transport_reaction])
+        self.changes['added']['reactions'].add(transport_reaction)
 
     def reaction_for_compound(self, compound, lower_bound, upper_bound):
         try:
@@ -583,6 +650,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
         # have <-- x, then multiply with -1
         direction = reaction.metabolites[model_metabolite]
+        self.allow_transport(model_metabolite, lower_bound)
         if direction > 0:
             lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
         reaction.bounds = lower_bound, upper_bound
