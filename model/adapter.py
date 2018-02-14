@@ -555,6 +555,29 @@ class MediumChangeModel(ModelModificationMixin):
                 self.changes['measured']['reactions'].add(reaction)
 
 
+def next_measured_reaction(exchange_reaction):
+    """Find the reaction flux of which would be fully defined by the corresponding exchange reaction.
+
+    :param exchange_reaction: cobra.Reaction
+    :return: cobra.Reaction or None
+    """
+    met = list(exchange_reaction.metabolites.keys())[0]
+    connected_reactions = [r for r in met.reactions if r != exchange_reaction]
+    if len(connected_reactions) == 0:
+        LOGGER.warning('No reactions except exchange is connected to %s', met)
+        return
+    if len(connected_reactions) > 1:
+        return
+    next_reaction = connected_reactions[0]
+    metabolites = [m for m in next_reaction.metabolites if m != met]
+    if len(metabolites) > 1:
+        return
+    met2 = metabolites[0]
+    if next_reaction.metabolites[met] * next_reaction.metabolites[met2] > 0:
+        return
+    return next_reaction
+
+
 class MeasurementChangeModel(ModelModificationMixin):
     """
     Update constraints based on measured fluxes
@@ -710,3 +733,7 @@ class MeasurementChangeModel(ModelModificationMixin):
                 LOGGER.info('scalar for measured type %s not supported', scalar['type'])
             if reaction:
                 self.changes['measured']['reactions'].add(reaction)
+                if scalar['type'] == 'compound':
+                    next_measured = next_measured_reaction(reaction)
+                    if next_measured:
+                        self.changes['measured']['reactions'].add(next_measured)

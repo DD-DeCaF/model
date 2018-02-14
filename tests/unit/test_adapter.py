@@ -2,7 +2,7 @@ import logging
 import pytest
 
 from model.adapter import (NoIDMapping, get_unique_metabolite,
-    MediumChangeModel, MediumSalts, MeasurementChangeModel)
+    MediumChangeModel, MediumSalts, MeasurementChangeModel, next_measured_reaction)
 from model.storage import Models
 
 logging.disable(logging.CRITICAL)
@@ -52,3 +52,9 @@ def test_transport_reaction():
     assert changes.has_transport('btn', 1)
     solution = changes.model.optimize()
     assert solution.status == 'optimal'
+
+
+def test_next_measured_reaction():
+    ecoli = Models.get('iJO1366')
+    assert next_measured_reaction(ecoli.reactions.EX_co2_e) == ecoli.reactions.CO2tex
+    assert next_measured_reaction(ecoli.reactions.EX_glc__D_e) is None
