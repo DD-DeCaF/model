@@ -492,7 +492,10 @@ class MediumChangeModel(ModelModificationMixin):
     """
     Applies medium on cameo model
     """
-    TRACE_METALS = [{'id': 'chebi:25517', 'name': 'nickel'}]
+    TRACE_METALS = [
+        {'id': 'chebi:25517', 'name': 'nickel'},
+        {'id': 'chebi:25368', 'name': 'molybdate'},
+    ]
 
     def __init__(self, model, medium):
         """
@@ -568,6 +571,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         self.model = model
         self.changes = {
             'measured': {'reactions': set()},
+            'added': {'reactions': set()},
             'measured-missing': {'reactions': set()}
         }
         self.missing_in_model = []
@@ -624,12 +628,13 @@ class MeasurementChangeModel(ModelModificationMixin):
         LOGGER.info('Transport reaction for %s is not found, '
                     'creating a transport reaction from %s to %s',
                     met_id, m_from, m_to)
-        transport_reaction = Reaction('transport_' + met_id)
-        transport_reaction.lower_bound = -1000
+        transport_reaction = Reaction('adapter_' + met_id)
+        transport_reaction.bounds = -1000, 1000
         transport_reaction.add_metabolites(
             {m_from: -1, m_to: 1}
         )
         self.model.add_reactions([transport_reaction])
+        self.changes['added']['reactions'].add(transport_reaction)
 
     def reaction_for_compound(self, compound, lower_bound, upper_bound):
         try:
@@ -645,7 +650,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
         # have <-- x, then multiply with -1
         direction = reaction.metabolites[model_metabolite]
-        self.allow_transport(model_metabolite, direction)
+        self.allow_transport(model_metabolite, lower_bound)
         if direction > 0:
             lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
         reaction.bounds = lower_bound, upper_bound
