@@ -179,7 +179,7 @@ class ModelModificationMixin(object):
         """
         exchange_reaction = list(set(metabolite.reactions).intersection(self.model.exchanges))[0]
         if exchange_reaction.lower_bound >= 0:
-            exchange_reaction.lower_bound = -1 if contains_carbon(metabolite) else -1000
+            exchange_reaction.lower_bound = -10 if contains_carbon(metabolite) else -1000
         self.changes['measured']['reactions'].add(exchange_reaction)
         self.annotate_new_metabolites(exchange_reaction)
 
