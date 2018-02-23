@@ -171,16 +171,17 @@ class ModelModificationMixin(object):
         except Exception:  # TODO: raise a reasonable exception on cobra side if the reaction exists
             LOGGER.debug('Adapter reaction exists: %s <--> %s', metabolite.id, existing_metabolite.id)
 
-    def make_consumable(self, metabolite):
+    def make_consumable(self, metabolite, key='measured'):
         """For metabolite in e compartment with existing exchange reaction, make it possible to consume metabolite
         by decreasing the lower bound of exchange reaction
 
         :param metabolite: cobra.Metabolite, metabolite from e compartment, f.e. melatn_e
+        :param key: where to save the reactions, default is 'measured'
         """
         exchange_reaction = list(set(metabolite.reactions).intersection(self.model.exchanges))[0]
         if exchange_reaction.lower_bound >= 0:
             exchange_reaction.lower_bound = -10 if contains_carbon(metabolite) else -1000
-        self.changes['measured']['reactions'].add(exchange_reaction)
+        self.changes[key]['reactions'].add(exchange_reaction)
         self.annotate_new_metabolites(exchange_reaction)
 
     def annotate_new_metabolite(self, metabolite):
@@ -506,7 +507,7 @@ class MediumChangeModel(ModelModificationMixin):
         self.medium = medium
         self.model = model
         self.changes = {
-            'measured': {'reactions': set()},
+            'measured-medium': {'reactions': set()},
         }
 
     def detect_salt_compounds(self):
@@ -549,10 +550,10 @@ class MediumChangeModel(ModelModificationMixin):
                 LOGGER.info('No metabolite %s in external compartment', compound['id'])
                 continue
             LOGGER.info('Found metabolite %s', compound['id'])
-            self.make_consumable(existing_metabolite)
+            self.make_consumable(existing_metabolite, key='measured-medium')
         for reaction in old_medium:
-            if reaction.id not in self.changes['measured']['reactions']:
-                self.changes['measured']['reactions'].add(reaction)
+            if reaction.id not in self.changes['measured-medium']['reactions']:
+                self.changes['measured-medium']['reactions'].add(reaction)
 
 
 def next_measured_reaction(exchange_reaction):

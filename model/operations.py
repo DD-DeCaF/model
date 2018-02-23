@@ -253,6 +253,7 @@ def fix_measurements_ids(measurements):
             value['id'] = IDS[value['id']]
     return measurements
 
+
 async def apply_measurement_changes(model, measurements):
     measurement = convert_measurements_to_mmol(measurements, model)
     measurements = fix_measurements_ids(measurement)
@@ -284,6 +285,7 @@ def restore_changes(model, changes):
     LOGGER.info('Changes to restore: %s', changes)
     model = apply_additions(model, changes['added'])
     model = apply_removals(model, changes['removed'])
+    model = apply_measurements(model, changes['measured-medium'])
     model = apply_measurements(model, changes['measured'])
     return model
 

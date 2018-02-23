@@ -77,6 +77,9 @@ def get_empty_changes():
         'measured-missing': {
             'genes': [],
             'reactions': []
+        },
+        'measured-medium': {
+            'reactions': []
         }
     }
 
