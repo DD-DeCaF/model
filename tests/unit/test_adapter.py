@@ -21,7 +21,9 @@ async def test_existing_metabolite():
 def test_medium_salts():
     salts = MediumSalts.get()
     assert len(salts) > 2000
-    assert salts['75832'] == [['29033'], ['16189']]
+    assert len(salts['75832']) == 2
+    assert len(salts['30808']) == 2
+    assert len(salts['86254']) == 4
 
 
 def test_medium_change_model():
