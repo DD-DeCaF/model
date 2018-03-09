@@ -11,17 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 import json
-import requests
+import os
 import re
+
+import requests
+from cameo import load_model
+from cobra.io import read_sbml_model, write_sbml_model
 from tqdm import tqdm
 
-from cobra.io import read_sbml_model, write_sbml_model
-from cameo import load_model
-
 from model.adapter import add_prefix
-from model.constants import MODELS, MODEL_NAMESPACE
+from model.constants import MODEL_NAMESPACE, MODELS
 from model.settings import ID_MAPPER_API
 
 

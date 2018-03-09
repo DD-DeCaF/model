@@ -11,23 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
-import os
-
-import aiohttp
 import asyncio
-import gnomic
-import numpy as np
+import itertools
 import json
 import logging
+import os
+import re
 import time
-import itertools
-import networkx as nx
 from collections import defaultdict
 
+import aiohttp
+import gnomic
+import networkx as nx
+import numpy as np
+from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
-from cameo.data import metanetx
 
 from model.settings import ID_MAPPER_API
 

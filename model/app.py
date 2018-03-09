@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
-import aiohttp_cors
-from aiohttp import web
 import logging
 
+import aiohttp_cors
+from aiohttp import web
+
 import model.handlers as handlers
+
 from .middleware import raven_middleware
 
 

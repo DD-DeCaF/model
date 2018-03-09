@@ -15,8 +15,7 @@ import logging
 
 from aiohttp import web
 
-from . import settings
-from . import raven_client
+from . import raven_client, settings
 
 
 async def raven_middleware(app, handler):

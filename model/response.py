@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from functools import lru_cache
 import json
-import jsonpatch
 import logging
-import time
 import os
+import time
+from functools import lru_cache
 
+import jsonpatch
 from cobra.exceptions import OptimizationError
 from cobra.flux_analysis import pfba
 from cobra.io.dict import model_to_dict
@@ -25,6 +25,7 @@ from cobra.io.dict import model_to_dict
 import model.constants as constants
 from model.operations import is_dummy, phase_plane_to_dict
 from model.storage import Models
+
 
 LOGGER = logging.getLogger(__name__)
 

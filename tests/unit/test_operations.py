@@ -13,15 +13,16 @@
 # limitations under the License.
 import logging
 from math import isclose
+
 import pytest
 
 from model.adapter import full_genotype
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
-from model.operations import (convert_mg_to_mmol, modify_model, product_reaction_variable,
-                              phase_plane_to_dict, new_features_identifiers, add_reactions,
-                              apply_reactions_knockouts, convert_measurements_to_mmol,
-                              build_string_from_metabolites)
-from model.storage import restore_model, Models
+from model.operations import (
+    add_reactions, apply_reactions_knockouts, build_string_from_metabolites, convert_measurements_to_mmol,
+    convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict, product_reaction_variable)
+from model.storage import Models, restore_model
+
 
 logging.disable(logging.CRITICAL)
 

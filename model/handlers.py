@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
-from aiohttp import web, WSMsgType
 import json
 import logging
 import os
 
+from aiohttp import WSMsgType, web
 from cobra.io.dict import model_to_dict
 
 import model.constants as constants
-from model.storage import (restore_model, model_from_changes, key_from_model_info,
-                           restore_from_db, Models, save_changes_to_db)
 from model.operations import modify_model
 from model.response import respond
+from model.storage import (
+    Models, key_from_model_info, model_from_changes, restore_from_db, restore_model, save_changes_to_db)
+
 
 LOGGER = logging.getLogger(__name__)
 

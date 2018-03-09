@@ -11,15 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
-from deepdiff import DeepDiff
 import logging
 
-from model.adapter import full_genotype, MediumChangeModel
+import pytest
+from deepdiff import DeepDiff
+
+from model.adapter import MediumChangeModel, full_genotype
 from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
-from model.storage import (restore_model, restore_from_db, save_changes_to_db, Models)
-from model.operations import call_genes_to_reactions, modify_model, apply_reactions_add
+from model.operations import apply_reactions_add, call_genes_to_reactions, modify_model
 from model.response import Response
+from model.storage import Models, restore_from_db, restore_model, save_changes_to_db
+
 
 logging.disable(logging.CRITICAL)
 

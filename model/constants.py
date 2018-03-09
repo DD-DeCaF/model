@@ -15,11 +15,11 @@ import logging
 import os
 import re
 import time
-
 from itertools import chain
 
-from cobra.flux_analysis import pfba, flux_variability_analysis
+from cobra.flux_analysis import flux_variability_analysis, pfba
 from cobra.flux_analysis.moma import add_moma
+
 
 LOGGER = logging.getLogger(__name__)
 

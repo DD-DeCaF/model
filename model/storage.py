@@ -11,16 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import aioredis
 import asyncio
-from functools import lru_cache
 import hashlib
 import json
 import logging
 import os
 import time
+from functools import lru_cache
 
-from cobra.io import read_sbml_model, model_to_dict
+import aioredis
+from cobra.io import model_to_dict, read_sbml_model
 
 import model.constants as constants
 from model.operations import restore_changes

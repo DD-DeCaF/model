@@ -20,15 +20,16 @@ cu2 and cu
 Both from the couple are added to the model, even if only one is the part
 of the medium chemical.
 """
+import json
 import os
 import re
-import json
-import requests
-from urllib import request
-from multiprocessing import Pool
-from functools import partial
-from collections import defaultdict
 import xml.etree.ElementTree as ET
+from collections import defaultdict
+from functools import partial
+from multiprocessing import Pool
+from urllib import request
+
+import requests
 
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
