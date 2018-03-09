@@ -11,17 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import logging
-import unittest
 from copy import deepcopy
 
 import aiohttp
 import jsonpatch
-import pytest
-import requests
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
-from cobra.io import model_to_dict
 
 from model.app import get_app
 

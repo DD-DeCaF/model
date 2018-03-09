@@ -91,6 +91,7 @@ def update_local_models(model_id, model_store=None):
         rxn.annotation[db_name] = [re.findall('^prot_(.*)_exchange$', rxn.id)[0]]
     write_sbml_model(model, os.path.join(model_store, model_id + '.sbml.gz'))
 
+
 if '__main__' in __name__:
     for m_id in tqdm(MODELS):
         update_local_models(m_id)

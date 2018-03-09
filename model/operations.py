@@ -30,6 +30,7 @@ from model.settings import ANNOTATIONS_API
 
 LOGGER = logging.getLogger(__name__)
 
+
 async def operate_on_reactions(model, reactions, key, apply_function, undo_function):
     if 'changes' not in model.notes:
         model.notes['changes'] = constants.get_empty_changes()

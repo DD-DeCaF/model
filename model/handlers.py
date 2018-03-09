@@ -28,11 +28,14 @@ from model.storage import (
 
 LOGGER = logging.getLogger(__name__)
 
+
 async def model_ws_full(request):
     return await model_ws(request, False)
 
+
 async def model_ws_json_diff(request):
     return await model_ws(request, True)
+
 
 async def model_ws(request, diff=False):
     ws = web.WebSocketResponse()

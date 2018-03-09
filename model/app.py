@@ -54,7 +54,7 @@ def get_app():
 
 async def start(loop):
     app = get_app()
-    server = await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
+    await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
     LOGGER.info('Web server is up')
     return app
 

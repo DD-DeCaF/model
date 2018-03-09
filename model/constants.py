@@ -96,6 +96,7 @@ def get_empty_changes():
         }
     }
 
+
 MAPS_DIR = 'maps'
 
 SPECIES_TO_MODEL = {

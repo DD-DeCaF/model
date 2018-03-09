@@ -15,7 +15,6 @@ import json
 import logging
 import os
 import time
-from functools import lru_cache
 
 import jsonpatch
 from cobra.exceptions import OptimizationError
@@ -125,7 +124,8 @@ class Response(object):
 
     def measured_missing_reactions(self):
         return list(set(
-            [i['id'] for i in self.model.notes.get('changes', constants.get_empty_changes())['measured-missing']['reactions']]
+            [i['id'] for i in self.model.notes.get('changes',
+                                                   constants.get_empty_changes())['measured-missing']['reactions']]
         ))
 
     def removed_reactions(self):
