@@ -1,4 +1,4 @@
-.PHONY: start stop clean test logs
+.PHONY: start stop test license clean logs
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -26,6 +26,10 @@ test:
 
 unit_tests:
 	docker-compose run --entrypoint "py.test -vxs --duration=0 --cov=./model tests/unit" web
+
+## Verify source code license headers
+license:
+	./scripts/verify_license_headers.sh
 
 ## Shut down the Docker containers.
 stop:
