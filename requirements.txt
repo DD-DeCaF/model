@@ -20,9 +20,9 @@ raven==6.3.0
 yarl==0.18.0
 
 # Testing and QA
-codecov==2.0.9
+codecov
 flake8
 isort
-pytest-aiohttp==0.1.3
-pytest-asyncio==0.5.0
-pytest-cov==2.4.0
+pytest-aiohttp
+pytest-asyncio
+pytest-cov
