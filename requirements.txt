@@ -1,4 +1,4 @@
-aiohttp==2.3.2
+aiohttp==2.3.10
 aiozmq==0.7.1
 aiohttp_cors==0.5.3
 msgpack-python==0.4.8
