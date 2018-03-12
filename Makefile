@@ -24,10 +24,10 @@ test:
 	@echo "**********************************************************************"
 	@echo "* Running tests."
 	@echo "**********************************************************************"
-	docker-compose run web py.test -vxs --cov=./model tests/
+	docker-compose run --rm web py.test -vxs --cov=./model tests/
 
 unit_tests:
-	docker-compose run web py.test -vxs --duration=0 --cov=./model tests/unit
+	docker-compose run --rm web py.test -vxs --duration=0 --cov=./model tests/unit
 
 ## Run flake8
 flake8:
