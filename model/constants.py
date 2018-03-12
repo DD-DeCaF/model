@@ -65,13 +65,14 @@ MODEL = 'model'
 FLUXES = 'fluxes'
 GROWTH_RATE = 'growth-rate'
 TMY = 'tmy'
-OBJECTIVES = 'objectives'
+TMY_OBJECTIVES = 'theoretical-objectives'
+OBJECTIVE = 'objective'
 REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
 MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
 
-MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT}
+MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE}
 
 
 def get_empty_changes():

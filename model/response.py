@@ -45,6 +45,10 @@ def map_reactions_list(map_path):
 class Response(object):
     def __init__(self, model, message, wild_type_model_id=None):
         self.model = model
+        self.old_objective = self.model.objective
+        if constants.OBJECTIVE in message:
+            if model.reactions.has_id(message[constants.OBJECTIVE]):
+                self.model.objective = self.model.reactions.get_by_id(message[constants.OBJECTIVE])
         self.message = message
         self.method_name = message.get(constants.SIMULATION_METHOD, 'fba')
         self.wild_type_model_id = wild_type_model_id
@@ -76,6 +80,7 @@ class Response(object):
             else:
                 self.flux = solution.fluxes.to_dict()
                 self.growth = self.flux[constants.MODEL_GROWTH_RATE[model.id]]
+        self.model.objective = self.old_objective
 
     def solve_fva(self):
         fva_reactions = None
@@ -115,7 +120,7 @@ class Response(object):
         return self.flux
 
     def theoretical_maximum_yield(self):
-        objectives = self.message.get(constants.OBJECTIVES, [])
+        objectives = self.message.get(constants.TMY_OBJECTIVES, [])
         res = {key: phase_plane_to_dict(self.model, key) for key in objectives}
         LOGGER.info(res)
         return res
