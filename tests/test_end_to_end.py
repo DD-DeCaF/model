@@ -20,7 +20,6 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
 from model.app import get_app
 
-
 logging.disable(logging.CRITICAL)
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
@@ -32,7 +31,8 @@ MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:4275
 MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': MEASUREMENTS}
 MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
     {'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]}
-MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy', 'model'], 'theoretical-objectives': ['chebi:17790'], 'request-id': 'requestid'}
+MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy', 'model'], 'theoretical-objectives': ['chebi:17790'],
+                      'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
     'reactions-add': [
@@ -118,12 +118,14 @@ class EndToEndTestCase(AioHTTPTestCase):
         assert response.status == 404
         response = await self.client.post(MODELS_URL.format('iJO1366'), json={})
         assert response.status == 400
-        response_etoh = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+        response_etoh = await self.client.post(MODELS_URL.format('iJO1366'),
+                                               json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
         response_etoh.raise_for_status()
         model = await response_etoh.json()
         assert abs(model['fluxes']['EX_etoh_e']) - 20.0 < 0.001
         MESSAGE_DIFFERENT_OBJECTIVE.pop('objective')
-        response_etoh = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+        response_etoh = await self.client.post(MODELS_URL.format('iJO1366'),
+                                               json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
         response_etoh.raise_for_status()
         model = await response_etoh.json()
         assert abs(model['fluxes']['EX_etoh_e']) < 0.001
