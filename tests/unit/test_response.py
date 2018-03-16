@@ -19,6 +19,7 @@ import pytest
 from model.response import respond
 from model.storage import Models
 
+
 logging.disable(logging.CRITICAL)
 
 

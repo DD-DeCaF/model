@@ -20,6 +20,7 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
 from model.app import get_app
 
+
 logging.disable(logging.CRITICAL)
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],

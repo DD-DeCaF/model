@@ -26,6 +26,7 @@ import model.constants as constants
 from model.operations import is_dummy, phase_plane_to_dict
 from model.storage import Models
 
+
 LOGGER = logging.getLogger(__name__)
 
 
