@@ -47,8 +47,7 @@ class Response(object):
         self.model = model
         self.old_objective = self.model.objective
         if constants.OBJECTIVE in message:
-            if model.reactions.has_id(message[constants.OBJECTIVE]):
-                self.model.objective = self.model.reactions.get_by_id(message[constants.OBJECTIVE])
+            self.model.objective = self.model.reactions.get_by_id(message[constants.OBJECTIVE])
         self.message = message
         self.method_name = message.get(constants.SIMULATION_METHOD, 'fba')
         self.wild_type_model_id = wild_type_model_id
