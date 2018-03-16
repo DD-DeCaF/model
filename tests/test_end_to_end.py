@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import logging
 from copy import deepcopy
 
@@ -33,7 +32,8 @@ MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:4275
 MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': MEASUREMENTS}
 MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
     {'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]}
-MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy', 'model'], 'objectives': ['chebi:17790'], 'request-id': 'requestid'}
+MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy', 'model'], 'theoretical-objectives': ['chebi:17790'],
+                      'request-id': 'requestid'}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
     'reactions-add': [
@@ -42,10 +42,12 @@ MESSAGE_MODIFY = {
         {'id': 'MagicCarrot', 'metabolites': {'glc__D_c': -1, 'caro_c': 1}}
     ],
     'to-return': ['tmy', 'fluxes', 'model', 'added-reactions', 'removed-reactions'],
-    'objectives': ['chebi:17790', 'chebi:17579'],
+    'theoretical-objectives': ['chebi:17790', 'chebi:17579'],
     'genotype-changes': ['+Aac', '-pta'],
     'measurements': MEASUREMENTS,
 }
+
+MESSAGE_DIFFERENT_OBJECTIVE = {'to-return': ['fluxes'], 'objective': 'EX_etoh_e'}
 
 MODELS_URL = '/models/{}'
 V1_MODELS_URL = '/v1/models/{}'
@@ -117,6 +119,17 @@ class EndToEndTestCase(AioHTTPTestCase):
         assert response.status == 404
         response = await self.client.post(MODELS_URL.format('iJO1366'), json={})
         assert response.status == 400
+        response_etoh = await self.client.post(MODELS_URL.format('iJO1366'),
+                                               json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+        response_etoh.raise_for_status()
+        model = await response_etoh.json()
+        assert abs(model['fluxes']['EX_etoh_e']) - 20.0 < 0.001
+        MESSAGE_DIFFERENT_OBJECTIVE.pop('objective')
+        response_etoh = await self.client.post(MODELS_URL.format('iJO1366'),
+                                               json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+        response_etoh.raise_for_status()
+        model = await response_etoh.json()
+        assert abs(model['fluxes']['EX_etoh_e']) < 0.001
 
     @unittest_run_loop
     async def test_websocket(self):

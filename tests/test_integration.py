@@ -98,7 +98,7 @@ async def test_reactions_additions():
 async def test_modify_model():
     message = {
         'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
-        'objectives': ['chebi:17790'],
+        'theoretical-objectives': ['chebi:17790'],
         'genotype-changes': ['+Aac'],
         'medium': [
             {'id': 'chebi:44080', 'concentration': 0.01},
