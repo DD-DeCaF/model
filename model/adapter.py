@@ -29,6 +29,7 @@ from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 
+from model import constants
 from model.settings import ID_MAPPER_API
 
 
@@ -741,6 +742,9 @@ class MeasurementChangeModel(ModelModificationMixin):
                 reaction = self.reaction_for_compound(scalar['id'], lower_bound, upper_bound)
             elif scalar['type'] == 'reaction':
                 reaction = self.reaction_for_scalar(scalar, lower_bound, upper_bound)
+            elif scalar['type'] == 'growth-rate':
+                reaction = self.model.reactions.get_by_id(constants.MODEL_GROWTH_RATE[self.model.id])
+                reaction.bounds = lower_bound, upper_bound
             elif scalar['type'] == 'protein' and scalar['mode'] == 'quantitative':
                 reaction = self.protein_exchange_reaction_for_scalar(scalar, upper_bound)
             else:
