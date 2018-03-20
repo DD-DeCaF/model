@@ -64,7 +64,8 @@ def test_transport_reaction():
     assert changes.has_transport('fe2', -1)
     assert not changes.has_transport('btn', 1)
     changes.model.reactions.EX_btn_e.bounds = (0.1, 0.1)
-    solution = changes.model.optimize()
+    with pytest.warns(UserWarning):
+        solution = changes.model.optimize()
     assert solution.status == 'infeasible'
     changes.allow_transport(changes.model.metabolites.btn_e, 1)
     assert changes.has_transport('btn', 1)
