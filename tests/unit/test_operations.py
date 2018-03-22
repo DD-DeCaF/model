@@ -1,14 +1,29 @@
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 from math import isclose
+
 import pytest
 
 from model.adapter import full_genotype
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
-from model.operations import (convert_mg_to_mmol, modify_model, product_reaction_variable,
-                              phase_plane_to_dict, new_features_identifiers, add_reactions,
-                              apply_reactions_knockouts, convert_measurements_to_mmol,
-                              build_string_from_metabolites)
-from model.storage import restore_model, Models
+from model.operations import (
+    add_reactions, apply_reactions_knockouts, build_string_from_metabolites, convert_measurements_to_mmol,
+    convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict, product_reaction_variable)
+from model.storage import Models, restore_model
+
 
 logging.disable(logging.CRITICAL)
 

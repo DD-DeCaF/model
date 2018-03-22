@@ -9,3 +9,4 @@ env
 venv
 .cache/
 test-data
+.pytest_cache/

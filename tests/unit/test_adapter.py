@@ -1,9 +1,25 @@
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
+
 import pytest
 
-from model.adapter import (NoIDMapping, get_unique_metabolite,
-    MediumChangeModel, MediumSalts, MeasurementChangeModel, next_measured_reaction)
+from model.adapter import (
+    MeasurementChangeModel, MediumChangeModel, MediumSalts, NoIDMapping, get_unique_metabolite, next_measured_reaction)
 from model.storage import Models
+
 
 logging.disable(logging.CRITICAL)
 
@@ -21,7 +37,9 @@ async def test_existing_metabolite():
 def test_medium_salts():
     salts = MediumSalts.get()
     assert len(salts) > 2000
-    assert salts['75832'] == [['29033'], ['16189']]
+    assert len(salts['75832']) == 2
+    assert len(salts['30808']) == 2
+    assert len(salts['86254']) == 4
 
 
 def test_medium_change_model():
@@ -46,7 +64,8 @@ def test_transport_reaction():
     assert changes.has_transport('fe2', -1)
     assert not changes.has_transport('btn', 1)
     changes.model.reactions.EX_btn_e.bounds = (0.1, 0.1)
-    solution = changes.model.optimize()
+    with pytest.warns(UserWarning):
+        solution = changes.model.optimize()
     assert solution.status == 'infeasible'
     changes.allow_transport(changes.model.metabolites.btn_e, 1)
     assert changes.has_transport('btn', 1)

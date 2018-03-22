@@ -1,14 +1,31 @@
-import pytest
-from deepdiff import DeepDiff
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 
-from model.adapter import full_genotype, MediumChangeModel
+import pytest
+from deepdiff import DeepDiff
+
+from model.adapter import full_genotype
 from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
-from model.storage import (restore_model, restore_from_db, save_changes_to_db, Models)
-from model.operations import call_genes_to_reactions, modify_model, apply_reactions_add
+from model.operations import apply_reactions_add, call_genes_to_reactions, modify_model
 from model.response import Response
+from model.storage import Models, restore_from_db, restore_model, save_changes_to_db
+
 
 logging.disable(logging.CRITICAL)
+
 
 @pytest.mark.asyncio
 async def test_call_genes_to_reactions():
@@ -70,14 +87,18 @@ async def test_reactions_additions():
     reaction_ids = {}
     ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
-    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None}, {'id': 'SUCR', 'metabolites': {'h2o_c': -1, 'sucr_c': -1, 'fru_c': 1, 'glc__D_c': 1}}])
+    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None},
+                                              {'id': 'SUCR', 'metabolites': {'h2o_c': -1,
+                                                                             'sucr_c': -1,
+                                                                             'fru_c': 1,
+                                                                             'glc__D_c': 1}}])
 
 
 @pytest.mark.asyncio
 async def test_modify_model():
     message = {
         'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
-        'objectives': ['chebi:17790'],
+        'theoretical-objectives': ['chebi:17790'],
         'genotype-changes': ['+Aac'],
         'medium': [
             {'id': 'chebi:44080', 'concentration': 0.01},
@@ -115,7 +136,6 @@ async def test_modify_model():
     }
     wildtype = await restore_model('iJO1366')
     modified = await modify_model(message, wildtype.copy())
-    assert len(modified.medium) + len(MediumChangeModel.TRACE_METALS) == len(message['medium'])
     assert 'EX_meoh_e' in modified.medium
     db_key = await save_changes_to_db(modified, 'iJO1366', message)
     restored_model = (await restore_from_db(db_key)).copy()

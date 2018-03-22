@@ -1,13 +1,27 @@
-import aioredis
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import asyncio
-from functools import lru_cache
 import hashlib
 import json
 import logging
 import os
 import time
+from functools import lru_cache
 
-from cobra.io import read_sbml_model, model_to_dict
+import aioredis
+from cobra.io import model_to_dict, read_sbml_model
 
 import model.constants as constants
 from model.operations import restore_changes
@@ -57,6 +71,7 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
 
 def read_model(model_id):
     model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz'))
+    model.solver = 'cplex'
     model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
     return model
 

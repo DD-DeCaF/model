@@ -1,4 +1,4 @@
-.PHONY: start stop clean test logs
+.PHONY: start qa test unit_test flake8 isort license stop clean logs update_models update_salts
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -16,16 +16,34 @@ start:
 	docker network inspect iloop || docker network create iloop
 	docker-compose up -d --build
 
+## Run all QA targets
+qa: test flake8 isort license
 
 ## Run the tests
 test:
 	@echo "**********************************************************************"
 	@echo "* Running tests."
 	@echo "**********************************************************************"
-	docker-compose run --entrypoint "py.test -vxs --cov=./model tests/" web
+	docker-compose run --rm web py.test -vxs --cov=./model tests/
 
 unit_tests:
-	docker-compose run --entrypoint "py.test -vxs --duration=0 --cov=./model tests/unit" web
+	docker-compose run --rm web py.test -vxs --duration=0 --cov=./model tests/unit
+
+## Run flake8
+flake8:
+	docker-compose run --rm web flake8 model tests
+
+## Check import sorting
+isort:
+	docker-compose run --rm web isort --check-only --recursive model tests
+
+## Sort imports and write changes to files
+isort-save:
+	docker-compose run --rm web isort --recursive model tests
+
+## Verify source code license headers
+license:
+	./scripts/verify_license_headers.sh
 
 ## Shut down the Docker containers.
 stop:

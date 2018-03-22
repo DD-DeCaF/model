@@ -12,26 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import logging
-import time
-from functools import wraps
+import os
+
+from cobra.io import read_sbml_model
+
+from model.adapter import get_unique_metabolite
+from model.update_models import update_local_models
 
 
-def timing(f):
-    @wraps(f)
-    def wrap(*args, **kw):
-        time_start = time.time()
-        result = f(*args, **kw)
-        time_end = time.time()
-        # Get the appropriate logger for the file
+logging.disable(logging.CRITICAL)
 
-        try:
-            logger_name = inspect.getmodule(f).__name__
-        except TypeError:
-            logger_name = 'builtin'
-        function_logger = logging.getLogger(logger_name)
-        function_logger.info('func:%r args:[%r, %r] took: %2.4f sec',
-                             f.__name__, args, kw, time_end - time_start)
-        return result
-    return wrap
+
+def test_update_models(tmpdir):
+    update_local_models('e_coli_core', tmpdir)
+    model = read_sbml_model(os.path.join(tmpdir, 'e_coli_core.sbml.gz'))
+    glucose = get_unique_metabolite(model, 'CHEBI:42758')
+    assert glucose.id == 'glc__D_e'
+    assert glucose.annotation['bigg.metabolite'] == 'glc__D'

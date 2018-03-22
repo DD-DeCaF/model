@@ -1,12 +1,26 @@
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 import os
 import re
 import time
-
 from itertools import chain
 
-from cobra.flux_analysis import pfba, flux_variability_analysis
+from cobra.flux_analysis import flux_variability_analysis, pfba
 from cobra.flux_analysis.moma import add_moma
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,13 +65,14 @@ MODEL = 'model'
 FLUXES = 'fluxes'
 GROWTH_RATE = 'growth-rate'
 TMY = 'tmy'
-OBJECTIVES = 'objectives'
+TMY_OBJECTIVES = 'theoretical-objectives'
+OBJECTIVE = 'objective'
 REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
 MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
 
-MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT}
+MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE}
 
 
 def get_empty_changes():
@@ -82,6 +97,7 @@ def get_empty_changes():
             'reactions': []
         }
     }
+
 
 MAPS_DIR = 'maps'
 

@@ -1,13 +1,27 @@
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 import random
-import pytest
 
+import pytest
 from cobra.io import model_to_dict
 
 from model.constants import GENOTYPE_CHANGES, MEASUREMENTS, MEDIUM
 from model.operations import modify_model
-from model.storage import (key_from_model_info, save_changes_to_db, Models, restore_model,
-                           restore_from_db)
+from model.storage import Models, key_from_model_info, restore_from_db, restore_model, save_changes_to_db
+
 
 logging.disable(logging.CRITICAL)
 
@@ -34,7 +48,8 @@ async def test_save_and_restore():
     message = {
         GENOTYPE_CHANGES: [
             '-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
-        MEASUREMENTS: [{'id': 'chebi:44080', 'measurements': [0.01, float('nan')], 'type': 'compound'}],
+        MEASUREMENTS: [{'id': 'chebi:44080', 'measurements': [0.01, float('nan')], 'type': 'compound'},
+                       {'measurements': [0.01, float('nan')], 'type': 'growth-rate'}],
         MEDIUM: [{'concentration': 27.0, 'id': 'chebi:42758'}, {'concentration': 6.0, 'id': 'chebi:16015'},
                  {'concentration': 1.6, 'id': 'chebi:30808'}, {'concentration': 2.0, 'id': 'chebi:35696'},
                  {'concentration': 1.0, 'id': 'chebi:49553'}, {'concentration': 2.0, 'id': 'chebi:49976'},

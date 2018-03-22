@@ -1,24 +1,42 @@
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import asyncio
-from aiohttp import web, WSMsgType
 import json
 import logging
 import os
 
+from aiohttp import WSMsgType, web
 from cobra.io.dict import model_to_dict
 
 import model.constants as constants
-from model.storage import (restore_model, model_from_changes, key_from_model_info,
-                           restore_from_db, Models, save_changes_to_db)
 from model.operations import modify_model
 from model.response import respond
+from model.storage import (
+    Models, key_from_model_info, model_from_changes, restore_from_db, restore_model, save_changes_to_db)
+
 
 LOGGER = logging.getLogger(__name__)
+
 
 async def model_ws_full(request):
     return await model_ws(request, False)
 
+
 async def model_ws_json_diff(request):
     return await model_ws(request, True)
+
 
 async def model_ws(request, diff=False):
     ws = web.WebSocketResponse()

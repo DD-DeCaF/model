@@ -1,14 +1,28 @@
-import os
+# Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
-import requests
+import os
 import re
+
+import requests
+from cameo import load_model
+from cobra.io import read_sbml_model, write_sbml_model
 from tqdm import tqdm
 
-from cobra.io import read_sbml_model, write_sbml_model
-from cameo import load_model
-
 from model.adapter import add_prefix
-from model.constants import MODELS, MODEL_NAMESPACE
+from model.constants import MODEL_NAMESPACE, MODELS
 from model.settings import ID_MAPPER_API
 
 
@@ -77,6 +91,7 @@ def update_local_models(model_id, model_store=None):
     for rxn in protein_exchanges:
         rxn.annotation[db_name] = [re.findall('^prot_(.*)_exchange$', rxn.id)[0]]
     write_sbml_model(model, os.path.join(model_store, model_id + '.sbml.gz'))
+
 
 if '__main__' in __name__:
     for m_id in tqdm(MODELS):
