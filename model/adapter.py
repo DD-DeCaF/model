@@ -729,11 +729,21 @@ class MeasurementChangeModel(ModelModificationMixin):
         """Replaces fluxomics measurements with the minimized distance"""
         reaction_measurements = filter(lambda m: m['type'] == 'reaction', self.measurements)
         observations = pd.Series({m['id']: np.mean(m['measurements']) for m in reaction_measurements})
+
+        try:
+            # Include growth rate measurement
+            growth_rate = next(m for m in self.measurements if m['type'] == 'growth-rate')
+            observations.append(pd.Series({
+                constants.MODEL_GROWTH_RATE[self.model.id]: np.mean(growth_rate['measurements'])}))
+        except StopIteration:
+            pass
+
         # TODO: add uncertainties using stddev of >=3 samples
         solution = adjust_fluxes2model(self.model, observations)
         for reaction, minimized_distance in solution.fluxes.to_dict().items():
             for measurement in self.measurements:
-                if reaction == measurement['id']:
+                if measurement['type'] == 'growth-rate' and reaction == constants.MODEL_GROWTH_RATE[self.model.id] \
+                        or reaction == measurement.get('id'):
                     measurement['measurements'] = [minimized_distance]
 
     def apply_measurements(self):
