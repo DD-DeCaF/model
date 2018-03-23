@@ -727,19 +727,24 @@ class MeasurementChangeModel(ModelModificationMixin):
 
     def minimize_distance(self):
         """Replaces fluxomics measurements with the minimized distance"""
-        reaction_measurements = filter(lambda m: m['type'] == 'reaction', self.measurements)
-        observations = pd.Series({m['id']: np.mean(m['measurements']) for m in reaction_measurements})
+        reaction_measurements = [m for m in self.measurements if m['type'] == 'reaction']
+        observations = {m['id']: np.mean(m['measurements']) for m in reaction_measurements}
+
+        uncertainties = {
+            m['id']: np.std(m['measurements']) if len(m['measurements']) >= 3 else 1
+            for m in reaction_measurements}
 
         try:
             # Include growth rate measurement
             growth_rate = next(m for m in self.measurements if m['type'] == 'growth-rate')
-            observations.append(pd.Series({
-                constants.MODEL_GROWTH_RATE[self.model.id]: np.mean(growth_rate['measurements'])}))
+            growth_rate_id = constants.MODEL_GROWTH_RATE[self.model.id]
+            observations[growth_rate_id] = np.mean(growth_rate['measurements'])
+            uncertainties[growth_rate_id] = (np.std(growth_rate['measurements'])
+                                             if len(growth_rate['measurements']) >= 3 else 1)
         except StopIteration:
             pass
 
-        # TODO: add uncertainties using stddev of >=3 samples
-        solution = adjust_fluxes2model(self.model, observations)
+        solution = adjust_fluxes2model(self.model, pd.Series(observations), pd.Series(uncertainties))
         for reaction, minimized_distance in solution.fluxes.to_dict().items():
             for measurement in self.measurements:
                 if measurement['type'] == 'growth-rate' and reaction == constants.MODEL_GROWTH_RATE[self.model.id] \
