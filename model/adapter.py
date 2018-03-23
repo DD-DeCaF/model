@@ -747,8 +747,8 @@ class MeasurementChangeModel(ModelModificationMixin):
         solution = adjust_fluxes2model(self.model, pd.Series(observations), pd.Series(uncertainties))
         for reaction, minimized_distance in solution.fluxes.to_dict().items():
             for measurement in self.measurements:
-                if measurement['type'] == 'growth-rate' and reaction == constants.MODEL_GROWTH_RATE[self.model.id] \
-                        or reaction == measurement.get('id'):
+                if (measurement['type'] == 'growth-rate' and reaction == constants.MODEL_GROWTH_RATE[self.model.id]
+                        or reaction == measurement.get('id')):
                     measurement['measurements'] = [minimized_distance]
 
     def apply_measurements(self):
