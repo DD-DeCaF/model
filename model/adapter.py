@@ -731,7 +731,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         observations = {m['id']: np.mean(m['measurements']) for m in reaction_measurements}
 
         uncertainties = {
-            m['id']: np.std(m['measurements']) if len(m['measurements']) >= 3 else 1
+            m['id']: np.std(m['measurements'], ddof=1) if len(m['measurements']) >= 3 else 1
             for m in reaction_measurements}
 
         try:
@@ -739,7 +739,7 @@ class MeasurementChangeModel(ModelModificationMixin):
             growth_rate = next(m for m in self.measurements if m['type'] == 'growth-rate')
             growth_rate_id = constants.MODEL_GROWTH_RATE[self.model.id]
             observations[growth_rate_id] = np.mean(growth_rate['measurements'])
-            uncertainties[growth_rate_id] = (np.std(growth_rate['measurements'])
+            uncertainties[growth_rate_id] = (np.std(growth_rate['measurements'], ddof=1)
                                              if len(growth_rate['measurements']) >= 3 else 1)
         except StopIteration:
             pass
