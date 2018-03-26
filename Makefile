@@ -43,7 +43,7 @@ isort-save:
 
 ## Verify source code license headers
 license:
-	./scripts/verify_license_headers.sh
+	./scripts/verify_license_headers.sh model tests
 
 ## Shut down the Docker containers.
 stop:
