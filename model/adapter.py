@@ -727,24 +727,32 @@ class MeasurementChangeModel(ModelModificationMixin):
 
     def minimize_distance(self):
         """Replaces fluxomics measurements with the minimized distance"""
-        reaction_measurements = [m for m in self.measurements if m['type'] == 'reaction']
-        observations = {m['id']: np.mean(m['measurements']) for m in reaction_measurements}
+        index = []
+        observations = []
+        uncertainties = []
 
-        uncertainties = {
-            m['id']: np.std(m['measurements'], ddof=1) if len(m['measurements']) >= 3 else 1
-            for m in reaction_measurements}
+        for measure in [m for m in self.measurements if m['type'] == 'reaction']:
+            index.append(measure['id'])
+            observations.append(np.mean(measure['measurements']))
+            if len(measure['measurements']) >= 3:
+                uncertainties.append(np.std(measure['measurements'], ddof=1))
+            else:
+                uncertainties.append(1)
 
         try:
             # Include growth rate measurement
             growth_rate = next(m for m in self.measurements if m['type'] == 'growth-rate')
-            growth_rate_id = constants.MODEL_GROWTH_RATE[self.model.id]
-            observations[growth_rate_id] = np.mean(growth_rate['measurements'])
-            uncertainties[growth_rate_id] = (np.std(growth_rate['measurements'], ddof=1)
-                                             if len(growth_rate['measurements']) >= 3 else 1)
+            index.append(constants.MODEL_GROWTH_RATE[self.model.id])
+            observations.append(np.mean(growth_rate['measurements']))
+            uncertainties.append(np.std(growth_rate['measurements'], ddof=1)
+                                 if len(growth_rate['measurements']) >= 3 else 1)
         except StopIteration:
             pass
 
-        solution = adjust_fluxes2model(self.model, pd.Series(observations), pd.Series(uncertainties))
+        observations = pd.Series(index=index, data=observations)
+        uncertainties = pd.Series(index=index, data=uncertainties)
+
+        solution = adjust_fluxes2model(self.model, observations, uncertainties)
         for reaction, minimized_distance in solution.fluxes.iteritems():
             for measurement in self.measurements:
                 if (measurement['type'] == 'growth-rate' and reaction == constants.MODEL_GROWTH_RATE[self.model.id]
