@@ -16,6 +16,7 @@ from copy import deepcopy
 
 import aiohttp
 import jsonpatch
+import pytest
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
 from model.app import get_app
@@ -102,7 +103,7 @@ class EndToEndTestCase(AioHTTPTestCase):
             assert set(model.keys()) == set(message['to-return'] + ['model-id'])
             assert model['fluxes']['EX_glc__D_e'] == -9.0
             assert abs(model['fluxes']['EX_etoh_e'] - 4.64) < 0.001  # lower bound
-            assert model['fluxes']['PFK'] == 5
+            assert model['fluxes']['PFK'] == pytest.approx(5)
             if query == 'modify':
                 tmy = model['tmy']
                 changes = model['model']['notes']['changes']
