@@ -733,9 +733,9 @@ class MeasurementChangeModel(ModelModificationMixin):
 
         for measure in [m for m in self.measurements if m['type'] == 'reaction']:
             index.append(measure['id'])
-            observations.append(np.mean(measure['measurements']))
+            observations.append(np.nanmean(measure['measurements']))
             if len(measure['measurements']) >= 3:
-                uncertainties.append(np.std(measure['measurements'], ddof=1))
+                uncertainties.append(np.nanstd(measure['measurements'], ddof=1))
             else:
                 uncertainties.append(1)
 
@@ -743,8 +743,8 @@ class MeasurementChangeModel(ModelModificationMixin):
             # Include growth rate measurement
             growth_rate = next(m for m in self.measurements if m['type'] == 'growth-rate')
             index.append(constants.MODEL_GROWTH_RATE[self.model.id])
-            observations.append(np.mean(growth_rate['measurements']))
-            uncertainties.append(np.std(growth_rate['measurements'], ddof=1)
+            observations.append(np.nanmean(growth_rate['measurements']))
+            uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
                                  if len(growth_rate['measurements']) >= 3 else 1)
         except StopIteration:
             pass
