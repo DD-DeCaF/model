@@ -115,7 +115,7 @@ class EndToEndTestCase(AioHTTPTestCase):
                 assert 'BAD_ID' in {rxn['id'] for rxn in changes['measured-missing']['reactions']}
         response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_FLUXES_INFEASIBLE})
         model = await response.json()
-        assert model['fluxes']['ATPM'] == 100
+        assert model['fluxes']['ATPM'] == pytest.approx(100)
         response = await self.client.post(MODELS_URL.format('wrong_id'), json={'message': {}})
         assert response.status == 404
         response = await self.client.post(MODELS_URL.format('iJO1366'), json={})
