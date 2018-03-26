@@ -25,10 +25,10 @@ import aiohttp
 import gnomic
 import networkx as nx
 import numpy as np
+import pandas as pd
 from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
-import pandas as pd
 
 from model import constants
 from model.driven import adjust_fluxes2model
