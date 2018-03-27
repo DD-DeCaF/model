@@ -25,11 +25,13 @@ import aiohttp
 import gnomic
 import networkx as nx
 import numpy as np
+import pandas as pd
 from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 
 from model import constants
+from model.driven import adjust_fluxes2model
 from model.settings import ID_MAPPER_API
 
 
@@ -722,6 +724,40 @@ class MeasurementChangeModel(ModelModificationMixin):
         else:
             reaction.bounds = 0, upper_bound
         return reaction
+
+    def minimize_distance(self):
+        """Replaces fluxomics measurements with the minimized distance"""
+        index = []
+        observations = []
+        uncertainties = []
+
+        for measure in [m for m in self.measurements if m['type'] == 'reaction']:
+            index.append(measure['id'])
+            observations.append(np.nanmean(measure['measurements']))
+            if len(measure['measurements']) >= 3:
+                uncertainties.append(np.nanstd(measure['measurements'], ddof=1))
+            else:
+                uncertainties.append(1)
+
+        try:
+            # Include growth rate measurement
+            growth_rate = next(m for m in self.measurements if m['type'] == 'growth-rate')
+            index.append(constants.MODEL_GROWTH_RATE[self.model.id])
+            observations.append(np.nanmean(growth_rate['measurements']))
+            uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
+                                 if len(growth_rate['measurements']) >= 3 else 1)
+        except StopIteration:
+            pass
+
+        observations = pd.Series(index=index, data=observations)
+        uncertainties = pd.Series(index=index, data=uncertainties)
+
+        solution = adjust_fluxes2model(self.model, observations, uncertainties)
+        for reaction, minimized_distance in solution.fluxes.iteritems():
+            for measurement in self.measurements:
+                if (measurement['type'] == 'growth-rate' and reaction == constants.MODEL_GROWTH_RATE[self.model.id]
+                        or reaction == measurement.get('id')):
+                    measurement['measurements'] = [minimized_distance]
 
     def apply_measurements(self):
         """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
