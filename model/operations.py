@@ -273,6 +273,7 @@ async def apply_measurement_changes(model, measurements):
     measurement = convert_measurements_to_mmol(measurements, model)
     measurements = fix_measurements_ids(measurement)
     change_model = MeasurementChangeModel(model, measurements)
+    change_model.minimize_distance()
     change_model.apply_measurements()
     return change_model
 
