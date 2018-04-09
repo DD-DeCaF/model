@@ -32,7 +32,7 @@ from model.settings import ANNOTATIONS_API
 LOGGER = logging.getLogger(__name__)
 
 
-async def operate_on_reactions(model, reactions, key, apply_function, undo_function):
+async def operate_on_reactions(model, reactions, key, apply_function, undo_function, bounds = None):
     if 'changes' not in model.notes:
         model.notes['changes'] = constants.get_empty_changes()
     current = model.notes['changes'][key]['reactions']
@@ -44,6 +44,7 @@ async def operate_on_reactions(model, reactions, key, apply_function, undo_funct
     else:
         to_apply = [r for r in reactions if r['id'] not in applied]
         to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
+
     new_reactions = await apply_function(model, to_apply)
     removed = undo_function(model, to_undo)
     model.notes['changes'][key]['reactions'] = [r for r in current if r['id'] in applied - removed]
@@ -175,6 +176,24 @@ async def knockout_apply(model, to_apply):
             model.reactions.get_by_id(r_id).knock_out()
     return removed
 
+def changebounds_undo(model, to_undo):
+    for rn in to_undo:
+        if model.reactions.has_id(rn['id']):
+            model.reactions.get_by_id(rn['id']).bounds = \
+                rn['lower_bound'], rn['upper_bound']
+    return {reaction['id'] for reaction in to_undo}
+
+
+async def changebounds_apply(model, to_apply):
+    changed = []
+    before = {r['id'] for r in model.notes['changes']['changed']['reactions']}
+    for rn in to_apply:
+        changed.append(reaction_to_dict(model.reactions.get_by_id(rn['id'])))
+        model.reactions.get_by_id(rn['id']).bounds = rn['bounds'][0], rn['bounds'][1]
+    for reaction in model.notes['changes']['changed']['reactions']:
+        if reaction['id'] not in before:
+            changed.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
+    return changed
 
 async def apply_reactions_knockouts(model, reactions_ids):
     return await operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, knockout_undo)
@@ -294,6 +313,8 @@ async def modify_model(message, model):
         model = await apply_reactions_add(model, message[constants.REACTIONS_ADD])
     if constants.REACTIONS_KNOCKOUT in message:
         model = await apply_reactions_knockouts(model, message[constants.REACTIONS_KNOCKOUT])
+    if constants.BOUNDS in message:
+        model = await change_bounds(model,  message[constants.CHANGED_REACTIONS])
     return model
 
 
@@ -415,3 +436,10 @@ def new_features_identifiers(genotype_changes: gnomic.Genotype):
         if isinstance(change, gnomic.Plasmid):
             for feature in change.features():
                 yield feature_id(feature)
+
+
+
+async def change_bounds(model, reaction_ids):
+    return await operate_on_reactions(model, reaction_ids, 'changed', changebounds_apply, changebounds_undo, True)
+    # model.reactions.get_by_id(reaction_id).bounds = bounds[0], bounds[1]
+    # return model

@@ -71,8 +71,11 @@ REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
 MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
-
-MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE}
+BOUNDS = 'bounds'
+CHANGED_REACTIONS = 'changed-reactions'
+REACTION_ID = 'reactions-knockout'
+MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE, BOUNDS,
+                     REACTION_ID}
 
 
 def get_empty_changes():
@@ -83,6 +86,9 @@ def get_empty_changes():
         },
         'removed': {
             'genes': [],
+            'reactions': [],
+        },
+        'changed': {
             'reactions': [],
         },
         'measured': {

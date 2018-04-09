@@ -143,6 +143,11 @@ class Response(object):
              if not is_dummy(i['id'])]
         ))
 
+    def changed_reactions(self):
+        return list(set(
+            [i['id'] for i in self.model.notes.get('changes', constants.get_empty_changes())['changed']['reactions']]
+        ))
+
     def full_response(self):
         ret = {}
         for key, func in constants.RETURN_FUNCTIONS.items():
