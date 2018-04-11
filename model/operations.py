@@ -182,7 +182,7 @@ async def changebounds_apply(model, to_apply):
     before = {r['id'] for r in model.notes['changes']['measured']['reactions']}
     for rn in to_apply:
         changed.append(reaction_to_dict(model.reactions.get_by_id(rn['id'])))
-        model.reactions.get_by_id(rn['id']).bounds = rn['bounds']
+        model.reactions.get_by_id(rn['id']).bounds = rn['bounds']['lower'], rn['bounds']['upper']
     for reaction in model.notes['changes']['measured']['reactions']:
         if reaction['id'] not in before:
             changed.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
@@ -306,8 +306,8 @@ async def modify_model(message, model):
         model = await apply_reactions_add(model, message[constants.REACTIONS_ADD])
     if constants.REACTIONS_KNOCKOUT in message:
         model = await apply_reactions_knockouts(model, message[constants.REACTIONS_KNOCKOUT])
-    if constants.CHANGED_REACTIONS in message:
-        model = await change_bounds(model,  message[constants.CHANGED_REACTIONS])
+    if constants.MEASURED_REACTIONS in message:
+        model = await change_bounds(model,  message[constants.MEASURED_REACTIONS])
     return model
 
 
