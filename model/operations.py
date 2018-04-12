@@ -42,7 +42,8 @@ async def operate_on_reactions(model, reactions, key, apply_function, undo_funct
         to_undo = [r for r in current
                    if r['id'] in (applied - set(reactions))]
     elif key == 'measured':
-        to_apply = [r for r in reactions if ((r['lower_bound'], r['upper_bound']) != model.reactions.get_by_id(r['id']).bounds)]
+        to_apply = [r for r in reactions if ((r['lower_bound'],
+                                              r['upper_bound']) != model.reactions.get_by_id(r['id']).bounds)]
         to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
     else:
         to_apply = [r for r in reactions if r['id'] not in applied]
@@ -191,6 +192,7 @@ async def changebounds_apply(model, to_apply):
         if reaction['id'] not in before:
             changed.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
     return changed
+
 
 async def apply_reactions_knockouts(model, reactions_ids):
     return await operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, restore_bounds)
@@ -433,7 +435,6 @@ def new_features_identifiers(genotype_changes: gnomic.Genotype):
         if isinstance(change, gnomic.Plasmid):
             for feature in change.features():
                 yield feature_id(feature)
-
 
 
 async def change_bounds(model, reaction_ids):

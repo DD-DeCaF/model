@@ -94,7 +94,8 @@ async def test_reactions_change_bounds():
     ecoli_original = Models.get('iJO1366').copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
-    reaction_ids = [{'bounds': {'lower': 1, 'upper': 3.5}, 'id': "FBA3"}, {'id': "PFK_3", 'bounds': {'lower': -1000, 'upper': 1000}}]
+    reaction_ids = [{'bounds': {'lower': 1, 'upper': 3.5}, 'id': "FBA3"},
+                    {'id': "PFK_3", 'bounds': {'lower': -1000, 'upper': 1000}}]
     FBA3_upper_bound = ecoli.reactions.get_by_id('FBA3').upper_bound
     assert FBA3_upper_bound != 0
     ecoli = await change_bounds(ecoli, list(reaction_ids))
