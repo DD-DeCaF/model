@@ -41,6 +41,9 @@ async def operate_on_reactions(model, reactions, key, apply_function, undo_funct
         to_apply = set(reactions) - applied
         to_undo = [r for r in current
                    if r['id'] in (applied - set(reactions))]
+    elif key == 'measured':
+        to_apply = [r for r in reactions if ((r['lower_bound'], r['upper_bound']) != model.reactions.get_by_id(r['id']).bounds)]
+        to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
     else:
         to_apply = [r for r in reactions if r['id'] not in applied]
         to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
@@ -181,8 +184,9 @@ async def changebounds_apply(model, to_apply):
     changed = []
     before = {r['id'] for r in model.notes['changes']['measured']['reactions']}
     for rn in to_apply:
-        changed.append(reaction_to_dict(model.reactions.get_by_id(rn['id'])))
-        model.reactions.get_by_id(rn['id']).bounds = rn['bounds']['lower'], rn['bounds']['upper']
+        if rn['id'] not in before:
+            changed.append(reaction_to_dict(model.reactions.get_by_id(rn['id'])))
+        model.reactions.get_by_id(rn['id']).bounds = rn['lower_bound'], rn['upper_bound']
     for reaction in model.notes['changes']['measured']['reactions']:
         if reaction['id'] not in before:
             changed.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
