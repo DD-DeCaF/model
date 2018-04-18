@@ -20,8 +20,9 @@ import pytest
 from model.adapter import full_genotype
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
 from model.operations import (
-    add_reactions, apply_reactions_knockouts, build_string_from_metabolites, convert_measurements_to_mmol,
-    convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict, product_reaction_variable)
+    add_reactions, apply_reactions_knockouts, build_string_from_metabolites, change_bounds,
+    convert_measurements_to_mmol, convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict,
+    product_reaction_variable)
 from model.storage import Models, restore_model
 
 
@@ -85,6 +86,21 @@ async def test_reactions_knockouts():
     reaction_ids = reaction_ids - {'3HAD160'}
     ecoli = await apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == set()
+    assert is_close(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
+
+
+@pytest.mark.asyncio
+async def test_reactions_change_bounds():
+    ecoli_original = Models.get('iJO1366').copy()
+    ecoli = ecoli_original.copy()
+    ecoli.notes['changes'] = get_empty_changes()
+    reaction_ids = [{'id': "ACONTb", 'lower_bound': -3, 'upper_bound': 3.5},
+                    {'id': "FBA3", 'lower_bound': -996, 'upper_bound': 1000}]
+    FBA3_upper_bound = ecoli.reactions.get_by_id('FBA3').upper_bound
+    assert FBA3_upper_bound != 0
+    ecoli = await change_bounds(ecoli, list(reaction_ids))
+    reaction_ids = [{'id': "FBA3", 'lower_bound': -996, 'upper_bound': 1000}]
+    ecoli = await change_bounds(ecoli, list(reaction_ids))
     assert is_close(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
 
 

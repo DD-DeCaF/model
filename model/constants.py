@@ -71,8 +71,9 @@ REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
 MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
-
-MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE}
+MEASURED_REACTIONS = 'measured-reactions'
+MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE,
+                     MEASURED_REACTIONS}
 
 
 def get_empty_changes():
@@ -145,6 +146,7 @@ RETURN_FUNCTIONS = {
     MODEL: 'model_json',
     GROWTH_RATE: 'growth_rate',
     REMOVED_REACTIONS: 'removed_reactions',
+    MEASURED_REACTIONS: 'measured_reactions',
     ADDED_REACTIONS: 'added_reactions',
     MISSING_MEASURED_REACTIONS: 'measured_missing_reactions',
 }
