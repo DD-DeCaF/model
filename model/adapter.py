@@ -788,6 +788,8 @@ class MeasurementChangeModel(ModelModificationMixin):
             else:
                 LOGGER.info('scalar for measured type %s not supported', scalar['type'])
             if reaction:
+                if scalar['type'] != 'reaction':
+                    self.changes['measured']['reactions'].add(reaction)
                 if scalar['type'] == 'compound':
                     next_measured = next_measured_reaction(reaction)
                     if next_measured:
