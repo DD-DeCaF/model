@@ -706,7 +706,7 @@ class MeasurementChangeModel(ModelModificationMixin):
             self.changes['measured-missing']['reactions'].add(Reaction(scalar['id']))
         else:
             if scalar['id'] not in self.changes['measured']['reactions']:
-                self.changes['measured']['reactions'].add(Reaction(scalar['id']))
+                self.changes['measured']['reactions'].add(self.model.reactions.get_by_id(scalar['id']))
             reaction.bounds = lower_bound, upper_bound
         return reaction
 
