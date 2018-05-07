@@ -1,0 +1,53 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: model-production
+  annotations:
+    prometheus.io/probe: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+spec:
+  selector:
+    app: model
+    env: production
+  ports:
+  - name: web
+    protocol: TCP
+    port: 80
+    targetPort: 8000
+  - name: redis
+    protocol: TCP
+    port: 6379
+    targetPort: 6379
+  - name: redis-exporter
+    protocol: TCP
+    port: 9121
+    targetPort: 9121
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: model-staging
+  annotations:
+    prometheus.io/probe: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+spec:
+  selector:
+    app: model
+    env: staging
+  ports:
+  - name: web
+    protocol: TCP
+    port: 80
+    targetPort: 8000
+  - name: redis
+    protocol: TCP
+    port: 6379
+    targetPort: 6379
+  - name: redis-exporter
+    protocol: TCP
+    port: 9121
+    targetPort: 9121

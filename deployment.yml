@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-production
+spec:
+  selector:
+    matchLabels:
+      app: model
+      env: production
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: model
+        env: production
+    spec:
+      containers:
+      - name: web
+        image: gcr.io/dd-decaf-cfbf6/model:master
+        ports:
+        - containerPort: 8000
+        env:
+        - name: REDIS_ADDR
+          value: redis
+        - name: REDIS_PORT
+          value: "6379"
+        - name: ANNOTATIONS_API
+          value: https://api.dd-decaf.eu/annotation/genes
+        - name: ID_MAPPER_API
+          value: https://api.dd-decaf.eu/idmapping/query
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: model-production
+              key: SENTRY_DSN
+        command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+      - name: redis
+        image: redis:latest
+        ports:
+        - containerPort: 6379
+      - name: redis-exporter
+        image: oliver006/redis_exporter:latest
+        ports:
+        - containerPort: 9121
+        env:
+        - name: REDIS_ADDR
+          value: "redis:6379"
+        - name: REDIS_ALIAS
+          value: model
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-staging
+spec:
+  selector:
+    matchLabels:
+      app: model
+      env: staging
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: model
+        env: staging
+    spec:
+      containers:
+      - name: web
+        image: gcr.io/dd-decaf-cfbf6/model:devel
+        ports:
+        - containerPort: 8000
+        env:
+        - name: REDIS_ADDR
+          value: redis
+        - name: REDIS_PORT
+          value: "6379"
+        - name: ANNOTATIONS_API
+          value: https://api-staging.dd-decaf.eu/annotation/genes
+        - name: ID_MAPPER_API
+          value: https://api-staging.dd-decaf.eu/idmapping/query
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: model-staging
+              key: SENTRY_DSN
+        command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+      - name: redis
+        image: redis:latest
+        ports:
+        - containerPort: 6379
+      - name: redis-exporter
+        image: oliver006/redis_exporter:latest
+        ports:
+        - containerPort: 9121
+        env:
+        - name: REDIS_ADDR
+          value: "redis:6379"
+        - name: REDIS_ALIAS
+          value: model
