@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: gcr.io/dd-decaf-cfbf6/model:${IMAGE_TAG:-latest}
     command: "gunicorn -w 2 -b 0.0.0.0:8000 -t 150 -k aiohttp.worker.GunicornWebWorker --reload model.app:get_app()"
     ports:
       - "${MODEL_PORT:-8000}:8000"

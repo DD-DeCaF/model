@@ -1,76 +1,78 @@
-.PHONY: start qa test unit_test flake8 isort license stop clean logs update_models update_salts
-
-#################################################################################
-# GLOBALS                                                                       #
-#################################################################################
-
-PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-
+.PHONY: setup network lock build start qa style test test-travis flake8 isort \
+		isort-save license stop clean logs
+SHELL:=/bin/bash
 
 #################################################################################
 # COMMANDS                                                                      #
 #################################################################################
 
-## Install and start the model service.
-start:
-	docker network inspect iloop || docker network create iloop
-	docker-compose up -d --build
+## Run all initialization targets.
+setup: network
 
-## Run all QA targets
-qa: test flake8 isort license
+## Create the docker bridge network if necessary.
+network:
+	docker network inspect DD-DeCaF >/dev/null 2>&1 || \
+		docker network create DD-DeCaF
 
-## Run the tests
-test:
-	@echo "**********************************************************************"
-	@echo "* Running tests."
-	@echo "**********************************************************************"
-	docker-compose run --rm web py.test -vxs --cov=./model tests/
-
-unit_tests:
-	docker-compose run --rm web py.test -vxs --duration=0 --cov=./model tests/unit
-
-## Run flake8
-flake8:
-	docker-compose run --rm web flake8 model tests
-
-## Check import sorting
-isort:
-	docker-compose run --rm web isort --check-only --recursive model tests
-
-## Sort imports and write changes to files
-isort-save:
-	docker-compose run --rm web isort --recursive model tests
-
-## Verify source code license headers
-license:
-	./scripts/verify_license_headers.sh model tests
-
-## Shut down the Docker containers.
-stop:
-	docker-compose stop
-
-## Remove all containers.
-clean:
-	docker-compose down
-
-
-## Read the logs.
-logs:
-	docker-compose logs --tail="all" -f
+## Build local docker images.
+build:
+	docker-compose build
 
 ## Update saved models by downloading and annotating reactions / metabolites
 update_models: start
-	docker exec -it model_web_1 python -m model.update_models
+	docker-compose run --rm web python -m model.update_models
 
 ## Update the salts dissociation mapping
 update_salts: start
-	docker exec -it model_web_1 python -m model.update_salts
+	docker-compose run --rm web python -m model.update_salts
 
-#################################################################################
-# PROJECT RULES                                                                 #
-#################################################################################
+## Start all services in the background.
+start:
+	docker-compose up -d
 
+## Run all QA targets.
+qa: test style
 
+## Run all style related targets.
+style: flake8 isort license
+
+## Run the tests.
+test:
+	-docker-compose run --rm web py.test -vxs --cov=./model tests/
+
+## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
+test-travis:
+	$(eval ci_env=$(shell bash <(curl -s https://codecov.io/env)))
+	docker-compose run --rm $(ci_env) web \
+		/bin/sh -c "pytest -s --cov=./model tests && codecov"
+
+## Run flake8.
+flake8:
+	-docker-compose run --rm web flake8 ./model tests
+
+## Check Python package import order.
+isort:
+	-docker-compose run --rm web isort --check-only --recursive model tests
+
+## Sort imports and write changes to files.
+isort-save:
+	docker-compose run --rm web isort --recursive model tests
+
+## Verify source code license headers.
+license:
+	-./scripts/verify_license_headers.sh model tests
+
+## Stop all services.
+stop:
+	docker-compose stop
+
+## Stop all services and remove containers.
+clean:
+	docker-compose down
+
+## Follow the logs.
+logs:
+	docker-compose logs --tail="all" -f
 
 #################################################################################
 # Self Documenting Commands                                                     #
