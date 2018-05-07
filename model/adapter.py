@@ -705,8 +705,6 @@ class MeasurementChangeModel(ModelModificationMixin):
         except KeyError:
             self.changes['measured-missing']['reactions'].add(Reaction(scalar['id']))
         else:
-            if scalar['id'] not in self.changes['measured']['reactions']:
-                self.changes['measured']['reactions'].add(self.model.reactions.get_by_id(scalar['id']))
             reaction.bounds = lower_bound, upper_bound
         return reaction
 
@@ -788,8 +786,7 @@ class MeasurementChangeModel(ModelModificationMixin):
             else:
                 LOGGER.info('scalar for measured type %s not supported', scalar['type'])
             if reaction:
-                if scalar['type'] != 'reaction':
-                    self.changes['measured']['reactions'].add(reaction)
+                self.changes['measured']['reactions'].add(reaction)
                 if scalar['type'] == 'compound':
                     next_measured = next_measured_reaction(reaction)
                     if next_measured:
