@@ -48,6 +48,8 @@ class Response(object):
         with self.model:
             if constants.OBJECTIVE in message:
                 self.model.objective = self.model.reactions.get_by_id(message[constants.OBJECTIVE])
+                if constants.OBJECTIVE_DIRECTION in message:
+                    self.model.objective.direction = message[constants.OBJECTIVE_DIRECTION]
             self.message = message
             self.method_name = message.get(constants.SIMULATION_METHOD, 'fba')
             self.wild_type_model_id = wild_type_model_id

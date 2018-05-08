@@ -72,8 +72,10 @@ REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
 MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
 MEASURED_REACTIONS = 'measured-reactions'
+OBJECTIVE_DIRECTION = 'objective-direction'
+
 MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE,
-                     MEASURED_REACTIONS}
+                     OBJECTIVE_DIRECTION, MEASURED_REACTIONS}
 
 
 def get_empty_changes():
