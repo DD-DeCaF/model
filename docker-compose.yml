@@ -17,10 +17,10 @@ services:
     environment:
       - PYTHONASYNCIODEBUG=1
       - ENVIRONMENT=development
-      - ANNOTATIONS_API=${ANNOTATIONS_API:-https://api-staging.dd-decaf.eu/annotation/genes}
-      - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      - ANNOTATIONS_API=${ANNOTATIONS_API:-https://api-staging.dd-decaf.eu/annotation/genes}
+      - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
     volumes:
       - .:/app
     command: gunicorn -c gunicorn.py model.app:get_app()
