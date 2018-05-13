@@ -23,7 +23,7 @@ from functools import lru_cache
 import aioredis
 from cobra.io import model_to_dict, read_sbml_model
 
-import model.constants as constants
+from model import constants, settings
 from model.operations import restore_changes
 
 
@@ -99,7 +99,7 @@ def preload_cache():
         Models.get_dict(model_id)
 
 
-if constants.ENV == constants.ENV_PROD:
+if settings.ENVIRONMENT == 'production':
     preload_cache()
 
 
