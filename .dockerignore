@@ -1,5 +1,8 @@
-**/__pycache__
-model-cache
-.env
-.cache
-test-data
+*
+!maps/
+!scripts/
+!src/
+!tests/
+!gunicorn.py
+!setup.cfg
+!requirements.txt

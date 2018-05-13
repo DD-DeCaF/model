@@ -112,9 +112,9 @@ SPECIES_TO_MODEL = {
 
 MODELS = frozenset(chain.from_iterable(SPECIES_TO_MODEL.values()))
 
-ENV_PROD = 'PROD'
-ENV_DEV = 'DEV'
-ENV = os.environ.get('ENV', ENV_PROD)
+ENV_PROD = 'production'
+ENV_DEV = 'development'
+ENV = os.environ.get('ENVIRONMENT', ENV_PROD)
 
 MODEL_NAMESPACE = {
     'iJO1366': 'bigg',
