@@ -1,5 +1,9 @@
 FROM biosustain/cameo-solvers:e9e330ca3e37
 
+ARG CWD=/model
+
+ENV PYTHONPATH=${CWD}/src
+
 # pin pip v9.0.1 to avoid this issue: https://github.com/pypa/pip/issues/5079
 # This cobrapy PR should fix the issue: https://github.com/opencobra/cobrapy/pull/680
 # When merged, the v9.0.1 pin should be removed.
