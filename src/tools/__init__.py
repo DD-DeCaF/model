@@ -11,22 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import logging
-import os
-
-from cobra.io import read_sbml_model
-
-from model.adapter import get_unique_metabolite
-from tools.update_models import update_local_models
-
-
-logging.disable(logging.CRITICAL)
-
-
-def test_update_models(tmpdir):
-    update_local_models('e_coli_core', tmpdir)
-    model = read_sbml_model(os.path.join(tmpdir, 'e_coli_core.sbml.gz'))
-    glucose = get_unique_metabolite(model, 'CHEBI:42758')
-    assert glucose.id == 'glc__D_e'
-    assert glucose.annotation['bigg.metabolite'] == 'glc__D'

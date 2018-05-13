@@ -20,11 +20,11 @@ build:
 
 ## Update saved models by downloading and annotating reactions / metabolites
 update_models: start
-	docker-compose run --rm web python -m model.update_models
+	docker-compose run --rm web python -m tools.update_models
 
 ## Update the salts dissociation mapping
 update_salts: start
-	docker-compose run --rm web python -m model.update_salts
+	docker-compose run --rm web python -m tools.update_salts
 
 ## Start all services in the background.
 start:
