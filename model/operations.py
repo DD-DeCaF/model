@@ -15,11 +15,13 @@
 import asyncio
 import logging
 import math
+import os
 from collections import Counter
 
 import aiohttp
 import gnomic
 from cameo import models, phenotypic_phase_plane
+from cobra.io import read_sbml_model
 from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict, reaction_from_dict, reaction_to_dict
 
 import model.constants as constants
@@ -165,10 +167,11 @@ async def apply_reactions_add(model, reactions_ids):
 
 
 def restore_bounds(model, to_undo):
+    if to_undo:
+        original_model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', str(model) + '.sbml.gz'))
     for reaction in to_undo:
         if model.reactions.has_id(reaction['id']):
-            model.reactions.get_by_id(reaction['id']).bounds = \
-                reaction['lower_bound'], reaction['upper_bound']
+            model.reactions.get_by_id(reaction['id']).bounds = original_model.reactions.get_by_id(reaction['id']).bounds
     return {reaction['id'] for reaction in to_undo}
 
 
@@ -290,6 +293,8 @@ def fix_measurements_ids(measurements):
 async def apply_measurement_changes(model, measurements):
     measurement = convert_measurements_to_mmol(measurements, model)
     measurements = fix_measurements_ids(measurement)
+    if 'changes' not in model.notes:
+        model.notes['changes'] = constants.get_empty_changes()
     change_model = MeasurementChangeModel(model, measurements)
     change_model.minimize_distance()
     change_model.apply_measurements()
@@ -308,6 +313,7 @@ async def modify_model(message, model):
         if data:
             modifications = await apply_functions[key](model, data)
             model = collect_changes(modifications)
+
     if constants.REACTIONS_ADD in message:
         model = await apply_reactions_add(model, message[constants.REACTIONS_ADD])
     if constants.REACTIONS_KNOCKOUT in message:
