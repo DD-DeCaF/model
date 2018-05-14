@@ -57,7 +57,7 @@ def update_local_models(model_id, model_store=None):
     :param model_id: string, model identifier
     :param model_store: path to directory where to store the processed models.
     """
-    model_store = model_store or '/io/model/data'
+    model_store = model_store or 'data/models'
     if model_id in LOCAL_MODELS:
         sbml_file = os.path.join(model_store, 'original', model_id + '.sbml.gz')
         model = read_sbml_model(sbml_file)

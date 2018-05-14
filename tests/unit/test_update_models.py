@@ -18,7 +18,7 @@ import os
 from cobra.io import read_sbml_model
 
 from model.adapter import get_unique_metabolite
-from model.update_models import update_local_models
+from tools.update_models import update_local_models
 
 
 logging.disable(logging.CRITICAL)

@@ -1,31 +1,30 @@
-version: "2.1"
+version: "3.1"
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile
     image: gcr.io/dd-decaf-cfbf6/model:${IMAGE_TAG:-latest}
-    command: "gunicorn -w 2 -b 0.0.0.0:8000 -t 150 -k aiohttp.worker.GunicornWebWorker --reload model.app:get_app()"
-    ports:
-      - "${MODEL_PORT:-8000}:8000"
-    links:
-      - redis
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONASYNCIODEBUG=1
-      - ANNOTATIONS_API=${ANNOTATIONS_API:-https://api-staging.dd-decaf.eu/annotation/genes}
-      - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
-      - REDIS_ADDR=${REDIS_ADDR:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - ENV=dev
-    volumes:
-      - ./:/io
-      - .:/model
     networks:
       default:
       DD-DeCaF:
         aliases:
-          - model-backend
+          - model
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      - redis
+    environment:
+      - PYTHONASYNCIODEBUG=1
+      - ENVIRONMENT=development
+      - REDIS_ADDR=${REDIS_ADDR:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - ANNOTATIONS_API=${ANNOTATIONS_API:-https://api-staging.dd-decaf.eu/annotation/genes}
+      - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
+    volumes:
+      - .:/app
+    command: gunicorn -c gunicorn.py model.app:get_app()
+
   redis:
     image: redis
     ports:

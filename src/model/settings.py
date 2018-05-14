@@ -11,3 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import os
+
+
+ENVIRONMENT = os.environ['ENVIRONMENT']
+ANNOTATIONS_API = os.environ['ANNOTATIONS_API']
+ID_MAPPER_API = os.environ['ID_MAPPER_API']
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')

@@ -19,12 +19,12 @@ build:
 	docker-compose build
 
 ## Update saved models by downloading and annotating reactions / metabolites
-update_models: start
-	docker-compose run --rm web python -m model.update_models
+update_models:
+	docker-compose run --rm web python -m tools.update_models
 
 ## Update the salts dissociation mapping
-update_salts: start
-	docker-compose run --rm web python -m model.update_salts
+update_salts:
+	docker-compose run --rm web python -m tools.update_salts
 
 ## Start all services in the background.
 start:
@@ -38,29 +38,29 @@ style: flake8 isort license
 
 ## Run the tests.
 test:
-	-docker-compose run --rm web py.test -vxs --cov=./model tests/
+	-docker-compose run --rm web py.test -vxs --cov=src/model tests/
 
 ## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
 test-travis:
 	$(eval ci_env=$(shell bash <(curl -s https://codecov.io/env)))
 	docker-compose run --rm $(ci_env) web \
-		/bin/sh -c "pytest -s --cov=./model tests && codecov"
+		/bin/sh -c "pytest -s --cov=src/model tests && codecov"
 
 ## Run flake8.
 flake8:
-	-docker-compose run --rm web flake8 ./model tests
+	-docker-compose run --rm web flake8 src/model tests
 
 ## Check Python package import order.
 isort:
-	-docker-compose run --rm web isort --check-only --recursive model tests
+	-docker-compose run --rm web isort --check-only --recursive src/model tests
 
 ## Sort imports and write changes to files.
 isort-save:
-	docker-compose run --rm web isort --recursive model tests
+	docker-compose run --rm web isort --recursive src/model tests
 
 ## Verify source code license headers.
 license:
-	-./scripts/verify_license_headers.sh model tests
+	-./scripts/verify_license_headers.sh src/model tests
 
 ## Stop all services.
 stop:

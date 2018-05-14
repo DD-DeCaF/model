@@ -100,7 +100,7 @@ def get_empty_changes():
     }
 
 
-MAPS_DIR = 'maps'
+MAPS_DIR = 'data/maps'
 
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
@@ -111,10 +111,6 @@ SPECIES_TO_MODEL = {
 }
 
 MODELS = frozenset(chain.from_iterable(SPECIES_TO_MODEL.values()))
-
-ENV_PROD = 'PROD'
-ENV_DEV = 'DEV'
-ENV = os.environ.get('ENV', ENV_PROD)
 
 MODEL_NAMESPACE = {
     'iJO1366': 'bigg',
