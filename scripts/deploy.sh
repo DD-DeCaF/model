@@ -16,4 +16,13 @@
 
 set -xeu
 
-kubectl set image deployment/$1 web=${IMAGE_REPO}:${TRAVIS_COMMIT::12}
+if [ "${TRAVIS_BRANCH}" = "master" ]; then
+  DEPLOYMENT=model-production
+elif [ "${TRAVIS_BRANCH}" = "devel" ]; then
+  DEPLOYMENT=model-staging
+else
+  echo "Skipping deployment for branch ${TRAVIS_BRANCH}"
+  exit 0
+fi
+
+kubectl set image deployment/${DEPLOYMENT} web=${IMAGE_REPO}:${TRAVIS_COMMIT::12}
