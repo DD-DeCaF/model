@@ -485,7 +485,7 @@ class GenotypeChangeModel(ModelModificationMixin):
 
 def load_salts():
     result = {}
-    path = os.path.join(os.path.dirname(__file__), 'data', 'salts.csv')
+    path = os.path.join('data', 'salts.csv')
     with open(path) as f:
         for line in f:
             line = line.strip()

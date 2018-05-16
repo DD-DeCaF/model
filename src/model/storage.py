@@ -23,7 +23,7 @@ from functools import lru_cache
 import aioredis
 from cobra.io import model_to_dict, read_sbml_model
 
-import model.constants as constants
+from model import constants, settings
 from model.operations import restore_changes
 
 
@@ -70,7 +70,7 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
 
 
 def read_model(model_id):
-    model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', model_id + '.sbml.gz'))
+    model = read_sbml_model(os.path.join('data', 'models', model_id + '.sbml.gz'))
     model.solver = 'cplex'
     model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
     return model
@@ -99,7 +99,7 @@ def preload_cache():
         Models.get_dict(model_id)
 
 
-if constants.ENV == constants.ENV_PROD:
+if settings.ENVIRONMENT == 'production':
     preload_cache()
 
 
