@@ -34,10 +34,22 @@ spec:
               name: model-production
               key: SENTRY_DSN
         command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+        resources:
+          requests:
+            cpu: "750m"
+            memory: "512Mi"
+          limits:
+            cpu: "1800m"
       - name: redis
         image: redis:latest
         ports:
         - containerPort: 6379
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "512Mi"
+          limits:
+            cpu: "100m"
       - name: redis-exporter
         image: oliver006/redis_exporter:latest
         ports:
@@ -47,6 +59,12 @@ spec:
           value: "redis:6379"
         - name: REDIS_ALIAS
           value: model
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "128Mi"
+          limits:
+            cpu: "100m"
 
 ---
 
@@ -86,10 +104,20 @@ spec:
               name: model-staging
               key: SENTRY_DSN
         command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+        resources:
+          requests:
+            cpu: "100m"
+          limits:
+            cpu: "500m"
       - name: redis
         image: redis:latest
         ports:
         - containerPort: 6379
+        resources:
+          requests:
+            cpu: "10m"
+          limits:
+            cpu: "100m"
       - name: redis-exporter
         image: oliver006/redis_exporter:latest
         ports:
@@ -99,3 +127,8 @@ spec:
           value: "redis:6379"
         - name: REDIS_ALIAS
           value: model
+        resources:
+          requests:
+            cpu: "10m"
+          limits:
+            cpu: "100m"
