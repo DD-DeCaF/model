@@ -168,7 +168,8 @@ async def apply_reactions_add(model, reactions_ids):
 
 def restore_bounds(model, to_undo):
     if to_undo:
-        original_model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', str(model) + '.sbml.gz'))
+        original_model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', 'models',
+                                                      str(model) + '.sbml.gz'))
     for reaction in to_undo:
         if model.reactions.has_id(reaction['id']):
             model.reactions.get_by_id(reaction['id']).bounds = original_model.reactions.get_by_id(reaction['id']).bounds
