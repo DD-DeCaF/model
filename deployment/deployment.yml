@@ -20,6 +20,8 @@ spec:
         ports:
         - containerPort: 8000
         env:
+        - name: ENVIRONMENT
+          value: production
         - name: REDIS_ADDR
           value: redis
         - name: REDIS_PORT
@@ -90,8 +92,8 @@ spec:
         ports:
         - containerPort: 8000
         env:
-        - name: REDIS_ADDR
-          value: redis
+        - name: ENVIRONMENT
+          value: production
         - name: REDIS_PORT
           value: "6379"
         - name: ANNOTATIONS_API
