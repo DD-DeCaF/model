@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Copyright 2018 Novo Nordisk Foundation Center for Biosustainability, DTU.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import os
+set -xeu
 
-from cobra.io import read_sbml_model
+if [ "${TRAVIS_BRANCH}" = "master" ]; then
+  DEPLOYMENT=model-production
+elif [ "${TRAVIS_BRANCH}" = "devel" ]; then
+  DEPLOYMENT=model-staging
+else
+  echo "Skipping deployment for branch ${TRAVIS_BRANCH}"
+  exit 0
+fi
 
-from model.adapter import get_unique_metabolite
-from tools.update_models import update_local_models
-
-
-logging.disable(logging.CRITICAL)
-
-
-def test_update_models(tmpdir):
-    update_local_models('e_coli_core', tmpdir)
-    model = read_sbml_model(os.path.join(tmpdir, 'e_coli_core.sbml.gz'))
-    glucose = get_unique_metabolite(model, 'CHEBI:42758')
-    assert glucose.id == 'glc__D_e'
-    assert glucose.annotation['bigg.metabolite'] == 'glc__D'
+kubectl set image deployment/${DEPLOYMENT} web=${IMAGE_REPO}:${TRAVIS_COMMIT::12}

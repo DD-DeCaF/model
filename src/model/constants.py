@@ -71,8 +71,9 @@ REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
 MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
-
-MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE}
+MEASURED_REACTIONS = 'measured-reactions'
+MESSAGE_HASH_KEYS = {GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS, REACTIONS_ADD, REACTIONS_KNOCKOUT, OBJECTIVE,
+                     MEASURED_REACTIONS}
 
 
 def get_empty_changes():
@@ -99,7 +100,7 @@ def get_empty_changes():
     }
 
 
-MAPS_DIR = 'maps'
+MAPS_DIR = 'data/maps'
 
 SPECIES_TO_MODEL = {
     'ECOLX': ['iJO1366', 'e_coli_core'],
@@ -110,10 +111,6 @@ SPECIES_TO_MODEL = {
 }
 
 MODELS = frozenset(chain.from_iterable(SPECIES_TO_MODEL.values()))
-
-ENV_PROD = 'PROD'
-ENV_DEV = 'DEV'
-ENV = os.environ.get('ENV', ENV_PROD)
 
 MODEL_NAMESPACE = {
     'iJO1366': 'bigg',
@@ -145,6 +142,7 @@ RETURN_FUNCTIONS = {
     MODEL: 'model_json',
     GROWTH_RATE: 'growth_rate',
     REMOVED_REACTIONS: 'removed_reactions',
+    MEASURED_REACTIONS: 'measured_reactions',
     ADDED_REACTIONS: 'added_reactions',
     MISSING_MEASURED_REACTIONS: 'measured_missing_reactions',
 }

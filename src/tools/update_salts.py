@@ -33,7 +33,6 @@ from urllib import request
 import requests
 
 
-DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 FILE_PATH = 'ftp://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.obo'
 N_PROCESSES = 20
 
@@ -158,7 +157,7 @@ def generate_chebi_to_formula(chebi_to_inchi):
 
 
 def save_salts(salts_mapping):
-    with open(DIR_PATH + '/data/salts.csv', 'w') as f:
+    with open('data/salts.csv', 'w') as f:
         for k, v in salts_mapping.items():
             f.write('{}:{}\n'.format(k, ';'.join(
                 [','.join(map(str, i)) for i in v])))

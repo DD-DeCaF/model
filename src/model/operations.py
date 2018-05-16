@@ -15,11 +15,13 @@
 import asyncio
 import logging
 import math
+import os
 from collections import Counter
 
 import aiohttp
 import gnomic
 from cameo import models, phenotypic_phase_plane
+from cobra.io import read_sbml_model
 from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict, reaction_from_dict, reaction_to_dict
 
 import model.constants as constants
@@ -41,9 +43,14 @@ async def operate_on_reactions(model, reactions, key, apply_function, undo_funct
         to_apply = set(reactions) - applied
         to_undo = [r for r in current
                    if r['id'] in (applied - set(reactions))]
+    elif key == 'measured':
+        to_apply = [r for r in reactions if ((r['lower_bound'],
+                                              r['upper_bound']) != model.reactions.get_by_id(r['id']).bounds)]
+        to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
     else:
         to_apply = [r for r in reactions if r['id'] not in applied]
         to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
+
     new_reactions = await apply_function(model, to_apply)
     removed = undo_function(model, to_undo)
     model.notes['changes'][key]['reactions'] = [r for r in current if r['id'] in applied - removed]
@@ -159,11 +166,12 @@ async def apply_reactions_add(model, reactions_ids):
     return await operate_on_reactions(model, reactions_ids, 'added', add_apply, add_undo)
 
 
-def knockout_undo(model, to_undo):
+def restore_bounds(model, to_undo):
+    if to_undo:
+        original_model = read_sbml_model(os.path.join(os.path.dirname(__file__), 'data', str(model) + '.sbml.gz'))
     for reaction in to_undo:
         if model.reactions.has_id(reaction['id']):
-            model.reactions.get_by_id(reaction['id']).bounds = \
-                reaction['lower_bound'], reaction['upper_bound']
+            model.reactions.get_by_id(reaction['id']).bounds = original_model.reactions.get_by_id(reaction['id']).bounds
     return {reaction['id'] for reaction in to_undo}
 
 
@@ -176,8 +184,21 @@ async def knockout_apply(model, to_apply):
     return removed
 
 
+async def changebounds_apply(model, to_apply):
+    changed = []
+    before = {r['id'] for r in model.notes['changes']['measured']['reactions']}
+    for rn in to_apply:
+        if rn['id'] not in before:
+            changed.append(reaction_to_dict(model.reactions.get_by_id(rn['id'])))
+        model.reactions.get_by_id(rn['id']).bounds = rn['lower_bound'], rn['upper_bound']
+    for reaction in model.notes['changes']['measured']['reactions']:
+        if reaction['id'] not in before:
+            changed.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
+    return changed
+
+
 async def apply_reactions_knockouts(model, reactions_ids):
-    return await operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, knockout_undo)
+    return await operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, restore_bounds)
 
 
 async def call_genes_to_reactions(genotype_features):
@@ -272,6 +293,8 @@ def fix_measurements_ids(measurements):
 async def apply_measurement_changes(model, measurements):
     measurement = convert_measurements_to_mmol(measurements, model)
     measurements = fix_measurements_ids(measurement)
+    if 'changes' not in model.notes:
+        model.notes['changes'] = constants.get_empty_changes()
     change_model = MeasurementChangeModel(model, measurements)
     change_model.minimize_distance()
     change_model.apply_measurements()
@@ -290,10 +313,13 @@ async def modify_model(message, model):
         if data:
             modifications = await apply_functions[key](model, data)
             model = collect_changes(modifications)
+
     if constants.REACTIONS_ADD in message:
         model = await apply_reactions_add(model, message[constants.REACTIONS_ADD])
     if constants.REACTIONS_KNOCKOUT in message:
         model = await apply_reactions_knockouts(model, message[constants.REACTIONS_KNOCKOUT])
+    if constants.MEASURED_REACTIONS in message:
+        model = await change_bounds(model,  message[constants.MEASURED_REACTIONS])
     return model
 
 
@@ -415,3 +441,9 @@ def new_features_identifiers(genotype_changes: gnomic.Genotype):
         if isinstance(change, gnomic.Plasmid):
             for feature in change.features():
                 yield feature_id(feature)
+
+
+async def change_bounds(model, reaction_ids):
+    return await operate_on_reactions(model, reaction_ids, 'measured', changebounds_apply, restore_bounds)
+    # model.reactions.get_by_id(reaction_id).bounds = bounds[0], bounds[1]
+    # return model
