@@ -15,10 +15,6 @@ spec:
     protocol: TCP
     port: 80
     targetPort: 8000
-  - name: redis
-    protocol: TCP
-    port: 6379
-    targetPort: 6379
   - name: redis-exporter
     protocol: TCP
     port: 9121
@@ -43,10 +39,6 @@ spec:
     protocol: TCP
     port: 80
     targetPort: 8000
-  - name: redis
-    protocol: TCP
-    port: 6379
-    targetPort: 6379
   - name: redis-exporter
     protocol: TCP
     port: 9121

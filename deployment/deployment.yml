@@ -23,7 +23,7 @@ spec:
         - name: ENVIRONMENT
           value: production
         - name: REDIS_ADDR
-          value: redis
+          value: localhost
         - name: REDIS_PORT
           value: "6379"
         - name: ANNOTATIONS_API
@@ -58,7 +58,7 @@ spec:
         - containerPort: 9121
         env:
         - name: REDIS_ADDR
-          value: "redis:6379"
+          value: "localhost:6379"
         - name: REDIS_ALIAS
           value: model
         resources:
@@ -94,6 +94,8 @@ spec:
         env:
         - name: ENVIRONMENT
           value: production
+        - name: REDIS_ADDR
+          value: localhost
         - name: REDIS_PORT
           value: "6379"
         - name: ANNOTATIONS_API
@@ -126,7 +128,7 @@ spec:
         - containerPort: 9121
         env:
         - name: REDIS_ADDR
-          value: "redis:6379"
+          value: "localhost:6379"
         - name: REDIS_ALIAS
           value: model
         resources:
