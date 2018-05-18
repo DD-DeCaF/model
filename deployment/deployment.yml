@@ -27,9 +27,9 @@ spec:
         - name: REDIS_PORT
           value: "6379"
         - name: ANNOTATIONS_API
-          value: https://api.dd-decaf.eu/annotation/genes
+          value: http://gene-to-reactions-production/annotation/genes
         - name: ID_MAPPER_API
-          value: https://api.dd-decaf.eu/idmapping/query
+          value: http://id-mapper-production/idmapping/query
         - name: SENTRY_DSN
           valueFrom:
             secretKeyRef:
@@ -99,9 +99,9 @@ spec:
         - name: REDIS_PORT
           value: "6379"
         - name: ANNOTATIONS_API
-          value: https://api-staging.dd-decaf.eu/annotation/genes
+          value: http://gene-to-reactions-staging/annotation/genes
         - name: ID_MAPPER_API
-          value: https://api-staging.dd-decaf.eu/idmapping/query
+          value: http://id-mapper-production/idmapping/query
         - name: SENTRY_DSN
           valueFrom:
             secretKeyRef:
