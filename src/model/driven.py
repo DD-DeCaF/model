@@ -19,7 +19,7 @@ from optlang.symbolics import Zero
 from pandas import Series
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 """This module may one day be replaced with http://driven.bio/"""
@@ -94,7 +94,7 @@ def adjust_fluxes2model(model, observations, uncertainties=None, linear=True,
                 to_add.extend([direction, dist, forward_pos, forward_neg,
                                reverse_pos, reverse_neg])
             except KeyError:
-                LOGGER.warning(f"Reaction '{rxn_id}' not found in the model. "
+                logger.warning(f"Reaction '{rxn_id}' not found in the model. "
                                f"Ignored.")
         model.add_cons_vars(to_add)
         model.objective = prob.Objective(new_obj, direction="min")

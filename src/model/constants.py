@@ -22,7 +22,7 @@ from cobra.flux_analysis import flux_variability_analysis, pfba
 from cobra.flux_analysis.moma import add_moma
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def pfba_fva(model, reactions=None):
@@ -38,10 +38,10 @@ def moma(model, reference, linear=False):
     with model:
         start_time = time.time()
         add_moma(model, solution=reference, linear=linear)
-        LOGGER.info('moma addition finished in %s s', time.time() - start_time)
+        logger.info('moma addition finished in %s s', time.time() - start_time)
         start_time = time.time()
         solution = model.optimize()
-        LOGGER.info('moma optimization finished in %s s', time.time() - start_time)
+        logger.info('moma optimization finished in %s s', time.time() - start_time)
     return solution
 
 

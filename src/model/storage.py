@@ -27,7 +27,7 @@ from model import constants, settings
 from model.operations import restore_changes
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def key_from_model_info(wild_type_id, message, version=None):
@@ -65,7 +65,7 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
     redis = await redis_client()
     with (await redis) as connection:
         await connection.set(mutated_model_id, value)
-    LOGGER.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
+    logger.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
     return mutated_model_id
 
 
@@ -121,7 +121,7 @@ async def restore_from_db(model_id):
         return None
     model = model_from_changes(changes)
     t = time.time() - t
-    LOGGER.info('Model with db key %s is ready in %s sec', model_id, t)
+    logger.info('Model with db key %s is ready in %s sec', model_id, t)
     return model
 
 
@@ -143,11 +143,11 @@ async def restore_model(model_id):
     """
     model = Models.get(model_id)
     if model:
-        LOGGER.info('Wild type model with id %s is found', model_id)
+        logger.info('Wild type model with id %s is found', model_id)
         return model
     model = await restore_from_db(model_id)
     if model:
-        LOGGER.info('Model with id %s found in database', model_id)
+        logger.info('Model with id %s found in database', model_id)
         return model
-    LOGGER.info('No model with id %s', model_id)
+    logger.info('No model with id %s', model_id)
     return None

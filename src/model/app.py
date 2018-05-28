@@ -23,7 +23,7 @@ import model.handlers as handlers
 from .middleware import raven_middleware
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_app():
@@ -56,7 +56,7 @@ def get_app():
 async def start(loop):
     app = get_app()
     await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
-    LOGGER.info('Web server is up')
+    logger.info('Web server is up')
     return app
 
 

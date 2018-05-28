@@ -31,7 +31,7 @@ from model.adapter import (
 from model.settings import ANNOTATIONS_API
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 async def operate_on_reactions(model, reactions, key, apply_function, undo_function):
@@ -220,7 +220,7 @@ async def query_genes_to_reaction(gene):
     :param gene: gene identifier
     :return: reactions mapping {<rn ID>: <reaction string>}
     """
-    LOGGER.info('Annotated gene at %s: %s', ANNOTATIONS_API, gene)
+    logger.info('Annotated gene at %s: %s', ANNOTATIONS_API, gene)
     async with aiohttp.ClientSession() as session:
         async with session.get(ANNOTATIONS_API, params={'geneId': gene}) as r:
             try:
@@ -240,10 +240,10 @@ async def apply_genotype_changes(model, genotype_changes):
     :param genotype_changes: list of strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
     :return:
     """
-    LOGGER.info('Genotype changes %s', genotype_changes)
+    logger.info('Genotype changes %s', genotype_changes)
     genotype_features = full_genotype(genotype_changes)
     genes_to_reactions = await call_genes_to_reactions(genotype_features)
-    LOGGER.info('Genes to reaction: %s', genes_to_reactions)
+    logger.info('Genes to reaction: %s', genes_to_reactions)
     change_model = GenotypeChangeModel(model, genotype_features, genes_to_reactions, model.notes['namespace'])
     await change_model.map_metabolites()
     change_model.apply_changes()
@@ -275,7 +275,7 @@ def convert_measurements_to_mmol(measurements, model):
                     metabolite.formula_weight
                 ) for point in value['measurements']]
                 value['unit'] = 'mmol'
-                LOGGER.info('Converted metabolite %s from mg to mmol', value['id'])
+                logger.info('Converted metabolite %s from mg to mmol', value['id'])
     return measurements
 
 
@@ -324,7 +324,7 @@ async def modify_model(message, model):
 
 
 def restore_changes(model, changes):
-    LOGGER.info('Changes to restore: %s', changes)
+    logger.info('Changes to restore: %s', changes)
     model = apply_additions(model, changes['added'])
     model = apply_removals(model, changes['removed'])
     model = apply_measurements(model, changes['measured-medium'])
@@ -398,13 +398,13 @@ def product_reaction_variable(model, metabolite_id):
     db_name, compound_id = metabolite_id.split(':')
     try:
         metabolite = get_unique_metabolite(model, compound_id, 'e', db_name)
-        LOGGER.info('found model metabolite for %s %s', compound_id, db_name)
+        logger.info('found model metabolite for %s %s', compound_id, db_name)
     except NoIDMapping:
-        LOGGER.info('no model metabolite for %s %s', compound_id, db_name)
+        logger.info('no model metabolite for %s %s', compound_id, db_name)
         return None
     exchange_reactions = list(set(metabolite.reactions).intersection(model.exchanges))
     if len(exchange_reactions) != 1:
-        LOGGER.info('More than one exchange reaction in model %s for metabolite %s', model.id, metabolite_id)
+        logger.info('More than one exchange reaction in model %s for metabolite %s', model.id, metabolite_id)
     return exchange_reactions[0]
 
 
