@@ -19,3 +19,34 @@ ENVIRONMENT = os.environ['ENVIRONMENT']
 ANNOTATIONS_API = os.environ['ANNOTATIONS_API']
 ID_MAPPER_API = os.environ['ID_MAPPER_API']
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': "%(asctime)s [%(levelname)s] [%(name)s] %(filename)s:%(funcName)s:%(lineno)d | %(message)s",
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'sentry': {
+            'level': 'WARNING',
+            'class': 'raven.handlers.logging.SentryHandler',
+            'dsn': SENTRY_DSN,
+        },
+    },
+    'loggers': {
+        # All loggers will by default use the root logger below (and
+        # hence be very verbose). To silence spammy/uninteresting log
+        # output, add the loggers here and increase the loglevel.
+    },
+    'root': {
+        'level': 'DEBUG',
+        'handlers': ['console', 'sentry'],
+    },
+}
