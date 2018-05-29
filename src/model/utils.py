@@ -15,8 +15,11 @@
 import inspect
 import logging
 import time
+from contextlib import contextmanager
 from functools import wraps
 
+
+logger = logging.getLogger(__name__)
 
 def timing(f):
     @wraps(f)
@@ -35,3 +38,12 @@ def timing(f):
                              f.__name__, args, kw, time_end - time_start)
         return result
     return wrap
+
+
+@contextmanager
+def log_time(level=logging.INFO, operation="Task"):
+    time_start = time.time()
+    yield
+    time_end = time.time()
+    logger.log(level, "{}: completed in {:.4f}s".format(operation,
+                                                        time_end - time_start))
