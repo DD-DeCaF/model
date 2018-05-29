@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import logging
 import time
 from contextlib import contextmanager
@@ -23,20 +22,9 @@ logger = logging.getLogger(__name__)
 
 def timing(f):
     @wraps(f)
-    def wrap(*args, **kw):
-        time_start = time.time()
-        result = f(*args, **kw)
-        time_end = time.time()
-        # Get the appropriate logger for the file
-
-        try:
-            logger_name = inspect.getmodule(f).__name__
-        except TypeError:
-            logger_name = 'builtin'
-        function_logger = logging.getLogger(logger_name)
-        function_logger.info('func:%r args:[%r, %r] took: %2.4f sec',
-                             f.__name__, args, kw, time_end - time_start)
-        return result
+    def wrap(*args, **kwargs):
+        with log_time(operation=f"func: {f.__name__}, args: [{args}, {kwargs}]"):
+            return f(*args, **kw)
     return wrap
 
 
