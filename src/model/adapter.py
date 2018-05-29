@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import re
-import time
 from collections import defaultdict
 
 import aiohttp
@@ -33,6 +32,7 @@ from cobra.manipulation import find_gene_knockout_reactions
 from model import constants
 from model.driven import adjust_fluxes2model
 from model.settings import ID_MAPPER_API
+from model.util import log_time
 
 
 logger = logging.getLogger(__name__)
@@ -60,13 +60,12 @@ async def query_identifiers(object_ids, db_from, db_to):
     if len(object_ids) == 0:
         return {}
     query = json.dumps({'ids': object_ids, 'dbFrom': db_from, 'dbTo': db_to, 'type': 'Metabolite'})
-    start_time = time.time()
     logger.info('query id mapper at %s with %s', ID_MAPPER_API, str(query))
-    async with aiohttp.ClientSession() as session:
-        async with session.post(ID_MAPPER_API, data=query) as r:
-            result = await r.json()
-            logger.info('id mapper call took %s', time.time() - start_time)
-            return result['ids']
+    with log_time(operation=f"ID map request for ids: {object_ids}"):
+        async with aiohttp.ClientSession() as session:
+            async with session.post(ID_MAPPER_API, data=query) as r:
+                result = await r.json()
+                return result['ids']
 
 
 def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
