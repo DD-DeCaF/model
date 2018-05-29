@@ -4,6 +4,8 @@ metadata:
   name: model-production
   annotations:
     prometheus.io/probe: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
 spec:
   selector:
     app: model
@@ -22,6 +24,8 @@ metadata:
   name: model-staging
   annotations:
     prometheus.io/probe: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
 spec:
   selector:
     app: model
