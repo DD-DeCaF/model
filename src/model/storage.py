@@ -119,7 +119,7 @@ async def find_changes_in_db(model_id):
 
 
 async def restore_from_db(model_id):
-    with log_time(operation="Restored model {model_id} from db"):
+    with log_time(operation=f"Restored model {model_id} from db"):
         changes = await find_changes_in_db(model_id)
         if not changes:
             return None
