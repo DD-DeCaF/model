@@ -21,9 +21,6 @@ from model.adapter import (
 from model.storage import Models
 
 
-logging.disable(logging.CRITICAL)
-
-
 @pytest.mark.asyncio
 async def test_existing_metabolite():
     ecoli = Models.get('iJO1366')

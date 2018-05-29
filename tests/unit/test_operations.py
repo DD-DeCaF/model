@@ -26,9 +26,6 @@ from model.operations import (
 from model.storage import Models, restore_model
 
 
-logging.disable(logging.CRITICAL)
-
-
 def is_close(x, y):
     return isclose(x, y, abs_tol=10e-6)
 

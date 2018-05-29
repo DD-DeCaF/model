@@ -20,9 +20,6 @@ from model.response import respond
 from model.storage import Models
 
 
-logging.disable(logging.CRITICAL)
-
-
 @pytest.mark.asyncio
 async def test_respond():
     message = {'to-return': ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions'],

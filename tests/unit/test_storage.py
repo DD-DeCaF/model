@@ -23,9 +23,6 @@ from model.operations import modify_model
 from model.storage import Models, key_from_model_info, restore_from_db, restore_model, save_changes_to_db
 
 
-logging.disable(logging.CRITICAL)
-
-
 def test_key_from_model_info():
     model_id = 'model_id'
     for _ in range(50):

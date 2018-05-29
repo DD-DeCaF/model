@@ -24,9 +24,6 @@ from model.response import Response
 from model.storage import Models, restore_from_db, restore_model, save_changes_to_db
 
 
-logging.disable(logging.CRITICAL)
-
-
 @pytest.mark.asyncio
 async def test_call_genes_to_reactions():
     changes = full_genotype(['-aceA -sucCD +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'])
