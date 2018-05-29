@@ -64,7 +64,6 @@ async def query_identifiers(object_ids, db_from, db_to):
     logger.info('query id mapper at %s with %s', ID_MAPPER_API, str(query))
     async with aiohttp.ClientSession() as session:
         async with session.post(ID_MAPPER_API, data=query) as r:
-            assert r.status == 200, f'response status {r.status} from identifier service'
             result = await r.json()
             logger.info('id mapper call took %s', time.time() - start_time)
             return result['ids']

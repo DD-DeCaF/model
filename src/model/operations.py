@@ -221,15 +221,9 @@ async def query_genes_to_reaction(gene):
     :return: reactions mapping {<rn ID>: <reaction string>}
     """
     logger.info('Annotated gene at %s: %s', ANNOTATIONS_API, gene)
-    async with aiohttp.ClientSession() as session:
-        async with session.get(ANNOTATIONS_API, params={'geneId': gene}) as r:
-            try:
-                assert r.status == 200
-            except Exception as ex:
-                print('######## ANNOTATIONS_API params: ', ANNOTATIONS_API, {'geneId': gene})
-                print('######## ANNOTATIONS_API exception:', await r.text())
-                raise ex
-            result = await r.json()
+    async with aiohttp.ClientSession() as client:
+        async with client.get(ANNOTATIONS_API, params={'geneId': gene}) as response:
+            result = await response.json()
             return result.get('response', {})
 
 
