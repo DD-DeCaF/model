@@ -32,7 +32,7 @@ from cobra.manipulation import find_gene_knockout_reactions
 from model import constants
 from model.driven import adjust_fluxes2model
 from model.settings import ID_MAPPER_API
-from model.util import log_time
+from model.utils import log_time
 
 
 logger = logging.getLogger(__name__)

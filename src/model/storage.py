@@ -25,6 +25,7 @@ from cobra.io import model_to_dict, read_sbml_model
 
 from model import constants, settings
 from model.operations import restore_changes
+from model.utils import log_time
 
 
 logger = logging.getLogger(__name__)
@@ -65,15 +66,16 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
     redis = await redis_client()
     with (await redis) as connection:
         await connection.set(mutated_model_id, value)
-    logger.info('Model created on the base of %s with message %s saved as %s', wild_type_id, message, mutated_model_id)
+    logger.info(f"Model created on the base of {wild_type_id} with message {message} saved as {mutated_model_id}")
     return mutated_model_id
 
 
 def read_model(model_id):
-    model = read_sbml_model(os.path.join('data', 'models', model_id + '.sbml.gz'))
-    model.solver = 'cplex'
-    model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
-    return model
+    with log_time(operation=f"Read model {model_id} from SBML file"):
+        model = read_sbml_model(os.path.join('data', 'models', model_id + '.sbml.gz'))
+        model.solver = 'cplex'
+        model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
+        return model
 
 
 class Models(object):
@@ -95,8 +97,10 @@ class Models(object):
 
 
 def preload_cache():
-    for model_id in constants.MODELS:
-        Models.get_dict(model_id)
+    logger.info("Preloading models")
+    with log_time(operation="Preload models"):
+        for model_id in constants.MODELS:
+            Models.get_dict(model_id)
 
 
 if settings.ENVIRONMENT == 'production':
@@ -115,14 +119,11 @@ async def find_changes_in_db(model_id):
 
 
 async def restore_from_db(model_id):
-    t = time.time()
-    changes = await find_changes_in_db(model_id)
-    if not changes:
-        return None
-    model = model_from_changes(changes)
-    t = time.time() - t
-    logger.info('Model with db key %s is ready in %s sec', model_id, t)
-    return model
+    with log_time(operation="Restored model {model_id} from db"):
+        changes = await find_changes_in_db(model_id)
+        if not changes:
+            return None
+        return model_from_changes(changes)
 
 
 @lru_cache(maxsize=2 ** 6)
