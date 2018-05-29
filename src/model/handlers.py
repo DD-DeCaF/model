@@ -19,6 +19,8 @@ import os
 
 from aiohttp import WSMsgType, web
 from cobra.io.dict import model_to_dict
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest, Histogram
+from prometheus_client.multiprocess import MultiProcessCollector
 
 import model.constants as constants
 from model.operations import modify_model
@@ -155,3 +157,8 @@ async def map(request):
     except FileNotFoundError:
         logger.debug(f"Request for unknown map: {modelId} / {mapId}")
         return web.HTTPNotFound()
+
+async def metrics(request):
+    resp = web.Response(body=generate_latest(MultiProcessCollector(CollectorRegistry())))
+    resp.content_type = CONTENT_TYPE_LATEST
+    return resp

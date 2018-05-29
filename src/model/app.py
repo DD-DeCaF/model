@@ -37,6 +37,7 @@ def get_app():
     app.router.add_route('GET', '/v1/models/{model_id}', handlers.model_get)
     app.router.add_route('POST', '/v1/models/{model_id}', handlers.model_diff)
     app.router.add_route('GET', '/v1/model-info/{model_id}', handlers.model_info)
+    app.router.add_route('GET', '/metrics', handlers.metrics)
 
     # Configure default CORS settings.
     cors = aiohttp_cors.setup(app, defaults={
