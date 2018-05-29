@@ -28,7 +28,7 @@ To run all tests and QA checks, run `make qa`.
 
 Specify environment variables in a `.env` file. See `docker-compose.yml` for the possible variables and their default values.
 
-* `ENVIRONMENT` Set to either `development`, `testing`, or `production`
+* `ENVIRONMENT` Set to either `development`, `testing`, `staging` or `production`
 * `SENTRY_DSN` DSN for reporting exceptions to [Sentry](https://docs.sentry.io/clients/python/integrations/flask/).
 * `REDIS_ADDR` Local Redis service hostname
 * `REDIS_PORT` Local Redis service port

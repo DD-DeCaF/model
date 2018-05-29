@@ -25,11 +25,11 @@ timeout = 20
 accesslog = "-"
 
 
-if _config == "production":
+if _config in ['production', 'staging']:
     workers = os.cpu_count() * 2 + 1
     preload_app = True
     loglevel = "INFO"
-else:
+elif _config in ['testing', 'development']:
     workers = 1
     reload = True
     loglevel = "DEBUG"

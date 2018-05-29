@@ -102,7 +102,7 @@ def preload_cache():
             Models.get_dict(model_id)
 
 
-if settings.ENVIRONMENT == 'production':
+if settings.ENVIRONMENT in ['production', 'staging']:
     preload_cache()
 
 
