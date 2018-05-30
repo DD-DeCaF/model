@@ -12,7 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from . import raven_client
+
+
+logger = logging.getLogger(__name__)
+
+
+async def log_middleware(app, handler):
+    """Log all initiated requests"""
+    async def middleware_handler(request):
+        logger.debug(f"Handling request: {request.url.relative()}")
+        return await handler(request)
+    return middleware_handler
 
 
 async def raven_middleware(app, handler):

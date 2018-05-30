@@ -31,17 +31,14 @@ logger = logging.getLogger(__name__)
 
 
 async def model_ws_full(request):
-    logger.debug("Request handler called: model_ws_full")
     return await model_ws(request, False)
 
 
 async def model_ws_json_diff(request):
-    logger.debug("Request handler called: model_ws_json_diff")
     return await model_ws(request, True)
 
 
 async def model_ws(request, diff=False):
-    logger.debug("Request handler called: model_ws")
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
     cached_model = await restore_model(model_id)
@@ -69,7 +66,6 @@ async def model_ws(request, diff=False):
 
 
 async def model(request):
-    logger.debug("Request handler called: model")
     wild_type_id = request.match_info['model_id']
     data = await request.json()
 
@@ -92,14 +88,12 @@ async def model(request):
 
 
 async def model_get(request):
-    logger.debug("Request handler called: model_get")
     wild_type_id = request.match_info['model_id']
     wild_type_model = Models.get(wild_type_id)
     return web.json_response(model_to_dict(wild_type_model))
 
 
 async def model_diff(request):
-    logger.debug("Request handler called: model_diff")
     wild_type_id = request.match_info['model_id']
     data = await request.json()
 
@@ -130,7 +124,6 @@ async def model_diff(request):
 
 
 async def model_info(request):
-    logger.debug("Request handler called: model_info")
     wild_type_id = request.match_info['model_id']
     wild_type_model = Models.get(wild_type_id)
     medium = [{
@@ -141,18 +134,15 @@ async def model_info(request):
 
 
 async def maps(request):
-    logger.debug("Request handler called: maps")
     return web.json_response(constants.MAP_DICTIONARY)
 
 
 async def model_options(request):
-    logger.debug("Request handler called: model_options")
     return web.json_response(constants.SPECIES_TO_MODEL[request.match_info['species']])
 
 
 # TODO @matyasfodor This really shouldn't live here. This is basically a static file service
 async def map(request):
-    logger.debug("Request handler called: map")
     modelId = request.GET['model']
     mapId = request.GET['map']
     directory = os.path.realpath(constants.MAPS_DIR)
