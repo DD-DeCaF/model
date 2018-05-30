@@ -17,7 +17,6 @@ import hashlib
 import json
 import logging
 import os
-import time
 from functools import lru_cache
 
 import aioredis
