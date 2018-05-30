@@ -31,20 +31,10 @@ start:
 	docker-compose up -d
 
 ## Run all QA targets.
-qa: test style
+qa: style test
 
 ## Run all style related targets.
 style: flake8 isort license
-
-## Run the tests.
-test:
-	-docker-compose run --rm web py.test -vxs --cov=src/model tests/
-
-## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
-test-travis:
-	$(eval ci_env=$(shell bash <(curl -s https://codecov.io/env)))
-	docker-compose run --rm $(ci_env) web \
-		/bin/sh -c "pytest -s --cov=src/model tests && codecov"
 
 ## Run flake8.
 flake8:
@@ -57,6 +47,16 @@ isort:
 ## Sort imports and write changes to files.
 isort-save:
 	docker-compose run --rm web isort --recursive src/model tests
+
+## Run the tests.
+test:
+	-docker-compose run --rm web py.test -vxs --cov=src/model tests/
+
+## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
+test-travis:
+	$(eval ci_env=$(shell bash <(curl -s https://codecov.io/env)))
+	docker-compose run --rm $(ci_env) web \
+		/bin/sh -c "pytest -s --cov=src/model tests && codecov"
 
 ## Verify source code license headers.
 license:
