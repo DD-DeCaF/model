@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from math import isclose
 
 import pytest
@@ -24,9 +23,6 @@ from model.operations import (
     convert_measurements_to_mmol, convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict,
     product_reaction_variable)
 from model.storage import Models, restore_model
-
-
-logging.disable(logging.CRITICAL)
 
 
 def is_close(x, y):

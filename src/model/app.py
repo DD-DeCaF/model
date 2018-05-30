@@ -20,14 +20,14 @@ from aiohttp import web
 
 import model.handlers as handlers
 
-from .middleware import raven_middleware
+from .middleware import metrics_middleware, raven_middleware
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_app():
-    app = web.Application(middlewares=[raven_middleware])
+    app = web.Application(middlewares=[metrics_middleware, raven_middleware])
     app.router.add_route('GET', '/wsmodels/{model_id}', handlers.model_ws_full)
     app.router.add_route('GET', '/v1/wsmodels/{model_id}', handlers.model_ws_json_diff)
     app.router.add_route('GET', '/maps', handlers.maps)
@@ -37,6 +37,7 @@ def get_app():
     app.router.add_route('GET', '/v1/models/{model_id}', handlers.model_get)
     app.router.add_route('POST', '/v1/models/{model_id}', handlers.model_diff)
     app.router.add_route('GET', '/v1/model-info/{model_id}', handlers.model_info)
+    app.router.add_route('GET', '/metrics', handlers.metrics)
 
     # Configure default CORS settings.
     cors = aiohttp_cors.setup(app, defaults={
@@ -56,7 +57,7 @@ def get_app():
 async def start(loop):
     app = get_app()
     await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
-    LOGGER.info('Web server is up')
+    logger.info('Web server is up')
     return app
 
 

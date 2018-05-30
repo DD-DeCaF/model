@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 import pytest
 from deepdiff import DeepDiff
 
@@ -22,9 +20,6 @@ from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
 from model.operations import apply_reactions_add, call_genes_to_reactions, modify_model
 from model.response import Response
 from model.storage import Models, restore_from_db, restore_model, save_changes_to_db
-
-
-logging.disable(logging.CRITICAL)
 
 
 @pytest.mark.asyncio

@@ -12,15 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 import pytest
 
 from model.response import respond
 from model.storage import Models
-
-
-logging.disable(logging.CRITICAL)
 
 
 @pytest.mark.asyncio

@@ -12,16 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import os
 
 from cobra.io import read_sbml_model
 
 from model.adapter import get_unique_metabolite
 from tools.update_models import update_local_models
-
-
-logging.disable(logging.CRITICAL)
 
 
 def test_update_models(tmpdir):

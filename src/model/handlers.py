@@ -19,6 +19,8 @@ import os
 
 from aiohttp import WSMsgType, web
 from cobra.io.dict import model_to_dict
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
+from prometheus_client.multiprocess import MultiProcessCollector
 
 import model.constants as constants
 from model.operations import modify_model
@@ -27,7 +29,7 @@ from model.storage import (
     Models, key_from_model_info, model_from_changes, restore_from_db, restore_model, save_changes_to_db)
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 async def model_ws_full(request):
@@ -42,14 +44,14 @@ async def model_ws(request, diff=False):
     ws = web.WebSocketResponse()
     model_id = request.match_info['model_id']
     cached_model = await restore_model(model_id)
-    LOGGER.info(model_from_changes.cache_info())
+    logger.info(model_from_changes.cache_info())
     if not cached_model:
         raise KeyError('No such model: {}'.format(model_id))
     model = cached_model.copy()
     await ws.prepare(request)
     try:
         async for msg in ws:
-            LOGGER.debug(msg)
+            logger.debug(msg)
             if msg.type == WSMsgType.TEXT:
                 if msg.data == 'close':
                     await ws.close()
@@ -58,9 +60,9 @@ async def model_ws(request, diff=False):
                     model = await modify_model(message, model)
                     await ws.send_json(await respond(model, message, wild_type_model_id=model_id if diff else None))
             elif msg.type == WSMsgType.ERROR:
-                LOGGER.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
+                logger.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
     except asyncio.CancelledError as ex:
-        LOGGER.debug('Websocket for model_id %s cancelled, %s', model_id, str(ex))
+        logger.debug('Websocket for model_id %s cancelled, %s', model_id, str(ex))
     await ws.close()
     return ws
 
@@ -76,7 +78,7 @@ async def model(request):
 
     mutated_model_id = key_from_model_info(wild_type_id, message)
     model = await restore_from_db(mutated_model_id)
-    LOGGER.info(model_from_changes.cache_info())
+    logger.info(model_from_changes.cache_info())
     if not model:
         model = Models.get(wild_type_id)
         if not model:
@@ -107,7 +109,7 @@ async def model_diff(request):
         return web.HTTPNotFound()
     mutated_model_id = key_from_model_info(wild_type_id, message, version=1)
     mutated_model = await restore_from_db(mutated_model_id)
-    LOGGER.info(model_from_changes.cache_info())
+    logger.info(model_from_changes.cache_info())
 
     if not mutated_model:
         # @matyasfodor Not sure about how this will perform, copy is an expensive
@@ -153,4 +155,11 @@ async def map(request):
         with open(filepath) as f:
             return web.json_response(json.load(f))
     except FileNotFoundError:
+        logger.debug(f"Request for unknown map: {modelId} / {mapId}")
         return web.HTTPNotFound()
+
+
+async def metrics(request):
+    resp = web.Response(body=generate_latest(MultiProcessCollector(CollectorRegistry())))
+    resp.content_type = CONTENT_TYPE_LATEST
+    return resp

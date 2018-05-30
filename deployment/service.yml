@@ -5,7 +5,7 @@ metadata:
   annotations:
     prometheus.io/probe: "true"
     prometheus.io/scrape: "true"
-    prometheus.io/port: "9121"
+    prometheus.io/port: "8000"
 spec:
   selector:
     app: model
@@ -15,10 +15,6 @@ spec:
     protocol: TCP
     port: 80
     targetPort: 8000
-  - name: redis-exporter
-    protocol: TCP
-    port: 9121
-    targetPort: 9121
 
 ---
 
@@ -29,7 +25,7 @@ metadata:
   annotations:
     prometheus.io/probe: "true"
     prometheus.io/scrape: "true"
-    prometheus.io/port: "9121"
+    prometheus.io/port: "8000"
 spec:
   selector:
     app: model
@@ -39,7 +35,3 @@ spec:
     protocol: TCP
     port: 80
     targetPort: 8000
-  - name: redis-exporter
-    protocol: TCP
-    port: 9121
-    targetPort: 9121

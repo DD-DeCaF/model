@@ -12,7 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import raven_client
+import logging
+
+from . import raven_client, settings
+from .metrics import REQUEST_TIME
+
+
+logger = logging.getLogger(__name__)
+
+
+async def metrics_middleware(app, handler):
+    """Log and time all initiated requests"""
+    async def middleware_handler(request):
+        logger.debug(f"Handling request: {request.url.relative()}")
+        with REQUEST_TIME.labels('model', settings.ENVIRONMENT, request.url.path).time():
+            return await handler(request)
+    return middleware_handler
 
 
 async def raven_middleware(app, handler):

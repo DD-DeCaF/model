@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
+
 from copy import deepcopy
 
 import aiohttp
@@ -21,8 +21,6 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
 from model.app import get_app
 
-
-logging.disable(logging.CRITICAL)
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
                  'type': 'compound'},

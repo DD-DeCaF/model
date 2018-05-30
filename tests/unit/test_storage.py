@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import random
 
 import pytest
@@ -21,9 +20,6 @@ from cobra.io import model_to_dict
 from model.constants import GENOTYPE_CHANGES, MEASUREMENTS, MEDIUM
 from model.operations import modify_model
 from model.storage import Models, key_from_model_info, restore_from_db, restore_model, save_changes_to_db
-
-
-logging.disable(logging.CRITICAL)
 
 
 def test_key_from_model_info():

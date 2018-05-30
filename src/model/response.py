@@ -27,7 +27,7 @@ from model.operations import is_dummy, phase_plane_to_dict
 from model.storage import Models
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def map_reactions_list(map_path):
@@ -55,7 +55,7 @@ class Response(object):
                 try:
                     solution = self.solve_fva()
                 except OptimizationError:
-                    LOGGER.info('infeasible model for fva')
+                    logger.info('infeasible model for fva')
                     self.flux = {}
                     self.growth = 0.0
                 else:
@@ -68,7 +68,7 @@ class Response(object):
                 try:
                     solution = self.solve()
                 except OptimizationError:
-                    LOGGER.info('infeasible model, returning measured fluxes only')
+                    logger.info('infeasible model, returning measured fluxes only')
                     changes = model.notes['changes']
                     self.flux = {}
                     self.growth = 0.0
@@ -105,7 +105,7 @@ class Response(object):
             solution = constants.METHODS[self.method_name](self.model, reference=pfba(self.model))
         else:
             solution = constants.METHODS[self.method_name](self.model)
-        LOGGER.info('Model solved with method %s in %s sec', self.method_name, time.time() - t)
+        logger.info('Model solved with method %s in %s sec', self.method_name, time.time() - t)
         return solution
 
     def model_json(self):
@@ -120,7 +120,7 @@ class Response(object):
     def theoretical_maximum_yield(self):
         objectives = self.message.get(constants.TMY_OBJECTIVES, [])
         res = {key: phase_plane_to_dict(self.model, key) for key in objectives}
-        LOGGER.info(res)
+        logger.info(res)
         return res
 
     def growth_rate(self):
@@ -171,5 +171,5 @@ async def respond(model, message=None, mutated_model_id=None, wild_type_model_id
         result['model-id'] = mutated_model_id
     if constants.REQUEST_ID in message:
         result[constants.REQUEST_ID] = message[constants.REQUEST_ID]
-    LOGGER.info('Response for %s is ready in %s sec', message, time.time() - t)
+    logger.info('Response for %s is ready in %s sec', message, time.time() - t)
     return result

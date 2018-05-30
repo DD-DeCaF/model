@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import re
-import time
 from collections import defaultdict
 
 import aiohttp
@@ -32,10 +31,12 @@ from cobra.manipulation import find_gene_knockout_reactions
 
 from model import constants
 from model.driven import adjust_fluxes2model
-from model.settings import ID_MAPPER_API
+from model.metrics import API_REQUESTS
+from model.settings import ENVIRONMENT, ID_MAPPER_API
+from model.utils import log_time
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class NoIDMapping(Exception):
@@ -60,14 +61,13 @@ async def query_identifiers(object_ids, db_from, db_to):
     if len(object_ids) == 0:
         return {}
     query = json.dumps({'ids': object_ids, 'dbFrom': db_from, 'dbTo': db_to, 'type': 'Metabolite'})
-    start_time = time.time()
-    LOGGER.info('query id mapper at %s with %s', ID_MAPPER_API, str(query))
-    async with aiohttp.ClientSession() as session:
-        async with session.post(ID_MAPPER_API, data=query) as r:
-            assert r.status == 200, f'response status {r.status} from identifier service'
-            result = await r.json()
-            LOGGER.info('id mapper call took %s', time.time() - start_time)
-            return result['ids']
+    logger.info('query id mapper at %s with %s', ID_MAPPER_API, str(query))
+    with log_time(operation=f"ID map request for ids: {object_ids}"):
+        with API_REQUESTS.labels('model', ENVIRONMENT, 'id-mapper', ID_MAPPER_API).time():
+            async with aiohttp.ClientSession() as session:
+                async with session.post(ID_MAPPER_API, data=query) as r:
+                    result = await r.json()
+                    return result['ids']
 
 
 def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
@@ -103,7 +103,7 @@ def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
 
 def contains_carbon(metabolite):  # TODO: use method from Metabolite class when this change is merged
     if not metabolite.formula:
-        LOGGER.warning("No formula for metabolite {}, it's unknown if there is carbon in it."
+        logger.warning("No formula for metabolite {}, it's unknown if there is carbon in it."
                        "Assuming that there is no carbon".format(metabolite.id))
         return False
     return 'C' in metabolite.elements
@@ -163,12 +163,12 @@ class ModelModificationMixin(object):
         :param metabolite: basestring, metabolite id in format <bigg_id>_<compartment_id>, f.e. Nacsertn_c
         """
         try:
-            LOGGER.debug('Add demand reaction for metabolite: %s', metabolite.id)
+            logger.debug('Add demand reaction for metabolite: %s', metabolite.id)
             demand_reaction = self.model.add_boundary(metabolite, type='demand')
             self.changes['added']['reactions'].add(demand_reaction)
             self.annotate_new_metabolites(demand_reaction)
         except ValueError:
-            LOGGER.debug('demand reaction exists for metabolite %s', metabolite.id)
+            logger.debug('demand reaction exists for metabolite %s', metabolite.id)
 
     def add_adapter_reaction(self, metabolite, existing_metabolite):
         """Add adapter reaction A <--> B for metabolites A and B
@@ -183,9 +183,9 @@ class ModelModificationMixin(object):
             self.model.add_reactions([adapter_reaction])
             self.changes['added']['reactions'].add(adapter_reaction)
             self.annotate_new_metabolites(adapter_reaction)
-            LOGGER.debug('Adapter reaction added: %s <--> %s', metabolite.id, existing_metabolite.id)
+            logger.debug('Adapter reaction added: %s <--> %s', metabolite.id, existing_metabolite.id)
         except Exception:  # TODO: raise a reasonable exception on cobra side if the reaction exists
-            LOGGER.debug('Adapter reaction exists: %s <--> %s', metabolite.id, existing_metabolite.id)
+            logger.debug('Adapter reaction exists: %s <--> %s', metabolite.id, existing_metabolite.id)
 
     def make_consumable(self, metabolite, key='measured'):
         """For metabolite in e compartment with existing exchange reaction, make it possible to consume metabolite
@@ -228,7 +228,7 @@ class ModelModificationMixin(object):
             metabolite.name = info['name']
             metabolite.annotation = info.to_dict()
         else:
-            LOGGER.debug('no formula for %s', metabolite.id)
+            logger.debug('no formula for %s', metabolite.id)
         if self.metabolite_mapping is not None:
             mapped_id = find_key_for_id(strip_compartment(metabolite.id), self.metabolite_mapping)
             if mapped_id is not None:
@@ -237,8 +237,8 @@ class ModelModificationMixin(object):
                 metabolite.annotation['metanetx.chemical'] = self.metabolite_mapping[mapped_id].get('mnx', [])
                 metabolite.annotation['bigg.metabolite'] = self.metabolite_mapping[mapped_id].get('bigg', [])
             else:
-                LOGGER.debug('no cross-references for %s', metabolite.id)
-        LOGGER.info('new annotation: %s', metabolite.annotation)
+                logger.debug('no cross-references for %s', metabolite.id)
+        logger.info('new annotation: %s', metabolite.annotation)
 
     def annotate_new_metabolites(self, reaction):
         """Annotate new metabolites with chem_prop information and keep track of them
@@ -323,7 +323,7 @@ def detect_mutations(remove, add):
     for old_feature in remove:
         for new_feature in add:
             if new_feature.startswith(old_feature):
-                LOGGER.info('Gene %s is replaced with %s', old_feature, new_feature)
+                logger.info('Gene %s is replaced with %s', old_feature, new_feature)
                 drop_add.append(new_feature)
                 if DELETE_GENE not in new_feature:
                     drop_remove.append(old_feature)
@@ -374,7 +374,7 @@ class GenotypeChangeModel(ModelModificationMixin):
         }
 
     async def map_metabolites(self):
-        LOGGER.info("Metabolites to map: %s", self.metabolite_identifiers)
+        logger.info("Metabolites to map: %s", self.metabolite_identifiers)
         from_db_key = list(self.metabolite_identifiers.keys())
         to_db_key = list({self.namespace, 'mnx', 'chebi'})
         queries = [(db_from, db_to) for db_from, db_to in itertools.product(from_db_key, to_db_key) if db_from != db_to]
@@ -386,7 +386,7 @@ class GenotypeChangeModel(ModelModificationMixin):
                 self.metabolite_mapping[met_id][db_from] = [met_id]
                 if met_id in mapping:
                     self.metabolite_mapping[met_id][db_to] = mapping[met_id]
-        LOGGER.info('Using metabolite mapping: %s', self.metabolite_mapping)
+        logger.info('Using metabolite mapping: %s', self.metabolite_mapping)
 
     def apply_changes(self):
         """Apply genotype changes on initial model
@@ -431,9 +431,9 @@ class GenotypeChangeModel(ModelModificationMixin):
             self.changes['removed']['genes'].add(gene)
             for reaction in find_gene_knockout_reactions(self.model, [gene]):
                 self.changes['removed']['reactions'].add(reaction)
-            LOGGER.info('Gene knockout: %s', gene.name)
+            logger.info('Gene knockout: %s', gene.name)
         else:
-            LOGGER.info('Gene for knockout is not found: %s', feature.name)
+            logger.info('Gene for knockout is not found: %s', feature.name)
 
     def add_gene(self, feature):
         """Perform gene insertion.
@@ -442,14 +442,14 @@ class GenotypeChangeModel(ModelModificationMixin):
         :param feature: gnomic.Feature
         :return:
         """
-        LOGGER.info('Add gene: %s', feature.name)
+        logger.info('Add gene: %s', feature.name)
         identifier = feature_id(feature)
         if self.model.genes.query(identifier, attribute='name'):  # do not add if gene is already there
-            LOGGER.info('Gene %s exists in the model', feature.name)
+            logger.info('Gene %s exists in the model', feature.name)
             return
         for reaction_id, equation in self.genes_to_reactions.get(identifier, {}).items():
             self.add_reaction(reaction_id, equation, identifier)
-        LOGGER.info('Gene added: %s', identifier)
+        logger.info('Gene added: %s', identifier)
 
     def add_reaction(self, reaction_id, equation, gene_name, compartment=None):
         """Add new reaction by rn ID from equation, where metabolites defined by kegg ids.
@@ -465,9 +465,9 @@ class GenotypeChangeModel(ModelModificationMixin):
             return
         reaction = Reaction(reaction_id)
         self.model.add_reactions([reaction])
-        LOGGER.info('New reaction to add: %s', equation)
+        logger.info('New reaction to add: %s', equation)
         equation = map_equation_to_model(equation, self.metabolite_mapping, self.model.notes['namespace'], compartment)
-        LOGGER.info('New adjusted reaction: %s', equation)
+        logger.info('New adjusted reaction: %s', equation)
         # TODO: adjust when build_reaction_from_string returns the new metabolites >>
         metabolites_before = {m.id for m in self.model.metabolites}
         reaction.build_reaction_from_string(equation)
@@ -535,9 +535,9 @@ class MediumChangeModel(ModelModificationMixin):
             if chebi_id in salts:
                 compounds = salts[chebi_id]
                 n_not_found = len([i for i in compounds if not i])
-                LOGGER.info('Metabolite %s can be splitted up to %s', chebi_id, str(compounds))
+                logger.info('Metabolite %s can be splitted up to %s', chebi_id, str(compounds))
                 if n_not_found:
-                    LOGGER.info('For %s %d mappings of %d is not found', chebi_id, n_not_found, len(compounds))
+                    logger.info('For %s %d mappings of %d is not found', chebi_id, n_not_found, len(compounds))
                 for array in compounds:
                     for compound in array:
                         if compound:
@@ -563,9 +563,9 @@ class MediumChangeModel(ModelModificationMixin):
             try:
                 existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
             except NoIDMapping:
-                LOGGER.info('No metabolite %s in external compartment', compound['id'])
+                logger.info('No metabolite %s in external compartment', compound['id'])
                 continue
-            LOGGER.info('Found metabolite %s', compound['id'])
+            logger.info('Found metabolite %s', compound['id'])
             self.make_consumable(existing_metabolite, key='measured-medium')
         for reaction in old_medium:
             if reaction.id not in self.changes['measured-medium']['reactions']:
@@ -581,7 +581,7 @@ def next_measured_reaction(exchange_reaction):
     met = list(exchange_reaction.metabolites.keys())[0]
     connected_reactions = [r for r in met.reactions if r != exchange_reaction]
     if len(connected_reactions) == 0:
-        LOGGER.warning('No reactions except exchange is connected to %s', met)
+        logger.warning('No reactions except exchange is connected to %s', met)
         return
     if len(connected_reactions) > 1:
         return
@@ -665,7 +665,7 @@ class MeasurementChangeModel(ModelModificationMixin):
             m_from, m_to = metabolite_c, metabolite_e
         else:
             m_from, m_to = metabolite_e, metabolite_c
-        LOGGER.info('Transport reaction for %s is not found, '
+        logger.info('Transport reaction for %s is not found, '
                     'creating a transport reaction from %s to %s',
                     met_id, m_from, m_to)
         transport_reaction = Reaction('adapter_' + met_id)
@@ -681,11 +681,11 @@ class MeasurementChangeModel(ModelModificationMixin):
             model_metabolite = get_unique_metabolite(self.model, compound, 'e', 'CHEBI')
         except NoIDMapping:
             self.missing_in_model.append(compound)
-            LOGGER.info('Model is missing metabolite %s, cannot apply measurement', compound)
+            logger.info('Model is missing metabolite %s, cannot apply measurement', compound)
             return
         possible_reactions = list(set(model_metabolite.reactions).intersection(self.model.exchanges))
         if len(possible_reactions) > 1:
-            LOGGER.warn('using first of %s', ', '.join([r.id for r in possible_reactions]))
+            logger.warn('using first of %s', ', '.join([r.id for r in possible_reactions]))
         reaction = possible_reactions[0]
         # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
         # have <-- x, then multiply with -1
@@ -784,7 +784,7 @@ class MeasurementChangeModel(ModelModificationMixin):
             elif scalar['type'] == 'protein' and scalar['mode'] == 'quantitative':
                 reaction = self.protein_exchange_reaction_for_scalar(scalar, upper_bound)
             else:
-                LOGGER.info('scalar for measured type %s not supported', scalar['type'])
+                logger.info('scalar for measured type %s not supported', scalar['type'])
             if reaction:
                 self.changes['measured']['reactions'].add(reaction)
                 if scalar['type'] == 'compound':

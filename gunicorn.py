@@ -17,6 +17,9 @@
 
 import os
 
+from prometheus_client import multiprocess
+
+
 _config = os.environ["ENVIRONMENT"]
 
 bind = "0.0.0.0:8000"
@@ -25,11 +28,15 @@ timeout = 20
 accesslog = "-"
 
 
-if _config == "production":
+def child_exit(server, worker):
+    multiprocess.mark_process_dead(worker.pid)
+
+
+if _config in ['production', 'staging']:
     workers = os.cpu_count() * 2 + 1
     preload_app = True
     loglevel = "INFO"
-else:
+elif _config in ['testing', 'development']:
     workers = 1
     reload = True
     loglevel = "DEBUG"

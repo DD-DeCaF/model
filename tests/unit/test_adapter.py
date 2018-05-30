@@ -12,16 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 import pytest
 
 from model.adapter import (
     MeasurementChangeModel, MediumChangeModel, MediumSalts, NoIDMapping, get_unique_metabolite, next_measured_reaction)
 from model.storage import Models
-
-
-logging.disable(logging.CRITICAL)
 
 
 @pytest.mark.asyncio
