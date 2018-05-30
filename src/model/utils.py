@@ -20,11 +20,12 @@ from functools import wraps
 
 logger = logging.getLogger(__name__)
 
+
 def timing(f):
     @wraps(f)
     def wrap(*args, **kwargs):
         with log_time(operation=f"func: {f.__name__}, args: [{args}, {kwargs}]"):
-            return f(*args, **kw)
+            return f(*args, **kwargs)
     return wrap
 
 
