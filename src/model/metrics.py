@@ -14,6 +14,7 @@
 
 import prometheus_client
 
+
 # REQUEST_TIME: Time spent waiting for outgoing API request to internal or external services
 # labels:
 #   service: The current service (always 'model')

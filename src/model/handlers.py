@@ -158,6 +158,7 @@ async def map(request):
         logger.debug(f"Request for unknown map: {modelId} / {mapId}")
         return web.HTTPNotFound()
 
+
 async def metrics(request):
     resp = web.Response(body=generate_latest(MultiProcessCollector(CollectorRegistry())))
     resp.content_type = CONTENT_TYPE_LATEST
