@@ -38,13 +38,13 @@ style: flake8 isort license
 
 ## Run the tests.
 test:
-	-docker-compose run --rm web py.test -vxs --cov=src/model tests/
+	-docker-compose run --rm web py.test -vx --cov=src/model tests/
 
 ## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
 test-travis:
 	$(eval ci_env=$(shell bash <(curl -s https://codecov.io/env)))
 	docker-compose run --rm $(ci_env) web \
-		/bin/sh -c "pytest -s --cov=src/model tests && codecov"
+		/bin/sh -c "pytest --cov=src/model tests && codecov"
 
 ## Run flake8.
 flake8:
