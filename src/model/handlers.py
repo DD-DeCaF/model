@@ -19,7 +19,7 @@ import os
 
 from aiohttp import WSMsgType, web
 from cobra.io.dict import model_to_dict
-from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest, Histogram
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
 import model.constants as constants
