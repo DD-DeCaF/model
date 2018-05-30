@@ -31,7 +31,8 @@ from cobra.manipulation import find_gene_knockout_reactions
 
 from model import constants
 from model.driven import adjust_fluxes2model
-from model.settings import ID_MAPPER_API
+from model.metrics import API_REQUESTS
+from model.settings import ENVIRONMENT, ID_MAPPER_API
 from model.utils import log_time
 
 
@@ -62,10 +63,11 @@ async def query_identifiers(object_ids, db_from, db_to):
     query = json.dumps({'ids': object_ids, 'dbFrom': db_from, 'dbTo': db_to, 'type': 'Metabolite'})
     logger.info('query id mapper at %s with %s', ID_MAPPER_API, str(query))
     with log_time(operation=f"ID map request for ids: {object_ids}"):
-        async with aiohttp.ClientSession() as session:
-            async with session.post(ID_MAPPER_API, data=query) as r:
-                result = await r.json()
-                return result['ids']
+        with API_REQUESTS.labels('model', ENVIRONMENT, 'id-mapper', ID_MAPPER_API).time():
+            async with aiohttp.ClientSession() as session:
+                async with session.post(ID_MAPPER_API, data=query) as r:
+                    result = await r.json()
+                    return result['ids']
 
 
 def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):

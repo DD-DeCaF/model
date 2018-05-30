@@ -28,7 +28,8 @@ import model.constants as constants
 from model.adapter import (
     GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, NoIDMapping, feature_id, full_genotype,
     get_unique_metabolite)
-from model.settings import ANNOTATIONS_API
+from model.metrics import API_REQUESTS
+from model.settings import ANNOTATIONS_API, ENVIRONMENT
 from model.utils import log_time
 
 
@@ -223,10 +224,11 @@ async def query_genes_to_reaction(gene):
     """
     logger.info('Annotated gene at %s: %s', ANNOTATIONS_API, gene)
     with log_time(operation=f"Annotation request for gene {gene}"):
-        async with aiohttp.ClientSession() as client:
-            async with client.get(ANNOTATIONS_API, params={'geneId': gene}) as response:
-                result = await response.json()
-                return result.get('response', {})
+        with API_REQUESTS.labels('model', ENVIRONMENT, 'gene-to-reactions', ANNOTATIONS_API).time():
+            async with aiohttp.ClientSession() as client:
+                async with client.get(ANNOTATIONS_API, params={'geneId': gene}) as response:
+                    result = await response.json()
+                    return result.get('response', {})
 
 
 async def apply_genotype_changes(model, genotype_changes):
