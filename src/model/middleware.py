@@ -14,17 +14,19 @@
 
 import logging
 
-from . import raven_client
+from . import raven_client, settings
+from .metrics import REQUEST_TIME
 
 
 logger = logging.getLogger(__name__)
 
 
-async def log_middleware(app, handler):
-    """Log all initiated requests"""
+async def metrics_middleware(app, handler):
+    """Log and time all initiated requests"""
     async def middleware_handler(request):
         logger.debug(f"Handling request: {request.url.relative()}")
-        return await handler(request)
+        with REQUEST_TIME.labels('model', settings.ENVIRONMENT, request.url.path).time():
+            return await handler(request)
     return middleware_handler
 
 

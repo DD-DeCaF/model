@@ -14,6 +14,17 @@
 
 import prometheus_client
 
+# REQUEST_TIME: Time spent waiting for outgoing API request to internal or external services
+# labels:
+#   service: The current service (always 'model')
+#   environment: The current runtime environment ('production' or 'staging')
+#   endpoint: The path to the requested endpoint without query parameters (e.g. '/models/iJO1366')
+REQUEST_TIME = prometheus_client.Histogram(
+    'decaf_request_handler_duration_seconds',
+    "Time spent in request",
+    ['service', 'environment', 'endpoint'])
+
+
 # API_REQUESTS: Time spent waiting for outgoing API request to internal or external services
 # labels:
 #   service: The current service (always 'model')
