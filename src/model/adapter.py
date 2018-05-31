@@ -23,6 +23,7 @@ from collections import defaultdict
 import gnomic
 import networkx as nx
 import numpy as np
+import requests
 import pandas as pd
 from cameo.data import metanetx
 from cobra import Metabolite, Reaction
@@ -64,10 +65,7 @@ async def query_identifiers(object_ids, db_from, db_to):
     logger.info('query id mapper at %s with %s', ID_MAPPER_API, str(query))
     with log_time(operation=f"ID map request for ids: {object_ids}"):
         with API_REQUESTS.labels('model', ENVIRONMENT, 'id-mapper', ID_MAPPER_API).time():
-            async with aiohttp.ClientSession() as session:
-                async with session.post(ID_MAPPER_API, data=query) as r:
-                    result = await r.json()
-                    return result['ids']
+            return requests.post(ID_MAPPER_API, data=query).json()['ids']
 
 
 def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):

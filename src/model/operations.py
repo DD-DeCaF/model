@@ -18,6 +18,7 @@ import os
 from collections import Counter
 
 import gnomic
+import requests
 from cameo import models, phenotypic_phase_plane
 from cobra.io import read_sbml_model
 from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict, reaction_from_dict, reaction_to_dict
