@@ -15,7 +15,6 @@ services:
     depends_on:
       - redis
     environment:
-      - PYTHONASYNCIODEBUG=1
       - ENVIRONMENT=development
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
