@@ -14,7 +14,7 @@
 
 import logging
 
-from . import raven_client, settings
+from . import settings
 from .metrics import REQUEST_TIME
 
 
@@ -27,15 +27,4 @@ async def metrics_middleware(app, handler):
         logger.debug(f"Handling request: {request.url.relative()}")
         with REQUEST_TIME.labels('model', settings.ENVIRONMENT, request.url.path).time():
             return await handler(request)
-    return middleware_handler
-
-
-async def raven_middleware(app, handler):
-    """aiohttp middleware captures any uncaught exceptions to Sentry before re-raising"""
-    async def middleware_handler(request):
-        try:
-            return await handler(request)
-        except Exception:
-            raven_client.captureException()
-            raise
     return middleware_handler
