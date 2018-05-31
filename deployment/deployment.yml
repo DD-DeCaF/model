@@ -88,7 +88,7 @@ spec:
         - containerPort: 8000
         env:
         - name: ENVIRONMENT
-          value: production
+          value: staging
         - name: REDIS_ADDR
           value: localhost
         - name: REDIS_PORT
