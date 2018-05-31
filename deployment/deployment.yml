@@ -51,7 +51,7 @@ spec:
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+        command: ["gunicorn", "-c", "gunicorn.py", "model.app:get_app()"]
         resources:
           requests:
             cpu: "750m"
@@ -127,7 +127,7 @@ spec:
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+        command: ["gunicorn", "-c", "gunicorn.py", "model.app:get_app()"]
         resources:
           requests:
             cpu: "100m"
