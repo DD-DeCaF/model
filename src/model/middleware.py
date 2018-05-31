@@ -13,6 +13,9 @@
 # limitations under the License.
 
 import logging
+import time
+
+from flask import g, request
 
 from . import settings
 from .metrics import REQUEST_TIME
@@ -21,10 +24,16 @@ from .metrics import REQUEST_TIME
 logger = logging.getLogger(__name__)
 
 
-async def metrics_middleware(app, handler):
-    """Log and time all initiated requests"""
-    async def middleware_handler(request):
-        logger.debug(f"Handling request: {request.url.relative()}")
-        with REQUEST_TIME.labels('model', settings.ENVIRONMENT, request.url.path).time():
-            return await handler(request)
-    return middleware_handler
+def init_app(app):
+    @app.before_request
+    def before_request():
+        logger.debug(f"Handling request: {request.path}")
+        g.request_start = time.time()
+
+    @app.after_request
+    def after_request(response):
+        request_duration = time.time() - g.request_start
+        REQUEST_TIME.labels('model',
+                            app.config['ENVIRONMENT'],
+                            request.path).observe(request_duration)
+        return response

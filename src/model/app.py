@@ -34,6 +34,10 @@ def init_app(application, interface):
     # Configure logging
     logging.config.dictConfig(application.config['LOGGING'])
 
+    # Configure middleware
+    from model import middleware
+    middleware.init_app(application)
+
     # Configure Sentry
     if application.config['SENTRY_DSN']:
         sentry = Sentry(dsn=application.config['SENTRY_DSN'], logging=True,
