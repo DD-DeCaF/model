@@ -12,58 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
+"""Expose the main Flask-RESTPlus application."""
+
 import logging
+import logging.config
+import os
 
-import aiohttp_cors
-import model.handlers as handlers
-from aiohttp import web
-
-from .middleware import metrics_middleware, raven_middleware
-
-
-logger = logging.getLogger(__name__)
+from flask import Flask
+from flask_cors import CORS
+from raven.contrib.flask import Sentry
 
 
-def get_app():
-    app = web.Application(middlewares=[metrics_middleware, raven_middleware])
-    app.router.add_route('GET', '/wsmodels/{model_id}', handlers.model_ws_full)
-    app.router.add_route('GET', '/v1/wsmodels/{model_id}', handlers.model_ws_json_diff)
-    app.router.add_route('GET', '/maps', handlers.maps)
-    app.router.add_route('GET', '/map', handlers.map)
-    app.router.add_route('GET', '/model-options/{species}', handlers.model_options)
-    app.router.add_route('POST', '/models/{model_id}', handlers.model)
-    app.router.add_route('GET', '/v1/models/{model_id}', handlers.model_get)
-    app.router.add_route('POST', '/v1/models/{model_id}', handlers.model_diff)
-    app.router.add_route('GET', '/v1/model-info/{model_id}', handlers.model_info)
-    app.router.add_route('GET', '/metrics', handlers.metrics)
-
-    # Configure default CORS settings.
-    cors = aiohttp_cors.setup(app, defaults={
-        "*": aiohttp_cors.ResourceOptions(
-            allow_credentials=True,
-            expose_headers="*",
-            allow_headers="*",
-        )
-    })
-
-    # Configure CORS on all routes.
-    for route in list(app.router.routes()):
-        cors.add(route)
-    return app
+app = Flask(__name__)
 
 
-async def start(loop):
-    app = get_app()
-    await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
-    logger.info('Web server is up')
-    return app
+def init_app(application, interface):
+    """Initialize the main app with config information and routes."""
+    from model.settings import Settings
+    application.config.from_object(Settings())
 
+    # Configure logging
+    logging.config.dictConfig(application.config['LOGGING'])
 
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start(loop))
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
+    # Configure Sentry
+    if application.config['SENTRY_DSN']:
+        sentry = Sentry(dsn=application.config['SENTRY_DSN'], logging=True,
+                        level=logging.WARNING)
+        sentry.init_app(application)
+
+    # Add routes and resources.
+    # TODO: use flask-restplus
+    from model import resources
+    app.add_url_rule('/wsmodels/<model_id>', resources.model_ws_full)
+    app.add_url_rule('/v1/wsmodels/<model_id>', resources.model_ws_json_diff)
+    app.add_url_rule('/maps', resources.maps)
+    app.add_url_rule('/map', resources.map)
+    app.add_url_rule('/model-options/<species>', resources.model_options)
+    app.add_url_rule('/models/<model_id>', resources.model, options={'methods': ['POST']})
+    app.add_url_rule('/v1/models/<model_id>')
+    app.add_url_rule('/v1/models/<model_id>', resources.model_diff, options={'methods': ['POST']})
+    app.add_url_rule('/v1/model-info/<model_id>', resources.model_info)
+    app.add_url_rule('/metrics', resources.metrics)
+
+    # Add CORS information for all resources.
+    CORS(application)

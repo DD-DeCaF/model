@@ -51,7 +51,7 @@ spec:
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-c", "gunicorn.py", "model.app:get_app()"]
+        command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
         resources:
           requests:
             cpu: "750m"
@@ -127,7 +127,7 @@ spec:
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-c", "gunicorn.py", "model.app:get_app()"]
+        command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
         resources:
           requests:
             cpu: "100m"

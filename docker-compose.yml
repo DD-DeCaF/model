@@ -27,7 +27,7 @@ services:
       - .:/app
       - type: tmpfs
         target: "/prometheus-client"
-    command: gunicorn -c gunicorn.py model.app:get_app()
+    command: gunicorn -c gunicorn.py model.wsgi:app
 
   redis:
     image: redis

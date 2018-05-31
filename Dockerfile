@@ -22,4 +22,4 @@ RUN sed -i "s/getLogger()/getLogger('cplex.problem')/" /usr/local/lib/python3.6/
 
 COPY . "${CWD}/"
 
-CMD ["gunicorn", "-c", "gunicorn.py", "model.app:get_app()""]
+CMD ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app""]
