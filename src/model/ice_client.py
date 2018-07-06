@@ -14,6 +14,7 @@
 
 import json
 import logging
+
 import requests
 
 from . import settings

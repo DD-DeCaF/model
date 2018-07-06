@@ -12,25 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 import math
 import os
 from collections import Counter
 
-import aiohttp
 import gnomic
 from cameo import models, phenotypic_phase_plane
 from cobra.io import read_sbml_model
 from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict, reaction_from_dict, reaction_to_dict
 
 import model.constants as constants
+from model import settings
 from model.adapter import (
     GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, NoIDMapping, feature_id, full_genotype,
     get_unique_metabolite)
 from model.ice_client import ice
 from model.metrics import API_REQUESTS
-from model.settings import ENVIRONMENT
 from model.utils import log_time
 
 
@@ -210,8 +208,12 @@ async def call_genes_to_reactions(genotype_features):
     :param genotype_features: generator of new genes ids
     :return:
     """
+    def get_reaction_equations(genotype):
+        with API_REQUESTS.labels('model', settings.ENVIRONMENT, 'ice', settings.ICE_API).time():
+            return ice.get_reaction_equations(genotype)
+
     identifiers = list(new_features_identifiers(genotype_features))
-    results = [ice.get_reaction_equations(genotype=identifier) for identifier in identifiers]
+    results = [get_reaction_equations(genotype=identifier) for identifier in identifiers]
     return {k: v for k, v in zip(identifiers, results)}
 
 
