@@ -148,19 +148,3 @@ RETURN_FUNCTIONS = {
     ADDED_REACTIONS: 'added_reactions',
     MISSING_MEASURED_REACTIONS: 'measured_missing_reactions',
 }
-
-
-def generate_map_dictionary():
-    """Generate model-maps lookup depending on the folder structure
-
-    :return: dict
-    """
-    result = {}
-    for path, _, files in os.walk(MAPS_DIR):
-        if files:
-            result[path.replace(MAPS_DIR + '/', '')] = \
-                sorted([re.match(r".*\.(.+)\..*", f).group(1) for f in files])
-    return result
-
-
-MAP_DICTIONARY = generate_map_dictionary()

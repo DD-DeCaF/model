@@ -135,28 +135,8 @@ async def model_info(request):
     return web.json_response({'medium': medium})
 
 
-async def maps(request):
-    return web.json_response(constants.MAP_DICTIONARY)
-
-
 async def model_options(request):
     return web.json_response(constants.SPECIES_TO_MODEL[request.match_info['species']])
-
-
-# TODO @matyasfodor This really shouldn't live here. This is basically a static file service
-async def map(request):
-    modelId = request.GET['model']
-    mapId = request.GET['map']
-    directory = os.path.realpath(constants.MAPS_DIR)
-    filepath = os.path.join(directory, modelId, '{}.{}.json'.format(modelId, mapId))
-    if os.path.commonprefix((os.path.realpath(filepath), directory)) != directory:
-        return web.HTTPBadRequest()
-    try:
-        with open(filepath) as f:
-            return web.json_response(json.load(f))
-    except FileNotFoundError:
-        logger.debug(f"Request for unknown map: {modelId} / {mapId}")
-        return web.HTTPNotFound()
 
 
 async def metrics(request):
