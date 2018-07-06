@@ -18,7 +18,9 @@ import os
 ENVIRONMENT = os.environ['ENVIRONMENT']
 assert ENVIRONMENT in ('production', 'staging', 'testing', 'development')
 
-ANNOTATIONS_API = os.environ['ANNOTATIONS_API']
+ICE_API = os.environ['ICE_API']
+ICE_USERNAME = os.environ['ICE_USERNAME']
+ICE_PASSWORD = os.environ['ICE_PASSWORD']
 ID_MAPPER_API = os.environ['ID_MAPPER_API']
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
 

@@ -28,8 +28,9 @@ import model.constants as constants
 from model.adapter import (
     GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, NoIDMapping, feature_id, full_genotype,
     get_unique_metabolite)
+from model.ice_client import ice
 from model.metrics import API_REQUESTS
-from model.settings import ANNOTATIONS_API, ENVIRONMENT
+from model.settings import ENVIRONMENT
 from model.utils import log_time
 
 
@@ -204,31 +205,14 @@ async def apply_reactions_knockouts(model, reactions_ids):
 
 
 async def call_genes_to_reactions(genotype_features):
-    """Make series of asynchronous calls for getting information about which reactions were added with new genes
+    """Make series of calls for getting information about which reactions were added with new genes
 
     :param genotype_features: generator of new genes ids
     :return:
     """
     identifiers = list(new_features_identifiers(genotype_features))
-    results = await asyncio.gather(*[
-        query_genes_to_reaction(gene=identifier) for identifier in identifiers
-    ])
+    results = [ice.get_reaction_equations(genotype=identifier) for identifier in identifiers]
     return {k: v for k, v in zip(identifiers, results)}
-
-
-async def query_genes_to_reaction(gene):
-    """Make asynchronous call for getting information about which reactions were added with the gene
-
-    :param gene: gene identifier
-    :return: reactions mapping {<rn ID>: <reaction string>}
-    """
-    logger.info('Annotated gene at %s: %s', ANNOTATIONS_API, gene)
-    with log_time(operation=f"Annotation request for gene {gene}"):
-        with API_REQUESTS.labels('model', ENVIRONMENT, 'gene-to-reactions', ANNOTATIONS_API).time():
-            async with aiohttp.ClientSession() as client:
-                async with client.get(ANNOTATIONS_API, params={'geneId': gene}) as response:
-                    result = await response.json()
-                    return result.get('response', {})
 
 
 async def apply_genotype_changes(model, genotype_changes):

@@ -32,5 +32,7 @@ Specify environment variables in a `.env` file. See `docker-compose.yml` for the
 * `SENTRY_DSN` DSN for reporting exceptions to [Sentry](https://docs.sentry.io/clients/python/integrations/flask/).
 * `REDIS_ADDR` Local Redis service hostname
 * `REDIS_PORT` Local Redis service port
-* `ANNOTATIONS_API` URL to the annotations service
+* `ICE_API` ICE API endpoint
+* `ICE_USERNAME` ICE username
+* `ICE_PASSWORD` ICE password
 * `ID_MAPPER_API` URL to the ID mapper service

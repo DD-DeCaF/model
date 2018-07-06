@@ -19,7 +19,9 @@ services:
       - ENVIRONMENT=development
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
-      - ANNOTATIONS_API=${ANNOTATIONS_API:-https://api-staging.dd-decaf.eu/gene-to-reactions/annotation/genes}
+      - ICE_API=${ICE_API:-https://ice.dd-decaf.eu}
+      - ICE_USERNAME=${ICE_USERNAME}
+      - ICE_PASSWORD=${ICE_PASSWORD}
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
       - prometheus_multiproc_dir=/prometheus-client
     volumes:
