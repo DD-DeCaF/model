@@ -29,7 +29,6 @@ from model.adapter import (
     get_unique_metabolite)
 from model.ice_client import ice
 from model.metrics import API_REQUESTS
-from model.utils import log_time
 
 
 logger = logging.getLogger(__name__)
