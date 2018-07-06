@@ -108,12 +108,12 @@ spec:
         - name: ICE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: model-production
+              name: model-staging
               key: ICE_USERNAME
         - name: ICE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: model-production
+              name: model-staging
               key: ICE_PASSWORD
         - name: ID_MAPPER_API
           value: http://id-mapper-production/idmapping/query
