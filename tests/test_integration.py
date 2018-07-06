@@ -17,15 +17,15 @@ from deepdiff import DeepDiff
 
 from model.adapter import full_genotype
 from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
-from model.operations import apply_reactions_add, call_genes_to_reactions, modify_model
+from model.operations import apply_reactions_add, get_genotype_reactions, modify_model
 from model.response import Response
 from model.storage import Models, restore_from_db, restore_model, save_changes_to_db
 
 
 @pytest.mark.asyncio
-async def test_call_genes_to_reactions():
+async def test_get_genotype_reactions():
     changes = full_genotype(['-aceA -sucCD +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'])
-    result = await call_genes_to_reactions(changes)
+    result = await get_genotype_reactions(changes)
     assert set(result.keys()) == {'BBa_J23100', 'AB326105', 'NP_600058', 'BBa_0010'}
 
 

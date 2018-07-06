@@ -202,7 +202,7 @@ async def apply_reactions_knockouts(model, reactions_ids):
     return await operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, restore_bounds)
 
 
-async def call_genes_to_reactions(genotype_features):
+async def get_genotype_reactions(genotype_features):
     """Make series of calls for getting information about which reactions were added with new genes
 
     :param genotype_features: generator of new genes ids
@@ -226,7 +226,7 @@ async def apply_genotype_changes(model, genotype_changes):
     """
     logger.info('Genotype changes %s', genotype_changes)
     genotype_features = full_genotype(genotype_changes)
-    genes_to_reactions = await call_genes_to_reactions(genotype_features)
+    genes_to_reactions = await get_genotype_reactions(genotype_features)
     logger.info('Genes to reaction: %s', genes_to_reactions)
     change_model = GenotypeChangeModel(model, genotype_features, genes_to_reactions, model.notes['namespace'])
     await change_model.map_metabolites()
