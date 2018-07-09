@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 ice = ICE()
 
 
-async def operate_on_reactions(model, reactions, key, apply_function, undo_function):
+def operate_on_reactions(model, reactions, key, apply_function, undo_function):
     if 'changes' not in model.notes:
         model.notes['changes'] = constants.get_empty_changes()
     current = model.notes['changes'][key]['reactions']
@@ -53,14 +53,14 @@ async def operate_on_reactions(model, reactions, key, apply_function, undo_funct
         to_apply = [r for r in reactions if r['id'] not in applied]
         to_undo = [r for r in current if r['id'] in applied - set([i['id'] for i in reactions])]
 
-    new_reactions = await apply_function(model, to_apply)
+    new_reactions = apply_function(model, to_apply)
     removed = undo_function(model, to_undo)
     model.notes['changes'][key]['reactions'] = [r for r in current if r['id'] in applied - removed]
     model.notes['changes'][key]['reactions'].extend(new_reactions)
     return model
 
 
-async def add_reaction_from_universal(model, reaction_id):
+def add_reaction_from_universal(model, reaction_id):
     reaction = models.metanetx_universal_model_bigg.reactions.get_by_id(reaction_id)
     reaction_string = reaction.build_reaction_string()
     adapter = GenotypeChangeModel(
@@ -69,7 +69,7 @@ async def add_reaction_from_universal(model, reaction_id):
         {None: {reaction_id: reaction_string}},
         model.notes['namespace'],
     )
-    await adapter.map_metabolites()
+    adapter.map_metabolites()
     adapter.add_reaction(reaction_id, reaction_string, None)
     return collect_changes(adapter)
 
@@ -110,18 +110,18 @@ def build_string_from_metabolites(metabolites):
     return '{} <=> {}'.format(' + '.join(reactant_bits), ' + '.join(product_bits))
 
 
-async def add_apply(model, to_apply):
+def add_apply(model, to_apply):
     added = []
     before = {r['id'] for r in model.notes['changes']['added']['reactions']}
     for rn in to_apply:
         if rn['metabolites']:
-            model = await add_reaction_from_string(
+            model = add_reaction_from_string(
                 model,
                 rn['id'],
                 build_string_from_metabolites(rn['metabolites'])
             )
         else:
-            model = await add_reaction_from_universal(model, rn['id'])
+            model = add_reaction_from_universal(model, rn['id'])
     for reaction in model.notes['changes']['added']['reactions']:
         if reaction['id'] not in before:
             added.append(reaction_to_dict(model.reactions.get_by_id(reaction['id'])))
@@ -151,7 +151,7 @@ def add_undo(model, to_undo):
     return final_undo
 
 
-async def add_reaction_from_string(model, reaction_id, reaction_string):
+def add_reaction_from_string(model, reaction_id, reaction_string):
     reaction_string = reaction_string.strip()
     adapter = GenotypeChangeModel(
         model,
@@ -159,13 +159,13 @@ async def add_reaction_from_string(model, reaction_id, reaction_string):
         {None: {reaction_id: reaction_string}},
         model.notes['namespace']
     )
-    await adapter.map_metabolites()
+    adapter.map_metabolites()
     adapter.add_reaction(reaction_id, reaction_string, None, '')
     return collect_changes(adapter)
 
 
-async def apply_reactions_add(model, reactions_ids):
-    return await operate_on_reactions(model, reactions_ids, 'added', add_apply, add_undo)
+def apply_reactions_add(model, reactions_ids):
+    return operate_on_reactions(model, reactions_ids, 'added', add_apply, add_undo)
 
 
 def restore_bounds(model, to_undo):
@@ -177,7 +177,7 @@ def restore_bounds(model, to_undo):
     return {reaction['id'] for reaction in to_undo}
 
 
-async def knockout_apply(model, to_apply):
+def knockout_apply(model, to_apply):
     removed = []
     for r_id in to_apply:
         if model.reactions.has_id(r_id):
@@ -186,7 +186,7 @@ async def knockout_apply(model, to_apply):
     return removed
 
 
-async def changebounds_apply(model, to_apply):
+def changebounds_apply(model, to_apply):
     changed = []
     before = {r['id'] for r in model.notes['changes']['measured']['reactions']}
     for rn in to_apply:
@@ -199,11 +199,11 @@ async def changebounds_apply(model, to_apply):
     return changed
 
 
-async def apply_reactions_knockouts(model, reactions_ids):
-    return await operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, restore_bounds)
+def apply_reactions_knockouts(model, reactions_ids):
+    return operate_on_reactions(model, reactions_ids, 'removed', knockout_apply, restore_bounds)
 
 
-async def get_genotype_reactions(genotype_features):
+def get_genotype_reactions(genotype_features):
     """Make series of calls for getting information about which reactions were added with new genes
 
     :param genotype_features: generator of new genes ids
@@ -218,7 +218,7 @@ async def get_genotype_reactions(genotype_features):
     return {k: v for k, v in zip(identifiers, results)}
 
 
-async def apply_genotype_changes(model, genotype_changes):
+def apply_genotype_changes(model, genotype_changes):
     """Apply genotype changes to cameo model.
 
     :param model: cameo model
@@ -227,15 +227,15 @@ async def apply_genotype_changes(model, genotype_changes):
     """
     logger.info('Genotype changes %s', genotype_changes)
     genotype_features = full_genotype(genotype_changes)
-    genes_to_reactions = await get_genotype_reactions(genotype_features)
+    genes_to_reactions = get_genotype_reactions(genotype_features)
     logger.info('Genes to reaction: %s', genes_to_reactions)
     change_model = GenotypeChangeModel(model, genotype_features, genes_to_reactions, model.notes['namespace'])
-    await change_model.map_metabolites()
+    change_model.map_metabolites()
     change_model.apply_changes()
     return change_model
 
 
-async def apply_medium_changes(model, medium):
+def apply_medium_changes(model, medium):
     change_model = MediumChangeModel(model, medium)
     change_model.apply_medium()
     return change_model
@@ -275,7 +275,7 @@ def fix_measurements_ids(measurements):
     return measurements
 
 
-async def apply_measurement_changes(model, measurements):
+def apply_measurement_changes(model, measurements):
     measurement = convert_measurements_to_mmol(measurements, model)
     measurements = fix_measurements_ids(measurement)
     if 'changes' not in model.notes:
@@ -286,7 +286,7 @@ async def apply_measurement_changes(model, measurements):
     return change_model
 
 
-async def modify_model(message, model):
+def modify_model(message, model):
     apply_functions = {
         constants.GENOTYPE_CHANGES: apply_genotype_changes,
         constants.MEDIUM: apply_medium_changes,
@@ -296,15 +296,15 @@ async def modify_model(message, model):
     for key in constants.REQUEST_KEYS:
         data = message.get(key, [])
         if data:
-            modifications = await apply_functions[key](model, data)
+            modifications = apply_functions[key](model, data)
             model = collect_changes(modifications)
 
     if constants.REACTIONS_ADD in message:
-        model = await apply_reactions_add(model, message[constants.REACTIONS_ADD])
+        model = apply_reactions_add(model, message[constants.REACTIONS_ADD])
     if constants.REACTIONS_KNOCKOUT in message:
-        model = await apply_reactions_knockouts(model, message[constants.REACTIONS_KNOCKOUT])
+        model = apply_reactions_knockouts(model, message[constants.REACTIONS_KNOCKOUT])
     if constants.MEASURED_REACTIONS in message:
-        model = await change_bounds(model,  message[constants.MEASURED_REACTIONS])
+        model = change_bounds(model,  message[constants.MEASURED_REACTIONS])
     return model
 
 
@@ -428,7 +428,7 @@ def new_features_identifiers(genotype_changes: gnomic.Genotype):
                 yield feature_id(feature)
 
 
-async def change_bounds(model, reaction_ids):
-    return await operate_on_reactions(model, reaction_ids, 'measured', changebounds_apply, restore_bounds)
+def change_bounds(model, reaction_ids):
+    return operate_on_reactions(model, reaction_ids, 'measured', changebounds_apply, restore_bounds)
     # model.reactions.get_by_id(reaction_id).bounds = bounds[0], bounds[1]
     # return model
