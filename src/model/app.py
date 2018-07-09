@@ -22,15 +22,15 @@ from flask import Flask
 from flask_cors import CORS
 from raven.contrib.flask import Sentry
 
+from model.settings import Settings
+
 
 app = Flask(__name__)
+app.config.from_object(Settings())
 
 
 def init_app(application, interface):
     """Initialize the main app with config information and routes."""
-    from model.settings import Settings
-    application.config.from_object(Settings())
-
     # Configure logging
     logging.config.dictConfig(application.config['LOGGING'])
 
