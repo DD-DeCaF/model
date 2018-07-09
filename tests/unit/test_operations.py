@@ -34,13 +34,12 @@ def test_mg_to_mmol():
     assert is_close(convert_mg_to_mmol(18, 18), 1.0)
 
 
-@pytest.mark.asyncio
-async def test_b_number():
+def test_b_number():
     model_id = 'iJO1366'
     message = {
         GENOTYPE_CHANGES: ['-b3067,-b3172,-b1084'],
     }
-    model = await modify_model(message, (await restore_model(model_id)).copy())
+    model = modify_model(message, (restore_model(model_id)).copy())
     assert not model.genes.b3172.functional
 
 
@@ -64,29 +63,27 @@ def test_new_features_identifiers():
     assert set(result) == {'C', 'D', 'E', 'F', 'G', 'Y'}
 
 
-@pytest.mark.asyncio
-async def test_reactions_knockouts():
+def test_reactions_knockouts():
     ecoli_original = Models.get('iJO1366').copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
     GLUDy_upper_bound = ecoli.reactions.get_by_id('GLUDy').upper_bound
     assert GLUDy_upper_bound != 0
-    ecoli = await apply_reactions_knockouts(ecoli, list(reaction_ids))
+    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == reaction_ids
     assert ecoli.reactions.get_by_id('GLUDy').upper_bound == 0
     reaction_ids = reaction_ids - {'GLUDy'}
-    ecoli = await apply_reactions_knockouts(ecoli, list(reaction_ids))
+    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == {'3HAD160'}
     assert GLUDy_upper_bound == ecoli.reactions.get_by_id('GLUDy').upper_bound
     reaction_ids = reaction_ids - {'3HAD160'}
-    ecoli = await apply_reactions_knockouts(ecoli, list(reaction_ids))
+    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
     assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == set()
     assert is_close(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
 
 
-@pytest.mark.asyncio
-async def test_reactions_change_bounds():
+def test_reactions_change_bounds():
     ecoli_original = Models.get('iJO1366').copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
@@ -94,14 +91,13 @@ async def test_reactions_change_bounds():
                     {'id': "FBA3", 'lower_bound': -996, 'upper_bound': 1000}]
     FBA3_upper_bound = ecoli.reactions.get_by_id('FBA3').upper_bound
     assert FBA3_upper_bound != 0
-    ecoli = await change_bounds(ecoli, list(reaction_ids))
+    ecoli = change_bounds(ecoli, list(reaction_ids))
     reaction_ids = [{'id': "FBA3", 'lower_bound': -996, 'upper_bound': 1000}]
-    ecoli = await change_bounds(ecoli, list(reaction_ids))
+    ecoli = change_bounds(ecoli, list(reaction_ids))
     assert is_close(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
 
 
-@pytest.mark.asyncio
-async def test_convert_measurements_to_mmol():
+def test_convert_measurements_to_mmol():
     ecoli = Models.get('iJO1366').copy()
     measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg', 'type': 'compound'}]
     assert convert_measurements_to_mmol(measurements, ecoli) == [
