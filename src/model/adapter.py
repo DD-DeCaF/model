@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import itertools
 import json
 import logging
@@ -52,7 +51,7 @@ def add_prefix(x, prefix):
     return [f'{prefix}:{i}' if not re.match(f'^{prefix}:', i) else i for i in x]
 
 
-async def query_identifiers(object_ids, db_from, db_to):
+def query_identifiers(object_ids, db_from, db_to):
     """Call the id mapper service.
 
     :param object_ids: list of identifiers to query
@@ -371,13 +370,13 @@ class GenotypeChangeModel(ModelModificationMixin):
             'removed': {'genes': set(), 'reactions': set()},
         }
 
-    async def map_metabolites(self):
+    def map_metabolites(self):
         logger.info("Metabolites to map: %s", self.metabolite_identifiers)
         from_db_key = list(self.metabolite_identifiers.keys())
         to_db_key = list({self.namespace, 'mnx', 'chebi'})
         queries = [(db_from, db_to) for db_from, db_to in itertools.product(from_db_key, to_db_key) if db_from != db_to]
-        mappings = await asyncio.gather(*[query_identifiers(self.metabolite_identifiers[db_from], db_from, db_to)
-                                          for db_from, db_to in queries])
+        mappings = [query_identifiers(self.metabolite_identifiers[db_from], db_from, db_to)
+                    for db_from, db_to in queries]
         for query, mapping in zip(queries, mappings):
             db_from, db_to = query
             for met_id in self.metabolite_identifiers[db_from]:
