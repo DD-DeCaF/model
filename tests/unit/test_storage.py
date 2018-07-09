@@ -22,7 +22,7 @@ from model.operations import modify_model
 from model.storage import Models, key_from_model_info, restore_from_db, restore_model, save_changes_to_db
 
 
-def test_key_from_model_info():
+def test_key_from_model_info(app):
     model_id = 'model_id'
     for _ in range(50):
         values1 = random.sample(range(20), 10)
@@ -37,10 +37,9 @@ def test_key_from_model_info():
         assert key_from_model_info(model_id, message1) == key_from_model_info(model_id, message4)
 
 
-@pytest.mark.asyncio
-async def test_save_and_restore():
+def test_save_and_restore(app):
     model_id = 'e_coli_core'
-    await save_changes_to_db(Models.get(model_id), model_id, {})
+    save_changes_to_db(Models.get(model_id), model_id, {})
     message = {
         GENOTYPE_CHANGES: [
             '-aceA -sucCD -pykA -pykF -pta +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'],
@@ -55,20 +54,19 @@ async def test_save_and_restore():
                  {'concentration': 0.005, 'id': 'chebi:49105'}, {'concentration': 300.0, 'id': 'chebi:42758'},
                  {'concentration': 9.0, 'id': 'chebi:16015'}, {'concentration': 52.5, 'id': 'chebi:62946'}],
     }
-    model = await modify_model(message, (await restore_model(model_id)).copy())
-    db_key = await save_changes_to_db(model, model_id, message)
-    restored = model_to_dict(await restore_from_db(db_key))
+    model = modify_model(message, (restore_model(model_id)).copy())
+    db_key = save_changes_to_db(model, model_id, message)
+    restored = model_to_dict(restore_from_db(db_key))
     original = model_to_dict(model)
     assert set([i['id'] for i in restored['reactions']]) == set([i['id'] for i in original['reactions']])
     assert set([i['id'] for i in restored['genes']]) == set([i['id'] for i in original['genes']])
     assert set([i['id'] for i in restored['metabolites']]) == set([i['id'] for i in original['metabolites']])
 
 
-@pytest.mark.asyncio
-async def test_model_immutability():
+def test_model_immutability(app):
     """Changes on restored models must not affect cache"""
-    model = (await restore_model('e_coli_core')).copy()
+    model = (restore_model('e_coli_core')).copy()
     model.notes['test'] = 'test'
-    restored_model = (await restore_model('e_coli_core')).copy()
+    restored_model = (restore_model('e_coli_core')).copy()
     restored_model.notes['test'] = 'different'
     assert model.notes['test'] == 'test'
