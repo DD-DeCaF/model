@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import json
 import logging
 import os
 
 from cobra.io.dict import model_to_dict
+from flask import Response, abort, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
@@ -67,48 +67,49 @@ logger = logging.getLogger(__name__)
 #     return ws
 
 
-async def model(request):
-    wild_type_id = request.match_info['model_id']
-    data = await request.json()
+def model(model_id):
+    if not request.is_json:
+        return "Non-JSON request content is not supported", 415
 
-    try:
-        message = data['message']
-    except KeyError:
-        return web.HTTPBadRequest()
+    wild_type_id = model_id
+    if 'message' not in request.json:
+        return "Missing field 'message'", 400
+    message = request.json['message']
 
     mutated_model_id = key_from_model_info(wild_type_id, message)
-    model = await restore_from_db(mutated_model_id)
+    model = restore_from_db(mutated_model_id)
     logger.info(model_from_changes.cache_info())
     if not model:
         model = Models.get(wild_type_id)
         if not model:
-            return web.HTTPNotFound()
+            return f"Model '{wild_type_id}' not found", 404
         model = model.copy()
-        model = await modify_model(message, model)
-        mutated_model_id = await save_changes_to_db(model, wild_type_id, message)
-    return web.json_response(await respond(model, message, mutated_model_id=mutated_model_id))
+        model = modify_model(message, model)
+        mutated_model_id = save_changes_to_db(model, wild_type_id, message)
+    return jsonify(respond(model, message, mutated_model_id=mutated_model_id))
 
 
-async def model_get(request):
-    wild_type_id = request.match_info['model_id']
+def model_get(model_id):
+    wild_type_id = model_id
     wild_type_model = Models.get(wild_type_id)
-    return web.json_response(model_to_dict(wild_type_model))
+    return jsonify(model_to_dict(wild_type_model))
 
 
-async def model_diff(request):
-    wild_type_id = request.match_info['model_id']
-    data = await request.json()
+def model_diff(model_id):
+    if not request.is_json:
+        return "Non-JSON request content is not supported", 415
 
-    try:
-        message = data['message']
-    except KeyError:
-        return web.HTTPBadRequest()
+    wild_type_id = model_id
+    if 'message' not in request.json:
+        return "Missing field 'message'", 400
+    message = request.json['message']
 
     wild_type_model = Models.get(wild_type_id)
     if not wild_type_model:
-        return web.HTTPNotFound()
+        return f"Model '{wild_type_id}' not found", 404
+
     mutated_model_id = key_from_model_info(wild_type_id, message, version=1)
-    mutated_model = await restore_from_db(mutated_model_id)
+    mutated_model = restore_from_db(mutated_model_id)
     logger.info(model_from_changes.cache_info())
 
     if not mutated_model:
@@ -118,28 +119,31 @@ async def model_diff(request):
         # than once. One idea is to delete the retrieved obejct (only use it once).
         # It is possible with https://pypi.python.org/pypi/pylru
         mutated_model = wild_type_model.copy()
-        mutated_model = await modify_model(message, mutated_model)
-        mutated_model_id = await save_changes_to_db(mutated_model, wild_type_id, message, version=1)
+        mutated_model = modify_model(message, mutated_model)
+        mutated_model_id = save_changes_to_db(mutated_model, wild_type_id, message, version=1)
 
-    diff = await respond(mutated_model, message, mutated_model_id, wild_type_model_id=wild_type_id)
-    return web.json_response(diff)
-
-
-async def model_info(request):
-    wild_type_id = request.match_info['model_id']
-    wild_type_model = Models.get(wild_type_id)
-    medium = [{
-        'id': reaction_id,
-        'name': wild_type_model.reactions.get_by_id(reaction_id).name.replace('exchange', '').strip()
-    } for reaction_id in wild_type_model.medium]
-    return web.json_response({'medium': medium})
+    diff = respond(mutated_model, message, mutated_model_id, wild_type_model_id=wild_type_id)
+    return jsonify(diff)
 
 
-async def model_options(request):
-    return web.json_response(constants.SPECIES_TO_MODEL[request.match_info['species']])
+def model_info(model_id):
+    try:
+        wild_type_model = Models.get(model_id)
+        medium = [{
+            'id': reaction_id,
+            'name': wild_type_model.reactions.get_by_id(reaction_id).name.replace('exchange', '').strip()
+        } for reaction_id in wild_type_model.medium]
+        return jsonify({'medium': medium})
+    except KeyError:
+        return f"Unknown model {model_id}", 400
 
 
-async def metrics(request):
-    resp = web.Response(body=generate_latest(MultiProcessCollector(CollectorRegistry())))
-    resp.content_type = CONTENT_TYPE_LATEST
-    return resp
+def model_options(species):
+    try:
+        return jsonify(constants.SPECIES_TO_MODEL[species])
+    except KeyError:
+        return f"Unknown species {species}", 400
+
+
+def metrics():
+    return Response(generate_latest(MultiProcessCollector(CollectorRegistry())), mimetype=CONTENT_TYPE_LATEST)
