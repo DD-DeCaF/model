@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -20,7 +19,7 @@ import os
 from functools import lru_cache
 
 from cobra.io import model_to_dict, read_sbml_model
-import aioredis
+from redis import Redis
 
 from model import constants
 from model.app import app
@@ -29,6 +28,7 @@ from model.utils import log_time
 
 
 logger = logging.getLogger(__name__)
+redis = Redis(app.config['REDIS_ADDR'], app.config['REDIS_PORT'])
 
 
 def key_from_model_info(wild_type_id, message, version=None):
@@ -47,12 +47,7 @@ def key_from_model_info(wild_type_id, message, version=None):
     return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
 
 
-async def redis_client():
-    return await aioredis.create_redis((os.environ['REDIS_ADDR'], os.environ['REDIS_PORT']),
-                                       loop=asyncio.get_event_loop())
-
-
-async def save_changes_to_db(model, wild_type_id, message, version=None):
+def save_changes_to_db(model, wild_type_id, message, version=None):
     """Store model in cache database
 
     :param model: Cameo model
@@ -63,9 +58,7 @@ async def save_changes_to_db(model, wild_type_id, message, version=None):
     mutated_model_id = key_from_model_info(wild_type_id, message, version)
 
     value = json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())})
-    redis = await redis_client()
-    with (await redis) as connection:
-        await connection.set(mutated_model_id, value)
+    redis.set(mutated_model_id, value)
     logger.info(f"Model created on the base of {wild_type_id} with message {message} saved as {mutated_model_id}")
     return mutated_model_id
 
@@ -107,20 +100,16 @@ if app.config['ENVIRONMENT'] in ['production', 'staging']:
     preload_cache()
 
 
-async def find_changes_in_db(model_id):
-    dumped_changes = None
-    redis = await redis_client()
-    with (await redis) as connection:
-        dumped_changes = await connection.get(model_id)
-
+def find_changes_in_db(model_id):
+    dumped_changes = redis.get(model_id)
     if dumped_changes is not None:
         return dumped_changes.decode('utf-8')
     return None
 
 
-async def restore_from_db(model_id):
+def restore_from_db(model_id):
     with log_time(operation=f"Restored model {model_id} from db"):
-        changes = await find_changes_in_db(model_id)
+        changes = find_changes_in_db(model_id)
         if not changes:
             return None
         return model_from_changes(changes)
@@ -135,7 +124,7 @@ def model_from_changes(changes):
     return model
 
 
-async def restore_model(model_id):
+def restore_model(model_id):
     """Try to restore model by model id.
     NOTE: if model is found in memory, the original model is returned - to modify, make a copy
 
@@ -146,7 +135,7 @@ async def restore_model(model_id):
     if model:
         logger.info('Wild type model with id %s is found', model_id)
         return model
-    model = await restore_from_db(model_id)
+    model = restore_from_db(model_id)
     if model:
         logger.info('Model with id %s found in database', model_id)
         return model
