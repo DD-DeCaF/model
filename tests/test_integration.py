@@ -22,15 +22,13 @@ from model.response import Response
 from model.storage import Models, restore_from_db, restore_model, save_changes_to_db
 
 
-@pytest.mark.asyncio
-async def test_get_genotype_reactions():
+def test_get_genotype_reactions():
     changes = full_genotype(['-aceA -sucCD +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'])
-    result = await get_genotype_reactions(changes)
+    result = get_genotype_reactions(changes)
     assert set(result.keys()) == {'BBa_J23100', 'AB326105', 'NP_600058', 'BBa_0010'}
 
 
-@pytest.mark.asyncio
-async def test_reactions_additions():
+def test_reactions_additions():
     ecoli_original = Models.get('iJO1366').copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
@@ -44,7 +42,7 @@ async def test_reactions_additions():
                        'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
                        'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e',
                        'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
-    ecoli = await apply_reactions_add(ecoli, reactions)
+    ecoli = apply_reactions_add(ecoli, reactions)
     added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
     assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
     assert added_reactions_unique_ids - reaction_ids == added_reactions
@@ -55,7 +53,7 @@ async def test_reactions_additions():
         {'id': 'MNXR81835', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
-    ecoli = await apply_reactions_add(ecoli, reactions)
+    ecoli = apply_reactions_add(ecoli, reactions)
     added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
     assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
     assert added_reactions_unique_ids - reaction_ids == {
@@ -75,22 +73,21 @@ async def test_reactions_additions():
         {'id': 'MNXR83321', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
-    ecoli = await apply_reactions_add(ecoli, reactions)
+    ecoli = apply_reactions_add(ecoli, reactions)
     added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
     assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
     assert added_reactions_unique_ids - reaction_ids == added_reactions
     reaction_ids = {}
-    ecoli = await apply_reactions_add(ecoli, list(reaction_ids))
+    ecoli = apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
-    ecoli = await apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None},
+    ecoli = apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None},
                                               {'id': 'SUCR', 'metabolites': {'h2o_c': -1,
                                                                              'sucr_c': -1,
                                                                              'fru_c': 1,
                                                                              'glc__D_c': 1}}])
 
 
-@pytest.mark.asyncio
-async def test_modify_model():
+def test_modify_model():
     message = {
         'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
         'theoretical-objectives': ['chebi:17790'],
@@ -129,11 +126,11 @@ async def test_modify_model():
                          {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
-    wildtype = await restore_model('iJO1366')
-    modified = await modify_model(message, wildtype.copy())
+    wildtype = restore_model('iJO1366')
+    modified = modify_model(message, wildtype.copy())
     assert 'EX_meoh_e' in modified.medium
-    db_key = await save_changes_to_db(modified, 'iJO1366', message)
-    restored_model = (await restore_from_db(db_key)).copy()
+    db_key = save_changes_to_db(modified, 'iJO1366', message)
+    restored_model = restore_from_db(db_key).copy()
     assert restored_model.medium == modified.medium
 
 
@@ -145,19 +142,17 @@ FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', '
                     'ACACT8r', 'HACD4', 'HACD6', 'ACOAD5f', 'ACOAD6f', 'FACOAL120t2pp']
 
 
-@pytest.mark.asyncio
-async def test_simulation_methods():
+def test_simulation_methods():
     for method in METHODS:
         message = {SIMULATION_METHOD: method}
-        model = (await restore_model('iJO1366')).copy()
+        model = restore_model('iJO1366').copy()
         response = Response(model, message)
         if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in model.reactions]
             assert set(response.fluxes().keys()) == set(reactions_ids)
 
 
-@pytest.mark.asyncio
-async def test_restore_from_cache():
+def test_restore_from_cache():
     wild_type_id = 'iMM904'
     message = {
         'to-return': ['model', 'fluxes'],
@@ -171,9 +166,9 @@ async def test_restore_from_cache():
                           'name': 'beta-carotene', 'type': 'compound'},
                          {'id': 'PFK', 'measurements': [5], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
     }
-    model = await modify_model(message, (await restore_model(wild_type_id)).copy())
-    db_key = await save_changes_to_db(model, wild_type_id, message)
-    restored_model = (await restore_from_db(db_key)).copy()
+    model = modify_model(message, restore_model(wild_type_id).copy())
+    db_key = save_changes_to_db(model, wild_type_id, message)
+    restored_model = restore_from_db(db_key).copy()
     reactions = {
         r.id: dict(lower_bound=r.lower_bound, upper_bound=r.upper_bound)
         for r in model.reactions
