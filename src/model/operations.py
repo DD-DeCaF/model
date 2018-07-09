@@ -24,10 +24,10 @@ from cobra.io import read_sbml_model
 from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict, reaction_from_dict, reaction_to_dict
 
 import model.constants as constants
-from model import settings
 from model.adapter import (
     GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, NoIDMapping, feature_id, full_genotype,
     get_unique_metabolite)
+from model.app import app
 from model.ice_client import ICE
 from model.metrics import API_REQUESTS
 
@@ -210,7 +210,7 @@ async def get_genotype_reactions(genotype_features):
     :return:
     """
     def get_reaction_equations(genotype):
-        with API_REQUESTS.labels('model', settings.ENVIRONMENT, 'ice', settings.ICE_API).time():
+        with API_REQUESTS.labels('model', app.config['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
             return ice.get_reaction_equations(genotype)
 
     identifiers = list(new_features_identifiers(genotype_features))

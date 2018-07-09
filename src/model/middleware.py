@@ -17,7 +17,6 @@ import time
 
 from flask import g, request
 
-from . import settings
 from .metrics import REQUEST_TIME
 
 

@@ -22,8 +22,8 @@ from cobra.io import read_sbml_model, write_sbml_model
 from tqdm import tqdm
 
 from model.adapter import add_prefix
+from model.app import app
 from model.constants import MODEL_NAMESPACE, MODELS
-from model.settings import ID_MAPPER_API
 
 
 LOCAL_MODELS = ['ecYeast7', 'ecYeast7_proteomics']
@@ -46,7 +46,7 @@ GLUCOSE = {'s_0563', 's_0565', 'glc__D', 's_0563', 's_0565', 's_0566', 's_0567',
 
 def sync_query_identifiers(object_ids, db_from, db_to):
     query = json.dumps({'ids': object_ids, 'dbFrom': db_from.lower(), 'dbTo': db_to.lower(), 'type': 'Metabolite'})
-    r = requests.post(ID_MAPPER_API, data=query)
+    r = requests.post(app.config['ID_MAPPER_API'], data=query)
     return r.json()['ids']
 
 

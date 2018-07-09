@@ -20,9 +20,10 @@ import os
 from functools import lru_cache
 
 from cobra.io import model_to_dict, read_sbml_model
-
 import aioredis
-from model import constants, settings
+
+from model import constants
+from model.app import app
 from model.operations import restore_changes
 from model.utils import log_time
 
@@ -102,7 +103,7 @@ def preload_cache():
             Models.get_dict(model_id)
 
 
-if settings.ENVIRONMENT in ['production', 'staging']:
+if app.config['ENVIRONMENT'] in ['production', 'staging']:
     preload_cache()
 
 
