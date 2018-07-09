@@ -157,7 +157,7 @@ class Response(object):
         return ret
 
 
-async def respond(model, message=None, mutated_model_id=None, wild_type_model_id=None):
+def respond(model, message=None, mutated_model_id=None, wild_type_model_id=None):
     message = message if message is not None else {}
     t = time.time()
     response = Response(model, message, wild_type_model_id)
