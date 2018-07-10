@@ -44,13 +44,9 @@ MESSAGE_MODIFY = {
 
 MESSAGE_DIFFERENT_OBJECTIVE = {'to-return': ['fluxes'], 'objective': 'EX_etoh_e'}
 
-MODELS_URL = '/models/{}'
-V1_MODELS_URL = '/v1/models/{}'
-MODEL_OPTIONS_URL = '/model-options/{}'
-
 
 def test_model_info(client):
-    response = client.get('/v1/model-info/{}'.format('e_coli_core'))
+    response = client.get('/models/{}/medium'.format('e_coli_core'))
     assert response.json['medium'] == [
         {'id': 'EX_co2_e', 'name': 'CO2'},
         {'id': 'EX_glc__D_e', 'name': 'D-Glucose'},
@@ -63,10 +59,10 @@ def test_model_info(client):
 
 
 def test_http(client):
-    response = client.get(MODEL_OPTIONS_URL.format('ECOLX'))
+    response = client.get("/species/{}".format('ECOLX'))
     assert response.status_code == 200
     for query, message in {'modify': MESSAGE_MODIFY, 'fluxes': MESSAGE_FLUXES}.items():
-        response = client.post(MODELS_URL.format('iJO1366'), json={'message': message})
+        response = client.post("/models/{}/simulate".format('iJO1366'), json={'message': message})
         assert response.status_code == 200
         model = response.json
         assert set(model.keys()) == set(message['to-return'] + ['model-id'])
@@ -82,20 +78,20 @@ def test_http(client):
             assert 'PFK' in {rxn['id'] for rxn in changes['measured']['reactions']}
             assert 'b2297' in {rxn['id'] for rxn in changes['removed']['genes']}
             assert 'BAD_ID' in {rxn['id'] for rxn in changes['measured-missing']['reactions']}
-    response = client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_FLUXES_INFEASIBLE})
+    response = client.post("/models/{}/simulate".format('iJO1366'), json={'message': MESSAGE_FLUXES_INFEASIBLE})
     model = response.json
     assert model['fluxes']['ATPM'] == pytest.approx(100)
-    response = client.post(MODELS_URL.format('wrong_id'), json={'message': {}})
+    response = client.post("/models/{}/simulate".format('wrong_id'), json={'message': {}})
     assert response.status_code == 404
-    response = client.post(MODELS_URL.format('iJO1366'), json={})
+    response = client.post("/models/{}/simulate".format('iJO1366'), json={})
     assert response.status_code == 400
-    response_etoh = client.post(MODELS_URL.format('iJO1366'),
+    response_etoh = client.post("/models/{}/simulate".format('iJO1366'),
                                 json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
     assert response_etoh.status_code == 200
     model = response_etoh.json
     assert abs(model['fluxes']['EX_etoh_e']) - 20.0 < 0.001
     MESSAGE_DIFFERENT_OBJECTIVE.pop('objective')
-    response_etoh = client.post(MODELS_URL.format('iJO1366'),
+    response_etoh = client.post("/models/{}/simulate".format('iJO1366'),
                                 json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
     assert response_etoh.status_code == 200
     model = response_etoh.json

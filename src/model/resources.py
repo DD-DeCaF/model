@@ -29,7 +29,20 @@ from model.storage import Models, key_from_model_info, model_from_changes, resto
 logger = logging.getLogger(__name__)
 
 
-def model(model_id):
+def species(species):
+    try:
+        return jsonify(constants.SPECIES_TO_MODEL[species])
+    except KeyError:
+        return f"Unknown species {species}", 400
+
+
+def model_get(model_id):
+    wild_type_id = model_id
+    wild_type_model = Models.get(wild_type_id)
+    return jsonify(model_to_dict(wild_type_model))
+
+
+def model_modify_simulate(model_id):
     if not request.is_json:
         return "Non-JSON request content is not supported", 415
 
@@ -51,13 +64,7 @@ def model(model_id):
     return jsonify(respond(model, message, mutated_model_id=mutated_model_id))
 
 
-def model_get(model_id):
-    wild_type_id = model_id
-    wild_type_model = Models.get(wild_type_id)
-    return jsonify(model_to_dict(wild_type_model))
-
-
-def model_info(model_id):
+def model_medium(model_id):
     try:
         wild_type_model = Models.get(model_id)
         medium = [{
@@ -67,13 +74,6 @@ def model_info(model_id):
         return jsonify({'medium': medium})
     except KeyError:
         return f"Unknown model {model_id}", 400
-
-
-def model_options(species):
-    try:
-        return jsonify(constants.SPECIES_TO_MODEL[species])
-    except KeyError:
-        return f"Unknown species {species}", 400
 
 
 def metrics():
