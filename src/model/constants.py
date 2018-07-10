@@ -14,7 +14,6 @@
 
 import logging
 import time
-from itertools import chain
 
 from cobra.flux_analysis import flux_variability_analysis, pfba
 from cobra.flux_analysis.moma import add_moma
