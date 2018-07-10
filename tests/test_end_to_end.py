@@ -100,28 +100,3 @@ def test_http(client):
     assert response_etoh.status_code == 200
     model = response_etoh.json
     assert abs(model['fluxes']['EX_etoh_e']) < 0.001
-
-
-def test_diff_model_api(client):
-    original_message = deepcopy(MESSAGE_MODIFY)
-    original_message['to-return'] = ["fluxes", "model", "added-reactions", "removed-reactions"]
-    original_response = client.post(MODELS_URL.format('iJO1366'), json={'message': original_message})
-    try:
-        assert original_response.status_code == 200
-    except Exception as ex:
-        print('Original resp: ', original_response.text())
-        raise ex
-    original_model = (original_response.json)['model']
-
-    wild_type_model_response = client.get(V1_MODELS_URL.format('iJO1366'))
-    assert wild_type_model_response.status_code == 200
-    wild_type_model = wild_type_model_response.json
-
-    diff_response = client.post(V1_MODELS_URL.format('iJO1366'), json={'message': original_message})
-    assert diff_response.status_code == 200
-    patch = jsonpatch.JsonPatch((diff_response.json)['model'])
-    result = patch.apply(wild_type_model)
-
-    del result['notes']['changes']
-    del original_model['notes']['changes']
-    assert result == original_model

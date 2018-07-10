@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 redis = Redis(app.config['REDIS_ADDR'], app.config['REDIS_PORT'])
 
 
-def key_from_model_info(wild_type_id, message, version=None):
+def key_from_model_info(wild_type_id, message):
     """Generate hash string from model information which will later be used as db key
 
     :param wild_type_id: str
@@ -40,14 +40,10 @@ def key_from_model_info(wild_type_id, message, version=None):
     """
     d = {k: message.get(k, []) for k in constants.MESSAGE_HASH_KEYS}
     d['model_id'] = wild_type_id
-
-    if version:
-        d['version'] = version
-
     return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
 
 
-def save_changes_to_db(model, wild_type_id, message, version=None):
+def save_changes_to_db(model, wild_type_id, message):
     """Store model in cache database
 
     :param model: Cameo model
@@ -55,7 +51,7 @@ def save_changes_to_db(model, wild_type_id, message, version=None):
     :param message: dict
     :return: mutated_model_id (cache database key)
     """
-    mutated_model_id = key_from_model_info(wild_type_id, message, version)
+    mutated_model_id = key_from_model_info(wild_type_id, message)
 
     value = json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())})
     redis.set(mutated_model_id, value)

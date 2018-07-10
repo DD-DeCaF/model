@@ -49,7 +49,6 @@ def init_app(application, interface):
     app.add_url_rule('/model-options/<species>', view_func=resources.model_options)
     app.add_url_rule('/models/<model_id>', view_func=resources.model, methods=['POST'])
     app.add_url_rule('/v1/models/<model_id>', view_func=resources.model_get)
-    app.add_url_rule('/v1/models/<model_id>', view_func=resources.model_diff, methods=['POST'])
     app.add_url_rule('/v1/model-info/<model_id>', view_func=resources.model_info)
     app.add_url_rule('/metrics', view_func=resources.metrics)
 

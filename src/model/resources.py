@@ -57,37 +57,6 @@ def model_get(model_id):
     return jsonify(model_to_dict(wild_type_model))
 
 
-def model_diff(model_id):
-    if not request.is_json:
-        return "Non-JSON request content is not supported", 415
-
-    wild_type_id = model_id
-    if 'message' not in request.json:
-        return "Missing field 'message'", 400
-    message = request.json['message']
-
-    wild_type_model = Models.get(wild_type_id)
-    if not wild_type_model:
-        return f"Model '{wild_type_id}' not found", 404
-
-    mutated_model_id = key_from_model_info(wild_type_id, message, version=1)
-    mutated_model = restore_from_db(mutated_model_id)
-    logger.info(model_from_changes.cache_info())
-
-    if not mutated_model:
-        # @matyasfodor Not sure about how this will perform, copy is an expensive
-        # operation. We could just modify the previous state (get it from LRU cache)
-        # but then we'd modify the returned object, it should not be accessed more
-        # than once. One idea is to delete the retrieved obejct (only use it once).
-        # It is possible with https://pypi.python.org/pypi/pylru
-        mutated_model = wild_type_model.copy()
-        mutated_model = modify_model(message, mutated_model)
-        mutated_model_id = save_changes_to_db(mutated_model, wild_type_id, message, version=1)
-
-    diff = respond(mutated_model, message, mutated_model_id, wild_type_model_id=wild_type_id)
-    return jsonify(diff)
-
-
 def model_info(model_id):
     try:
         wild_type_model = Models.get(model_id)

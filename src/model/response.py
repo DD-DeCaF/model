@@ -17,7 +17,6 @@ import logging
 import os
 import time
 
-import jsonpatch
 from cobra.exceptions import OptimizationError
 from cobra.flux_analysis import pfba
 from cobra.io.dict import model_to_dict
@@ -43,7 +42,7 @@ def map_reactions_list(map_path):
 
 
 class Response(object):
-    def __init__(self, model, message, wild_type_model_id=None):
+    def __init__(self, model, message):
         self.model = model
         with self.model:
             if constants.OBJECTIVE in message:
@@ -52,7 +51,6 @@ class Response(object):
                     self.model.objective.direction = message[constants.OBJECTIVE_DIRECTION]
             self.message = message
             self.method_name = message.get(constants.SIMULATION_METHOD, 'fba')
-            self.wild_type_model_id = wild_type_model_id
             if self.method_name in {'fva', 'pfba-fva'}:
                 try:
                     solution = self.solve_fva()
@@ -111,10 +109,7 @@ class Response(object):
         return solution
 
     def model_json(self):
-        if self.wild_type_model_id is not None:
-            return jsonpatch.make_patch(Models.get_dict(self.wild_type_model_id), model_to_dict(self.model)).patch
-        else:
-            return model_to_dict(self.model)
+        return model_to_dict(self.model)
 
     def fluxes(self):
         return self.flux
@@ -157,10 +152,10 @@ class Response(object):
         return ret
 
 
-def respond(model, message=None, mutated_model_id=None, wild_type_model_id=None):
+def respond(model, message=None, mutated_model_id=None):
     message = message if message is not None else {}
     t = time.time()
-    response = Response(model, message, wild_type_model_id)
+    response = Response(model, message)
     # Is it ok, to leave to-return optional?
     to_return = message.get('to-return', None)
     if to_return is not None:
