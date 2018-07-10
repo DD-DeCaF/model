@@ -47,6 +47,7 @@ MESSAGE_DIFFERENT_OBJECTIVE = {'to-return': ['fluxes'], 'objective': 'EX_etoh_e'
 
 def test_model_info(client):
     response = client.get('/models/{}/medium'.format('e_coli_core'))
+    assert response.status_code == 200
     assert response.json['medium'] == [
         {'id': 'EX_co2_e', 'name': 'CO2'},
         {'id': 'EX_glc__D_e', 'name': 'D-Glucose'},
