@@ -14,11 +14,11 @@
 
 from deepdiff import DeepDiff
 
+from model import storage
 from model.adapter import full_genotype
 from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
 from model.operations import apply_reactions_add, get_genotype_reactions, modify_model
 from model.response import Response
-from model.storage import Models, restore_from_db, restore_model, save_changes_to_db
 
 
 def test_get_genotype_reactions():
@@ -28,7 +28,7 @@ def test_get_genotype_reactions():
 
 
 def test_reactions_additions():
-    ecoli_original = Models.get('iJO1366').copy()
+    ecoli_original = storage.get('iJO1366').model.copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
     reactions = [
@@ -125,11 +125,11 @@ def test_modify_model():
                          {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
-    wildtype = restore_model('iJO1366')
+    wildtype = storage.get('iJO1366').model
     modified = modify_model(message, wildtype.copy())
     assert 'EX_meoh_e' in modified.medium
-    db_key = save_changes_to_db(modified, 'iJO1366', message)
-    restored_model = restore_from_db(db_key).copy()
+    db_key = storage.save_changes(modified, message)
+    restored_model = storage.restore_from_key(db_key).copy()
     assert restored_model.medium == modified.medium
 
 
@@ -144,7 +144,7 @@ FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', '
 def test_simulation_methods():
     for method in METHODS:
         message = {SIMULATION_METHOD: method}
-        model = restore_model('iJO1366').copy()
+        model = storage.get('iJO1366').model.copy()
         response = Response(model, message)
         if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in model.reactions]
@@ -165,9 +165,9 @@ def test_restore_from_cache():
                           'name': 'beta-carotene', 'type': 'compound'},
                          {'id': 'PFK', 'measurements': [5], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
     }
-    model = modify_model(message, restore_model(wild_type_id).copy())
-    db_key = save_changes_to_db(model, wild_type_id, message)
-    restored_model = restore_from_db(db_key).copy()
+    model = modify_model(message, storage.get(wild_type_id).model.copy())
+    db_key = storage.save_changes(model, message)
+    restored_model = storage.restore_from_key(db_key).copy()
     reactions = {
         r.id: dict(lower_bound=r.lower_bound, upper_bound=r.upper_bound)
         for r in model.reactions

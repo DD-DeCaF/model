@@ -14,13 +14,13 @@
 
 from math import isclose
 
+from model import storage
 from model.adapter import full_genotype
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
 from model.operations import (
     add_reactions, apply_reactions_knockouts, build_string_from_metabolites, change_bounds,
     convert_measurements_to_mmol, convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict,
     product_reaction_variable)
-from model.storage import Models, restore_model
 
 
 def is_close(x, y):
@@ -37,18 +37,18 @@ def test_b_number():
     message = {
         GENOTYPE_CHANGES: ['-b3067,-b3172,-b1084'],
     }
-    model = modify_model(message, (restore_model(model_id)).copy())
+    model = modify_model(message, storage.get(model_id).model.copy())
     assert not model.genes.b3172.functional
 
 
 def test_product_reaction_variable():
-    ecoli = Models.get('iJO1366')
+    ecoli = storage.get('iJO1366').model
     assert product_reaction_variable(ecoli, 'bigg:akg').id == 'EX_akg_e'
     assert product_reaction_variable(ecoli, 'bigg:e4p') is None
 
 
 def test_phase_plane_to_dict():
-    ecoli = Models.get('iJO1366')
+    ecoli = storage.get('iJO1366').model
     result = phase_plane_to_dict(ecoli, 'bigg:glu__L')
     assert set(result.keys()) == {'EX_glu__L_e', 'objective_lower_bound', 'objective_upper_bound'}
     assert len(set([len(v) for v in result.values()])) == 1
@@ -62,7 +62,7 @@ def test_new_features_identifiers():
 
 
 def test_reactions_knockouts():
-    ecoli_original = Models.get('iJO1366').copy()
+    ecoli_original = storage.get('iJO1366').model.copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
@@ -82,7 +82,7 @@ def test_reactions_knockouts():
 
 
 def test_reactions_change_bounds():
-    ecoli_original = Models.get('iJO1366').copy()
+    ecoli_original = storage.get('iJO1366').model.copy()
     ecoli = ecoli_original.copy()
     ecoli.notes['changes'] = get_empty_changes()
     reaction_ids = [{'id': "ACONTb", 'lower_bound': -3, 'upper_bound': 3.5},
@@ -96,14 +96,14 @@ def test_reactions_change_bounds():
 
 
 def test_convert_measurements_to_mmol():
-    ecoli = Models.get('iJO1366').copy()
+    ecoli = storage.get('iJO1366').model.copy()
     measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg', 'type': 'compound'}]
     assert convert_measurements_to_mmol(measurements, ecoli) == [
         {'id': 'chebi:17790', 'measurements': [1.0], 'unit': 'mmol', 'type': 'compound'}]
 
 
 def test_add_reactions():
-    ecoli = Models.get('iJO1366').copy()
+    ecoli = storage.get('iJO1366').model.copy()
     keys = ('id', 'name', 'metabolites', 'lower_bound', 'upper_bound', 'gene_reaction_rule')
     info = ('newid', '', {}, 0, 0, '')
     changes = [dict(zip(keys, info))] * 2

@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from model import storage
 from model.response import respond
-from model.storage import Models
 
 
 def test_respond():
     message = {'to-return': ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions'],
                'theoretical-objectives': ['bigg:akg']}
-    assert set((respond(Models.get('iJO1366'), message)).keys()) == set(message['to-return'])
+    assert set((respond(storage.get('iJO1366').model, message)).keys()) == set(message['to-return'])
