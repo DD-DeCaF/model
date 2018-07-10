@@ -40,11 +40,6 @@ class Settings:
                 'class': 'logging.StreamHandler',
                 'formatter': 'simple',
             },
-            'sentry': {
-                'level': 'WARNING',
-                'class': 'raven.handlers.logging.SentryHandler',
-                'dsn': SENTRY_DSN,
-            },
         },
         'loggers': {
             # All loggers will by default use the root logger below (and
@@ -53,6 +48,6 @@ class Settings:
         },
         'root': {
             'level': 'DEBUG',
-            'handlers': ['console', 'sentry'],
+            'handlers': ['console'],
         },
     }
