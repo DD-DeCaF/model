@@ -22,8 +22,8 @@ from collections import defaultdict
 import gnomic
 import networkx as nx
 import numpy as np
-import requests
 import pandas as pd
+import requests
 from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions

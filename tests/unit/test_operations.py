@@ -14,8 +14,6 @@
 
 from math import isclose
 
-import pytest
-
 from model.adapter import full_genotype
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
 from model.operations import (

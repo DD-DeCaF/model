@@ -14,6 +14,7 @@
 
 import os
 
+
 class Settings:
     ENVIRONMENT = os.environ['ENVIRONMENT']
     assert ENVIRONMENT in ('production', 'staging', 'testing', 'development')

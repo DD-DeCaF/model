@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
-import os
 
 from cobra.io.dict import model_to_dict
-from flask import Response, abort, jsonify, request
+from flask import Response, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
@@ -25,8 +23,7 @@ import model.constants as constants
 from aiohttp import WSMsgType, web
 from model.operations import modify_model
 from model.response import respond
-from model.storage import (
-    Models, key_from_model_info, model_from_changes, restore_from_db, restore_model, save_changes_to_db)
+from model.storage import Models, key_from_model_info, model_from_changes, restore_from_db, save_changes_to_db
 
 
 logger = logging.getLogger(__name__)

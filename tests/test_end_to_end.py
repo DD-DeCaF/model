@@ -91,13 +91,13 @@ def test_http(client):
     response = client.post(MODELS_URL.format('iJO1366'), json={})
     assert response.status_code == 400
     response_etoh = client.post(MODELS_URL.format('iJO1366'),
-                                           json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+                                json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
     assert response_etoh.status_code == 200
     model = response_etoh.json
     assert abs(model['fluxes']['EX_etoh_e']) - 20.0 < 0.001
     MESSAGE_DIFFERENT_OBJECTIVE.pop('objective')
     response_etoh = client.post(MODELS_URL.format('iJO1366'),
-                                           json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+                                json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
     assert response_etoh.status_code == 200
     model = response_etoh.json
     assert abs(model['fluxes']['EX_etoh_e']) < 0.001

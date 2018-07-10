@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from deepdiff import DeepDiff
 
 from model.adapter import full_genotype
@@ -81,10 +80,10 @@ def test_reactions_additions():
     ecoli = apply_reactions_add(ecoli, list(reaction_ids))
     assert ecoli.notes['changes']['added']['reactions'] == []
     ecoli = apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None},
-                                              {'id': 'SUCR', 'metabolites': {'h2o_c': -1,
-                                                                             'sucr_c': -1,
-                                                                             'fru_c': 1,
-                                                                             'glc__D_c': 1}}])
+                                        {'id': 'SUCR', 'metabolites': {'h2o_c': -1,
+                                                                       'sucr_c': -1,
+                                                                       'fru_c': 1,
+                                                                       'glc__D_c': 1}}])
 
 
 def test_modify_model():

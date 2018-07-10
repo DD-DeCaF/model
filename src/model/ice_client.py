@@ -60,7 +60,8 @@ class ICE(metaclass=Singleton):
         logger.info(f"Requesting session token from ICE")
         response = requests.post(f"{app.config['ICE_API']}/rest/accesstokens",
                                  headers=self._headers(add_session_id=False),
-                                 data=json.dumps({'email': app.config['ICE_USERNAME'], 'password': app.config['ICE_PASSWORD']}))
+                                 data=json.dumps({'email': app.config['ICE_USERNAME'],
+                                                  'password': app.config['ICE_PASSWORD']}))
         response.raise_for_status()
         self.SESSION_ID = response.json()['sessionId']
 

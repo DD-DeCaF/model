@@ -14,7 +14,6 @@
 
 import random
 
-import pytest
 from cobra.io import model_to_dict
 
 from model.constants import GENOTYPE_CHANGES, MEASUREMENTS, MEDIUM

@@ -13,8 +13,6 @@
 # limitations under the License.
 
 import logging
-import os
-import re
 import time
 from itertools import chain
 
