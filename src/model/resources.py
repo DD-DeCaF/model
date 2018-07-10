@@ -29,41 +29,6 @@ from model.storage import Models, key_from_model_info, model_from_changes, resto
 logger = logging.getLogger(__name__)
 
 
-# async def model_ws_full(request):
-#     return await model_ws(request, False)
-
-
-# async def model_ws_json_diff(request):
-#     return await model_ws(request, True)
-
-
-# async def model_ws(request, diff=False):
-#     ws = web.WebSocketResponse()
-#     model_id = request.match_info['model_id']
-#     cached_model = await restore_model(model_id)
-#     logger.info(model_from_changes.cache_info())
-#     if not cached_model:
-#         raise KeyError('No such model: {}'.format(model_id))
-#     model = cached_model.copy()
-#     await ws.prepare(request)
-#     try:
-#         async for msg in ws:
-#             logger.debug(msg)
-#             if msg.type == WSMsgType.TEXT:
-#                 if msg.data == 'close':
-#                     await ws.close()
-#                 else:
-#                     message = msg.json()
-#                     model = await modify_model(message, model)
-#                     await ws.send_json(await respond(model, message, wild_type_model_id=model_id if diff else None))
-#             elif msg.type == WSMsgType.ERROR:
-#                 logger.error('Websocket for model_id %s closed with exception %s', model_id, ws.exception())
-#     except asyncio.CancelledError as ex:
-#         logger.debug('Websocket for model_id %s cancelled, %s', model_id, str(ex))
-#     await ws.close()
-#     return ws
-
-
 def model(model_id):
     if not request.is_json:
         return "Non-JSON request content is not supported", 415

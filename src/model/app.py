@@ -46,8 +46,6 @@ def init_app(application, interface):
     # Add routes and resources.
     # TODO: use flask-restplus
     from model import resources
-    # app.add_url_rule('/wsmodels/<model_id>', view_func=resources.model_ws_full)
-    # app.add_url_rule('/v1/wsmodels/<model_id>', view_func=resources.model_ws_json_diff)
     app.add_url_rule('/model-options/<species>', view_func=resources.model_options)
     app.add_url_rule('/models/<model_id>', view_func=resources.model, methods=['POST'])
     app.add_url_rule('/v1/models/<model_id>', view_func=resources.model_get)

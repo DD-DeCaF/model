@@ -47,7 +47,6 @@ MESSAGE_DIFFERENT_OBJECTIVE = {'to-return': ['fluxes'], 'objective': 'EX_etoh_e'
 MODELS_URL = '/models/{}'
 V1_MODELS_URL = '/v1/models/{}'
 MODEL_OPTIONS_URL = '/model-options/{}'
-# WS_URL = '/wsmodels/{}'
 
 
 def test_model_info(client):
@@ -101,44 +100,6 @@ def test_http(client):
     assert response_etoh.status_code == 200
     model = response_etoh.json
     assert abs(model['fluxes']['EX_etoh_e']) < 0.001
-
-
-# @unittest_run_loop
-# async def test_websocket(self):
-#     response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_MODIFY})
-#     response.raise_for_status()
-#     model_id = (await response.json())['model-id']
-#     ws = await self.client.ws_connect(WS_URL.format(model_id))
-#     ws.send_json(MESSAGE_TMY_FLUXES)
-#     async for msg in ws:
-#         if msg.type == aiohttp.WSMsgType.TEXT:
-#             msg_content = msg.json()
-#             assert msg_content['fluxes']
-#             assert msg_content['tmy']
-#             assert isinstance(msg_content['model'], dict)
-#         elif msg.type == aiohttp.WSMsgType.ERROR:
-#             raise ws.exception()
-#         await ws.close()
-#         break
-
-
-# @unittest_run_loop
-# async def test_websocket_v1(self):
-#     response = await self.client.post(MODELS_URL.format('iJO1366'), json={'message': MESSAGE_MODIFY})
-#     response.raise_for_status()
-#     model_id = (await response.json())['model-id']
-#     ws = await self.client.ws_connect('/v1{}'.format(WS_URL.format(model_id)))
-#     ws.send_json(MESSAGE_TMY_FLUXES)
-#     async for msg in ws:
-#         if msg.type == aiohttp.WSMsgType.TEXT:
-#             msg_content = msg.json()
-#             assert msg_content['fluxes']
-#             assert msg_content['tmy']
-#             assert isinstance(msg_content['model'], list)
-#         elif msg.type == aiohttp.WSMsgType.ERROR:
-#             raise ws.exception()
-#         await ws.close()
-#         break
 
 
 def test_diff_model_api(client):
