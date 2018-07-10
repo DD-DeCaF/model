@@ -21,9 +21,9 @@ from cameo import load_model
 from cobra.io import read_sbml_model, write_sbml_model
 from tqdm import tqdm
 
+from model import storage
 from model.adapter import add_prefix
 from model.app import app
-from model.constants import MODEL_NAMESPACE, MODELS
 
 
 LOCAL_MODELS = ['ecYeast7', 'ecYeast7_proteomics']
@@ -65,7 +65,7 @@ def update_local_models(model_id, model_store=None):
         model = load_model(model_id)
 
     # annotate metabolites
-    namespace = MODEL_NAMESPACE[model_id]
+    namespace = storage.get(model_id).namespace
     metabolite_namespace = MODEL_METABOLITE_NAMESPACE[model_id]
     db_name = 'CHEBI'
     metabolites_missing_annotation = [m.id for m in model.metabolites if len(m.annotation.get(db_name, [])) < 1]
@@ -94,5 +94,5 @@ def update_local_models(model_id, model_store=None):
 
 
 if '__main__' in __name__:
-    for m_id in tqdm(MODELS):
+    for m_id in tqdm([model.model_id for model in storage.MODELS]):
         update_local_models(m_id)

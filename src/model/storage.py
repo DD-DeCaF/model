@@ -15,125 +15,96 @@
 import hashlib
 import json
 import logging
-import os
-from functools import lru_cache
 
-from cobra.io import model_to_dict, read_sbml_model
+from cobra.io import read_sbml_model
 from redis import Redis
 
 from model import constants
 from model.app import app
-from model.operations import restore_changes
-from model.utils import log_time
 
 
 logger = logging.getLogger(__name__)
 redis = Redis(app.config['REDIS_ADDR'], app.config['REDIS_PORT'])
 
 
-def key_from_model_info(wild_type_id, message):
-    """Generate hash string from model information which will later be used as db key
+class ModelMeta:
+    """A metabolic model, with metadata and an internal (lazy-loaded in development) cobrapy model instance."""
 
-    :param wild_type_id: str
-    :param message: dict
-    :return: str
-    """
-    d = {k: message.get(k, []) for k in constants.MESSAGE_HASH_KEYS}
-    d['model_id'] = wild_type_id
-    return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
+    def __init__(self, model_id, species, namespace, growth_rate_reaction):
+        self.model_id = model_id
+        self.species = species
+        self.namespace = namespace
+        self.growth_rate_reaction = growth_rate_reaction
+
+        # Preload the model into memory only in the following environments
+        if app.config['ENVIRONMENT'] in ('production', 'staging'):
+            self._load()
+
+    @property
+    def model(self):
+        if not hasattr(self, '_model'):
+            self._load()
+        return self._model
+
+    def _load(self):
+        self._model = read_sbml_model(f"data/models/{self.model_id}.sbml.gz")
+        self._model.solver = 'cplex'
+        self._model.notes['namespace'] = self.namespace
 
 
-def save_changes_to_db(model, wild_type_id, message):
-    """Store model in cache database
+MODELS = [
+    ModelMeta('iJO1366', 'ECOLX', 'bigg', 'BIOMASS_Ec_iJO1366_core_53p95M'),
+    ModelMeta('iMM904', 'YEAST', 'bigg', 'BIOMASS_SC5_notrace'),
+    ModelMeta('iMM1415', 'CRIGR', 'bigg', 'BIOMASS_mm_1_no_glygln'),
+    ModelMeta('iNJ661', 'CORGT', 'bigg', 'BIOMASS_Mtb_9_60atp'),
+    ModelMeta('iJN746', 'PSEPU', 'bigg', 'BIOMASS_KT_TEMP'),
+    ModelMeta('e_coli_core', 'ECOLX', 'bigg', 'BIOMASS_Ecoli_core_w_GAM'),
+    ModelMeta('ecYeast7', 'YEAST', 'yeast7', 'r_2111'),
+    ModelMeta('ecYeast7_proteomics', 'YEAST', 'yeast7', 'r_2111'),
+]
 
-    :param model: Cameo model
-    :param wild_type_id: str
-    :param message: dict
-    :return: mutated_model_id (cache database key)
-    """
-    mutated_model_id = key_from_model_info(wild_type_id, message)
 
+def get(model_id):
+    """Return the meta instance for the given model id"""
+    for model_meta in MODELS:
+        if model_meta.model_id == model_id:
+            return model_meta
+    else:
+        raise KeyError(f"No model with id '{model_id}'")
+
+
+def save_changes(model, message):
+    """Save adapted changes in cache based on the given model and message"""
+    changes_key = _changes_key(model.id, message)
     value = json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())})
-    redis.set(mutated_model_id, value)
-    logger.info(f"Model created on the base of {wild_type_id} with message {message} saved as {mutated_model_id}")
-    return mutated_model_id
+    redis.set(changes_key, value)
+    logger.info(f"Stored changes for {model.id} as '{changes_key}'")
+    return changes_key
 
 
-def read_model(model_id):
-    with log_time(operation=f"Read model {model_id} from SBML file"):
-        model = read_sbml_model(os.path.join('data', 'models', model_id + '.sbml.gz'))
-        model.solver = 'cplex'
-        model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
-        return model
+def restore_from_message(model_id, message):
+    """Restore model with modifications from cache based on the given model and message"""
+    return restore_from_key(_changes_key(model_id, message))
 
 
-class Models(object):
-    @classmethod
-    @lru_cache()
-    def get(cls, model_id):
-        try:
-            return read_model(model_id)
-        except FileNotFoundError:
-            return None
+def restore_from_key(changes_key):
+    """Restore model with modifications from cache based on the given unique cache key"""
+    from model.operations import restore_changes  # FIXME: circular dependency issue
 
-    @classmethod
-    @lru_cache()
-    def get_dict(cls, model_id):
-        model = cls.get(model_id)
-        if model is not None:
-            return model_to_dict(model)
-        return None
+    changes = redis.get(changes_key)
+    if changes is None:
+        logger.debug(f"Changes '{changes_key}' not found in cache")
+        raise KeyError(f"Changes '{changes_key}' not found in cache")
 
-
-def preload_cache():
-    logger.info("Preloading models")
-    with log_time(operation="Preload models"):
-        for model_id in constants.MODELS:
-            Models.get_dict(model_id)
-
-
-if app.config['ENVIRONMENT'] in ['production', 'staging']:
-    preload_cache()
-
-
-def find_changes_in_db(model_id):
-    dumped_changes = redis.get(model_id)
-    if dumped_changes is not None:
-        return dumped_changes.decode('utf-8')
-    return None
-
-
-def restore_from_db(model_id):
-    with log_time(operation=f"Restored model {model_id} from db"):
-        changes = find_changes_in_db(model_id)
-        if not changes:
-            return None
-        return model_from_changes(changes)
-
-
-@lru_cache(maxsize=2 ** 6)
-def model_from_changes(changes):
-    changes = json.loads(changes)
-    model = Models.get(changes['model']).copy()
+    changes = json.loads(changes.decode('utf-8'))
+    model = get(changes['model']).model.copy()
     model = restore_changes(model, changes['changes'])
     model.notes['changes'] = changes['changes']
     return model
 
 
-def restore_model(model_id):
-    """Try to restore model by model id.
-    NOTE: if model is found in memory, the original model is returned - to modify, make a copy
-
-    :param model_id: str
-    :return: Cameo model or None
-    """
-    model = Models.get(model_id)
-    if model:
-        logger.info('Wild type model with id %s is found', model_id)
-        return model
-    model = restore_from_db(model_id)
-    if model:
-        logger.info('Model with id %s found in database', model_id)
-        return model
-    logger.info('No model with id %s', model_id)
-    return None
+def _changes_key(model_id, message):
+    """Generate unique string used for cache key based on the model id and full message"""
+    d = {k: message.get(k, []) for k in constants.MESSAGE_HASH_KEYS}
+    d['model_id'] = model_id
+    return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()

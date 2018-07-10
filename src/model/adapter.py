@@ -28,8 +28,7 @@ from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 
-import aiohttp
-from model import constants
+from model import storage
 from model.app import app
 from model.driven import adjust_fluxes2model
 from model.metrics import API_REQUESTS
@@ -739,7 +738,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         try:
             # Include growth rate measurement
             growth_rate = next(m for m in self.measurements if m['type'] == 'growth-rate')
-            index.append(constants.MODEL_GROWTH_RATE[self.model.id])
+            index.append(storage.get(self.model.id).growth_rate_reaction)
             observations.append(np.nanmean(growth_rate['measurements']))
             uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
                                  if len(growth_rate['measurements']) >= 3 else 1)
@@ -752,7 +751,7 @@ class MeasurementChangeModel(ModelModificationMixin):
         solution = adjust_fluxes2model(self.model, observations, uncertainties)
         for reaction, minimized_distance in solution.fluxes.iteritems():
             for measurement in self.measurements:
-                if (measurement['type'] == 'growth-rate' and reaction == constants.MODEL_GROWTH_RATE[self.model.id]
+                if (measurement['type'] == 'growth-rate' and reaction == storage.get(self.model.id).growth_rate_reaction
                         or reaction == measurement.get('id')):
                     measurement['measurements'] = [minimized_distance]
 
@@ -776,7 +775,7 @@ class MeasurementChangeModel(ModelModificationMixin):
             elif scalar['type'] == 'reaction':
                 reaction = self.reaction_for_scalar(scalar, lower_bound, upper_bound)
             elif scalar['type'] == 'growth-rate':
-                reaction = self.model.reactions.get_by_id(constants.MODEL_GROWTH_RATE[self.model.id])
+                reaction = self.model.reactions.get_by_id(storage.get(self.model.id).growth_rate_reaction)
                 reaction.bounds = lower_bound, upper_bound
             elif scalar['type'] == 'protein' and scalar['mode'] == 'quantitative':
                 reaction = self.protein_exchange_reaction_for_scalar(scalar, upper_bound)

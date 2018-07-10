@@ -102,38 +102,6 @@ def get_empty_changes():
 
 MAPS_DIR = 'data/maps'
 
-SPECIES_TO_MODEL = {
-    'ECOLX': ['iJO1366', 'e_coli_core'],
-    'YEAST': ['iMM904', 'ecYeast7', 'ecYeast7_proteomics'],
-    'CRIGR': ['iMM1415'],
-    'CORGT': ['iNJ661'],
-    'PSEPU': ['iJN746'],
-}
-
-MODELS = frozenset(chain.from_iterable(SPECIES_TO_MODEL.values()))
-
-MODEL_NAMESPACE = {
-    'iJO1366': 'bigg',
-    'iMM904': 'bigg',
-    'iMM1415': 'bigg',
-    'iNJ661': 'bigg',
-    'iJN746': 'bigg',
-    'e_coli_core': 'bigg',
-    'ecYeast7': 'yeast7',
-    'ecYeast7_proteomics': 'yeast7',
-}
-
-MODEL_GROWTH_RATE = {
-    'iJO1366': 'BIOMASS_Ec_iJO1366_core_53p95M',
-    'iMM904': 'BIOMASS_SC5_notrace',
-    'iMM1415': 'BIOMASS_mm_1_no_glygln',
-    'iNJ661': 'BIOMASS_Mtb_9_60atp',
-    'iJN746': 'BIOMASS_KT_TEMP',
-    'e_coli_core': 'BIOMASS_Ecoli_core_w_GAM',
-    'ecYeast7': 'r_2111',
-    'ecYeast7_proteomics': 'r_2111',
-}
-
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
 
 RETURN_FUNCTIONS = {

@@ -19,11 +19,9 @@ from flask import Response, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
-import model.constants as constants
-from aiohttp import WSMsgType, web
+from model import storage
 from model.operations import modify_model
 from model.response import respond
-from model.storage import Models, key_from_model_info, model_from_changes, restore_from_db, save_changes_to_db
 
 
 logger = logging.getLogger(__name__)
@@ -31,49 +29,50 @@ logger = logging.getLogger(__name__)
 
 def species(species):
     try:
-        return jsonify(constants.SPECIES_TO_MODEL[species])
+        return jsonify([model_meta.model_id for model_meta in storage.MODELS if model_meta.species == species])
     except KeyError:
-        return f"Unknown species {species}", 400
+        return f"Unknown species {species}", 404
 
 
 def model_get(model_id):
-    wild_type_id = model_id
-    wild_type_model = Models.get(wild_type_id)
-    return jsonify(model_to_dict(wild_type_model))
+    try:
+        return jsonify(model_to_dict(storage.get(model_id).model))
+    except KeyError:
+        return f"Unknown model {model_id}", 404
 
 
 def model_modify_simulate(model_id):
     if not request.is_json:
         return "Non-JSON request content is not supported", 415
 
-    wild_type_id = model_id
     if 'message' not in request.json:
         return "Missing field 'message'", 400
     message = request.json['message']
 
-    mutated_model_id = key_from_model_info(wild_type_id, message)
-    model = restore_from_db(mutated_model_id)
-    logger.info(model_from_changes.cache_info())
-    if not model:
-        model = Models.get(wild_type_id)
-        if not model:
-            return f"Model '{wild_type_id}' not found", 404
-        model = model.copy()
+    try:
+        model = storage.restore_from_message(model_id, message)
+        changes_key = storage._changes_key(model_id, message)  # FIXME: shouldn't need to know changes_key here
+    except KeyError:
+        try:
+            model_meta = storage.get(model_id)
+        except KeyError:
+            return f"Unknown model {model_id}", 404
+        model = model_meta.model.copy()
         model = modify_model(message, model)
-        mutated_model_id = save_changes_to_db(model, wild_type_id, message)
-    return jsonify(respond(model, message, mutated_model_id=mutated_model_id))
+        changes_key = storage.save_changes(model, message)
+    return jsonify(respond(model, message, mutated_model_id=changes_key))
 
 
 def model_medium(model_id):
     try:
-        wild_type_model = Models.get(model_id)
+        model = storage.get(model_id).model
         medium = [{
             'id': reaction_id,
-            'name': wild_type_model.reactions.get_by_id(reaction_id).name.replace('exchange', '').strip()
-        } for reaction_id in wild_type_model.medium]
+            'name': model.reactions.get_by_id(reaction_id).name.replace('exchange', '').strip()
+        } for reaction_id in model.medium]
         return jsonify({'medium': medium})
     except KeyError:
-        return f"Unknown model {model_id}", 400
+        return f"Unknown model {model_id}", 404
 
 
 def metrics():

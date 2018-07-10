@@ -21,9 +21,8 @@ from cobra.exceptions import OptimizationError
 from cobra.flux_analysis import pfba
 from cobra.io.dict import model_to_dict
 
-import model.constants as constants
+from model import constants, storage
 from model.operations import is_dummy, phase_plane_to_dict
-from model.storage import Models
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ class Response(object):
                     for key in ['lower_bound', 'upper_bound']:
                         df[key] = df[key].astype('float')
                     self.flux = df.T.to_dict()
-                    self.growth = self.flux[constants.MODEL_GROWTH_RATE[model.id]]['upper_bound']
+                    self.growth = self.flux[storage.get(model.id).growth_rate_reaction]['upper_bound']
             else:
                 try:
                     solution = self.solve()
@@ -78,7 +77,7 @@ class Response(object):
                                          for rxn in model.reactions if rxn.id in ids_measured_reactions)
                 else:
                     self.flux = solution.fluxes.to_dict()
-                    self.growth = self.flux[constants.MODEL_GROWTH_RATE[model.id]]
+                    self.growth = self.flux[storage.get(model.id).growth_rate_reaction]
 
     def solve_fva(self):
         fva_reactions = None
@@ -92,7 +91,7 @@ class Response(object):
                 reactions = [i for i in reaction_ids
                              if self.model.reactions.has_id(i)]
                 fva_reactions = list(set(
-                    reactions + [constants.MODEL_GROWTH_RATE[self.model.id]]
+                    reactions + [storage.get(self.model.id).growth_rate_reaction]
                 ))
         return constants.METHODS[self.method_name](
             self.model,
