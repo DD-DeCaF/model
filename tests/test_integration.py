@@ -16,9 +16,9 @@ from deepdiff import DeepDiff
 
 from model import storage
 from model.adapter import full_genotype
-from model.constants import METHODS, SIMULATION_METHOD, get_empty_changes
+from model.constants import SIMULATION_METHOD, get_empty_changes
 from model.operations import apply_reactions_add, get_genotype_reactions, modify_model
-from model.response import Response
+from model.response import METHODS, respond
 
 
 def test_get_genotype_reactions():
@@ -145,7 +145,7 @@ def test_simulation_methods():
     for method in METHODS:
         message = {SIMULATION_METHOD: method}
         model = storage.get('iJO1366').model.copy()
-        response = Response(model, message)
+        response = respond(model, message)
         if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in model.reactions]
             assert set(response.fluxes().keys()) == set(reactions_ids)

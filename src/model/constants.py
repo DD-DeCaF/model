@@ -15,40 +15,8 @@
 import logging
 import time
 
-from cobra.flux_analysis import flux_variability_analysis, pfba
-from cobra.flux_analysis.moma import add_moma
-
 
 logger = logging.getLogger(__name__)
-
-
-def pfba_fva(model):
-    return flux_variability_analysis(
-        model,
-        fraction_of_optimum=1,
-        pfba_factor=1.05,
-    )
-
-
-def moma(model, reference, linear=False):
-    with model:
-        start_time = time.time()
-        add_moma(model, solution=reference, linear=linear)
-        logger.info('moma addition finished in %s s', time.time() - start_time)
-        start_time = time.time()
-        solution = model.optimize()
-        logger.info('moma optimization finished in %s s', time.time() - start_time)
-    return solution
-
-
-METHODS = {
-    'fba': lambda model: model.optimize(),
-    'pfba': pfba,
-    'fva': flux_variability_analysis,
-    'pfba-fva': pfba_fva,
-    'moma': moma,
-    'lmoma': lambda model, reference: moma(model, reference, linear=True),
-}
 
 GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
@@ -98,13 +66,3 @@ def get_empty_changes():
 
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
 
-RETURN_FUNCTIONS = {
-    FLUXES: 'fluxes',
-    TMY: 'theoretical_maximum_yield',
-    MODEL: 'model_json',
-    GROWTH_RATE: 'growth_rate',
-    REMOVED_REACTIONS: 'removed_reactions',
-    MEASURED_REACTIONS: 'measured_reactions',
-    ADDED_REACTIONS: 'added_reactions',
-    MISSING_MEASURED_REACTIONS: 'measured_missing_reactions',
-}
