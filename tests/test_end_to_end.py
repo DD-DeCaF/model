@@ -14,6 +14,8 @@
 
 import pytest
 
+from model.ice_client import ICE
+
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
                  'type': 'compound'},
@@ -77,7 +79,10 @@ def test_simulate_infeasible(client):
     assert result['fluxes']['ATPM'] == pytest.approx(100)
 
 
-def test_simulate_modify(client):
+def test_simulate_modify(monkeypatch, client):
+    # Disable GPR queries for efficiency
+    monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
+
     for query, message in {'modify': MESSAGE_MODIFY, 'fluxes': MESSAGE_FLUXES}.items():
         response = client.post("/models/iJO1366/simulate", json={'message': message})
         assert response.status_code == 200
