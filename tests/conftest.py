@@ -36,15 +36,25 @@ def client(app):
 @pytest.fixture(scope="function")
 def e_coli_core():
     """
-    Provide a modifiable copy of the e_coli_core cobrapy model.
-    This model is substantially smaller than iJO1366 and should be preferred in test cases where possible.
+    Provide a modifiable copy of the e_coli_core cobrapy model.  This model is fairly small and should be preferred in
+    test cases where possible.
     """
-    # Not using contexts here because edits to the `notes` attribute would not be reversed
-    return storage.get('e_coli_core').model.copy()
+    model = storage.get('e_coli_core').model
+
+    # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
+    original_notes = model.notes
+    with model:
+        yield model
+    model.notes = original_notes
 
 
 @pytest.fixture(scope="function")
 def iJO1366():
     """Provide a modifiable copy of the iJO1366 cobrapy model"""
-    # Not using contexts here because edits to the `notes` attribute would not be reversed
-    return storage.get('iJO1366').model.copy()
+    model = storage.get('iJO1366').model
+
+    # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
+    original_notes = model.notes
+    with model:
+        yield model
+    model.notes = original_notes
