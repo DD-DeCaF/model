@@ -14,19 +14,37 @@
 
 import pytest
 
+from model import storage
 from model.app import app as app_
 from model.app import init_app
 
 
 @pytest.fixture(scope="session")
 def app():
-    """Provide an initialized Flask for use in certain test cases."""
+    """Provide the initialized Flask app"""
     init_app(app_, None)
     return app_
 
 
 @pytest.fixture(scope="session")
 def client(app):
-    """Provide a Flask test client to be used by almost all test cases."""
+    """Provide a Flask test client"""
     with app.test_client() as client:
         yield client
+
+
+@pytest.fixture(scope="function")
+def e_coli_core():
+    """
+    Provide a modifiable copy of the e_coli_core cobrapy model.
+    This model is substantially smaller than iJO1366 and should be preferred in test cases where possible.
+    """
+    # Not using contexts here because edits to the `notes` attribute would not be reversed
+    return storage.get('e_coli_core').model.copy()
+
+
+@pytest.fixture(scope="function")
+def iJO1366():
+    """Provide a modifiable copy of the iJO1366 cobrapy model"""
+    # Not using contexts here because edits to the `notes` attribute would not be reversed
+    return storage.get('iJO1366').model.copy()

@@ -12,21 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model import storage
 from model.simulator import METHODS, simulate
 
 
-def test_tmy_result():
+def test_tmy_result(e_coli_core):
     tmy_objectives = ['bigg:akg']
     to_return = ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions']
-    result = simulate(storage.get('iJO1366').model, 'fba', None, None, tmy_objectives, to_return)
+    result = simulate(e_coli_core, 'fba', None, None, tmy_objectives, to_return)
     assert set(result.keys()) == set(to_return)
 
 
-def test_simulation_methods():
-    model = storage.get('iJO1366').model
+def test_simulation_methods(e_coli_core):
     for method in METHODS:
-        result = simulate(model, method, None, None, [], None)
+        result = simulate(e_coli_core, method, None, None, [], None)
         if method not in {'fva', 'pfba-fva'}:
-            reactions_ids = [i.id for i in model.reactions]
+            reactions_ids = [i.id for i in e_coli_core.reactions]
             assert set(result['fluxes'].keys()) == set(reactions_ids)

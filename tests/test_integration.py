@@ -26,10 +26,8 @@ def test_get_genotype_reactions():
     assert set(result.keys()) == {'BBa_J23100', 'AB326105', 'NP_600058', 'BBa_0010'}
 
 
-def test_reactions_additions():
-    ecoli_original = storage.get('iJO1366').model.copy()
-    ecoli = ecoli_original.copy()
-    ecoli.notes['changes'] = get_empty_changes()
+def test_reactions_additions(iJO1366):
+    iJO1366.notes['changes'] = get_empty_changes()
     reactions = [
         {'id': 'MNXR69355', 'metabolites': None},
         {'id': 'MNXR81835', 'metabolites': None},
@@ -40,52 +38,52 @@ def test_reactions_additions():
                        'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
                        'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e',
                        'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
-    ecoli = apply_reactions_add(ecoli, reactions)
-    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
-    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    iJO1366 = apply_reactions_add(iJO1366, reactions)
+    added_reactions_unique_ids = {i['id'] for i in iJO1366.notes['changes']['added']['reactions']}
+    assert len(iJO1366.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
     assert added_reactions_unique_ids - reaction_ids == added_reactions
-    for reaction in ecoli.notes['changes']['added']['reactions']:
-        assert ecoli.reactions.has_id(reaction['id'])
+    for reaction in iJO1366.notes['changes']['added']['reactions']:
+        assert iJO1366.reactions.has_id(reaction['id'])
     reactions = [
         {'id': 'MNXR69355', 'metabolites': None},
         {'id': 'MNXR81835', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
-    ecoli = apply_reactions_add(ecoli, reactions)
-    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
-    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    iJO1366 = apply_reactions_add(iJO1366, reactions)
+    added_reactions_unique_ids = {i['id'] for i in iJO1366.notes['changes']['added']['reactions']}
+    assert len(iJO1366.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
     assert added_reactions_unique_ids - reaction_ids == {
         'DM_phitcoa_e', 'adapter_bzsuccoa_c_bzsuccoa_e',
         'adapter_phitcoa_c_phitcoa_e', 'DM_bzsuccoa_e'
     }
-    for reaction in ecoli.notes['changes']['added']['reactions']:
-        assert ecoli.reactions.has_id(reaction['id'])
+    for reaction in iJO1366.notes['changes']['added']['reactions']:
+        assert iJO1366.reactions.has_id(reaction['id'])
     removed_reactions = {'DM_12dgr182_9_12_e',
                          'DM_mgdg182_9_12_e', 'adapter_mgdg182_9_12_c_mgdg182_9_12_e',
                          'adapter_12dgr182_9_12_c_12dgr182_9_12_e'}
     for reaction in removed_reactions:
-        assert not ecoli.reactions.has_id(reaction)
+        assert not iJO1366.reactions.has_id(reaction)
     reactions = [
         {'id': 'MNXR69355', 'metabolites': None},
         {'id': 'MNXR81835', 'metabolites': None},
         {'id': 'MNXR83321', 'metabolites': None},
     ]
     reaction_ids = set([i['id'] for i in reactions])
-    ecoli = apply_reactions_add(ecoli, reactions)
-    added_reactions_unique_ids = {i['id'] for i in ecoli.notes['changes']['added']['reactions']}
-    assert len(ecoli.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
+    iJO1366 = apply_reactions_add(iJO1366, reactions)
+    added_reactions_unique_ids = {i['id'] for i in iJO1366.notes['changes']['added']['reactions']}
+    assert len(iJO1366.notes['changes']['added']['reactions']) == len(added_reactions_unique_ids)
     assert added_reactions_unique_ids - reaction_ids == added_reactions
     reaction_ids = {}
-    ecoli = apply_reactions_add(ecoli, list(reaction_ids))
-    assert ecoli.notes['changes']['added']['reactions'] == []
-    ecoli = apply_reactions_add(ecoli, [{'id': 'MNXR83321', 'metabolites': None},
+    iJO1366 = apply_reactions_add(iJO1366, list(reaction_ids))
+    assert iJO1366.notes['changes']['added']['reactions'] == []
+    iJO1366 = apply_reactions_add(iJO1366, [{'id': 'MNXR83321', 'metabolites': None},
                                         {'id': 'SUCR', 'metabolites': {'h2o_c': -1,
                                                                        'sucr_c': -1,
                                                                        'fru_c': 1,
                                                                        'glc__D_c': 1}}])
 
 
-def test_modify_model():
+def test_modify_model(iJO1366):
     message = {
         'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
         'theoretical-objectives': ['chebi:17790'],
@@ -124,11 +122,10 @@ def test_modify_model():
                          {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}],
         'reactions-knockout': ['GLUDy', '3HAD160'],
     }
-    wildtype = storage.get('iJO1366').model
-    modified = modify_model(message, wildtype.copy())
+    modified = modify_model(message, iJO1366)
     assert 'EX_meoh_e' in modified.medium
     db_key = storage.save_changes(modified, message)
-    restored_model = storage.restore_from_key(db_key).copy()
+    restored_model = storage.restore_from_key(db_key)
     assert restored_model.medium == modified.medium
 
 
