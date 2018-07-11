@@ -16,9 +16,8 @@ from deepdiff import DeepDiff
 
 from model import storage
 from model.adapter import full_genotype
-from model.constants import SIMULATION_METHOD, get_empty_changes
+from model.constants import get_empty_changes
 from model.operations import apply_reactions_add, get_genotype_reactions, modify_model
-from model.response import METHODS, respond
 
 
 def test_get_genotype_reactions():
@@ -139,16 +138,6 @@ FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', '
                     'ACACT7r', 'ECOAH5', 'FACOAL180t2pp', 'CTECOAI6', 'FACOAL140t2pp', 'ACOAD7f', 'ACACT2r',
                     'FACOAL141t2pp', 'FACOAL181t2pp', 'HACD8', 'ACOAD8f', 'ACOAD2f', 'ECOAH8', 'ACACT3r', 'ACOAD3f',
                     'ACACT8r', 'HACD4', 'HACD6', 'ACOAD5f', 'ACOAD6f', 'FACOAL120t2pp']
-
-
-def test_simulation_methods():
-    for method in METHODS:
-        message = {SIMULATION_METHOD: method}
-        model = storage.get('iJO1366').model.copy()
-        response = respond(model, message)
-        if method not in {'fva', 'pfba-fva'}:
-            reactions_ids = [i.id for i in model.reactions]
-            assert set(response.fluxes().keys()) == set(reactions_ids)
 
 
 def test_restore_from_cache():
