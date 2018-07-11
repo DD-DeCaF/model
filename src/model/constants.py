@@ -22,12 +22,11 @@ from cobra.flux_analysis.moma import add_moma
 logger = logging.getLogger(__name__)
 
 
-def pfba_fva(model, reactions=None):
+def pfba_fva(model):
     return flux_variability_analysis(
         model,
         fraction_of_optimum=1,
         pfba_factor=1.05,
-        reactions_list=reactions
     )
 
 
@@ -55,7 +54,6 @@ GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 SIMULATION_METHOD = 'simulation-method'
-MAP = 'map'
 REACTIONS_KNOCKOUT = 'reactions-knockout'
 REACTIONS_ADD = 'reactions-add'
 MODEL = 'model'

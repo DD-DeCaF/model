@@ -28,18 +28,6 @@ from model.operations import is_dummy, phase_plane_to_dict
 logger = logging.getLogger(__name__)
 
 
-def map_reactions_list(map_path):
-    """Extract reaction ids from map for FVA optimization
-
-    :param map_path: string
-    :return: list of strings
-    """
-    if not os.path.isfile(map_path):
-        return []
-    with open(map_path) as fp:
-        return [i['bigg_id'] for i in json.load(fp)[1]['reactions'].values()]
-
-
 class Response(object):
     def __init__(self, model, message):
         self.model = model
@@ -52,7 +40,8 @@ class Response(object):
             self.method_name = message.get(constants.SIMULATION_METHOD, 'fba')
             if self.method_name in {'fva', 'pfba-fva'}:
                 try:
-                    solution = self.solve_fva()
+                    # FIXME: accept list of reactions to actually solve for fva
+                    solution = constants.METHODS[self.method_name](self.model)
                 except OptimizationError:
                     logger.info('infeasible model for fva')
                     self.flux = {}
@@ -78,25 +67,6 @@ class Response(object):
                 else:
                     self.flux = solution.fluxes.to_dict()
                     self.growth = self.flux[storage.get(model.id).growth_rate_reaction]
-
-    def solve_fva(self):
-        fva_reactions = None
-        if constants.MAP in self.message:
-            reaction_ids = map_reactions_list('{0}/{1}/{1}.{2}.json'.format(
-                constants.MAPS_DIR,
-                self.model.id,
-                self.message[constants.MAP]
-            ))
-            if reaction_ids:
-                reactions = [i for i in reaction_ids
-                             if self.model.reactions.has_id(i)]
-                fva_reactions = list(set(
-                    reactions + [storage.get(self.model.id).growth_rate_reaction]
-                ))
-        return constants.METHODS[self.method_name](
-            self.model,
-            reactions=fva_reactions
-        )
 
     def solve(self):
         t = time.time()
