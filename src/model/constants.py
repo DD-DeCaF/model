@@ -96,8 +96,6 @@ def get_empty_changes():
     }
 
 
-MAPS_DIR = 'data/maps'
-
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
 
 RETURN_FUNCTIONS = {
