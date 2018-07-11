@@ -17,6 +17,7 @@ from deepdiff import DeepDiff
 from model import storage
 from model.adapter import full_genotype
 from model.constants import get_empty_changes
+from model.ice_client import ICE
 from model.operations import apply_reactions_add, get_genotype_reactions, modify_model
 
 
@@ -137,7 +138,10 @@ FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', '
                     'ACACT8r', 'HACD4', 'HACD6', 'ACOAD5f', 'ACOAD6f', 'FACOAL120t2pp']
 
 
-def test_restore_from_cache(iMM904):
+def test_restore_from_cache(monkeypatch, iMM904):
+    # Disable GPR queries for efficiency
+    monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
+
     message = {
         'to-return': ['model', 'fluxes'],
         'genotype-changes': [
