@@ -165,7 +165,5 @@ def respond(model, message=None, mutated_model_id=None):
         result = response.full_response()
     if mutated_model_id:
         result['model-id'] = mutated_model_id
-    if constants.REQUEST_ID in message:
-        result[constants.REQUEST_ID] = message[constants.REQUEST_ID]
     logger.info('Response for %s is ready in %s sec', message, time.time() - t)
     return result
