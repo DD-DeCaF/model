@@ -58,3 +58,15 @@ def iJO1366():
     with model:
         yield model
     model.notes = original_notes
+
+
+@pytest.fixture(scope="function")
+def iMM904():
+    """Provide a modifiable copy of the iMM904 cobrapy model"""
+    model = storage.get('iMM904').model
+
+    # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
+    original_notes = model.notes
+    with model:
+        yield model
+    model.notes = original_notes

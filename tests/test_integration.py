@@ -137,8 +137,7 @@ FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', '
                     'ACACT8r', 'HACD4', 'HACD6', 'ACOAD5f', 'ACOAD6f', 'FACOAL120t2pp']
 
 
-def test_restore_from_cache():
-    wild_type_id = 'iMM904'
+def test_restore_from_cache(iMM904):
     message = {
         'to-return': ['model', 'fluxes'],
         'genotype-changes': [
@@ -151,7 +150,7 @@ def test_restore_from_cache():
                           'name': 'beta-carotene', 'type': 'compound'},
                          {'id': 'PFK', 'measurements': [5], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
     }
-    model = modify_model(message, storage.get(wild_type_id).model.copy())
+    model = modify_model(message, iMM904)
     db_key = storage.save_changes(model, message)
     restored_model = storage.restore_from_key(db_key).copy()
     reactions = {
