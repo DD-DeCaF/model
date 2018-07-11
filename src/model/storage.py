@@ -47,6 +47,7 @@ class ModelMeta:
         return self._model
 
     def _load(self):
+        logger.info(f"Loading model {self.model_id} from SBML file")
         self._model = read_sbml_model(f"data/models/{self.model_id}.sbml.gz")
         self._model.solver = 'cplex'
         self._model.notes['namespace'] = self.namespace

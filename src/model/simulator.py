@@ -46,6 +46,7 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
             model.objective.direction = objective_direction
 
         try:
+            logger.info(f"Simulating model {model.id} with {method}")
             if method == 'fba':
                 solution = model.optimize()
             elif method == 'pfba':
@@ -62,6 +63,7 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
                     add_moma(model, solution=reference, linear=(method == 'lmoma'))
                     solution = model.optimize()
         except OptimizationError:
+            logger.info(f"Infeasible model")
             flux_distribution = {}
             growth_rate = 0.0
 
@@ -75,6 +77,7 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
                         for rxn in model.reactions if rxn.id in ids_measured_reactions
                     }
         else:
+            logger.info(f"Simulation completed successfully")
             if method in ('fba', 'pfba', 'moma', 'lmoma'):
                 flux_distribution = solution.fluxes.to_dict()
                 growth_rate = flux_distribution[storage.get(model.id).growth_rate_reaction]
@@ -92,6 +95,7 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
         result[constants.FLUXES] = flux_distribution
 
     if to_return is None or constants.TMY in to_return:
+        logger.info("Adding theoretical maximum yields")
         result[constants.TMY] = {key: phase_plane_to_dict(model, key) for key in tmy_objectives}
 
     if to_return is None or constants.MODEL in to_return:
