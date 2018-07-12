@@ -14,6 +14,7 @@
 
 import pytest
 
+from model import adapter
 from model.ice_client import ICE
 
 
@@ -82,6 +83,24 @@ def test_simulate_infeasible(client):
 def test_simulate_modify(monkeypatch, client):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
+
+    # Mock id-mapper api queries for efficiency
+    def query_identifiers(object_ids, db_from, db_to):
+        q = (object_ids, db_from, db_to)
+        if q == (['MNXM2029', 'MNXM3447', 'MNXM368', 'MNXM7019'], 'mnx', 'chebi'):
+            return {'MNXM368': ['16929', '10647', '12842', '26699', '52330', '57952']}
+        elif q == (['MNXM2029', 'MNXM3447', 'MNXM368', 'MNXM7019'], 'mnx', 'bigg'):
+            return {'MNXM3447': ['2agpe141'], 'MNXM368': ['g3pe'], 'MNXM7019': ['apg141'], 'MNXM2029': ['pg141']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'chebi'):
+            return {'MNXM89795': ['18307', '13487', '13495', '22100', '42751', '9811', '58439', '66914', '67119'], 'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM17': ['17659', '13445', '27230', '46402', '9802', '58223']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'bigg'):
+            return {'MNXM147347': ['12dgr182_9_12'], 'MNXM146474': ['mgdg182_9_12'], 'MNXM89795': ['udpgal'], 'MNXM1': ['h'], 'MNXM17': ['udp']}
+        elif q == (['glc__D', 'caro'], 'bigg', 'mnx'):
+            return {'glc__D': ['MNXM41'], 'caro': ['MNXM614']}
+        elif q == (['glc__D', 'caro'], 'bigg', 'chebi'):
+            return {'glc__D': ['17634', '12965', '20999', '4167'], 'caro': ['17579', '10355', '12392', '22834', '40987']}
+        raise NotImplemented(f"Unmocked query!")
+    monkeypatch.setattr(adapter, 'query_identifiers', query_identifiers)
 
     for query, message in {'modify': MESSAGE_MODIFY, 'fluxes': MESSAGE_FLUXES}.items():
         response = client.post("/models/iJO1366/simulate", json={'message': message})

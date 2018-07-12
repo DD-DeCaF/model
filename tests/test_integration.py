@@ -14,7 +14,7 @@
 
 from deepdiff import DeepDiff
 
-from model import storage
+from model import adapter, storage
 from model.adapter import full_genotype
 from model.constants import get_empty_changes
 from model.ice_client import ICE
@@ -27,7 +27,37 @@ def test_get_genotype_reactions():
     assert set(result.keys()) == {'BBa_J23100', 'AB326105', 'NP_600058', 'BBa_0010'}
 
 
-def test_reactions_additions(iJO1366):
+def test_reactions_additions(monkeypatch, iJO1366):
+    # Mock id-mapper api queries for efficiency
+    def query_identifiers(object_ids, db_from, db_to):
+        q = (object_ids, db_from, db_to)
+        if q == (['MNXM2029', 'MNXM3447', 'MNXM368', 'MNXM7019'], 'mnx', 'chebi'):
+            return {'MNXM368': ['16929', '10647', '12842', '26699', '52330', '57952']}
+        elif q == (['MNXM2029', 'MNXM3447', 'MNXM368', 'MNXM7019'], 'mnx', 'bigg'):
+            return {'MNXM3447': ['2agpe141'], 'MNXM368': ['g3pe'], 'MNXM7019': ['apg141'], 'MNXM2029': ['pg141']}
+        elif q == (['MNXM1', 'MNXM2899', 'MNXM33', 'MNXM38', 'MNXM4923'], 'mnx', 'chebi'):
+            return {'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM33': ['16238', '13315', '21125', '42388', '4956', '57692'], 'MNXM38': ['17877', '13316', '21126', '42427', '4957', '58307'], 'MNXM2899': ['10970', '22746', '3060', '57253'], 'MNXM4923': ['27639', '10948', '21124', '4731', '58519']}
+        elif q == (['MNXM1', 'MNXM2899', 'MNXM33', 'MNXM38', 'MNXM4923'], 'mnx', 'bigg'):
+            return {'MNXM1': ['h'], 'MNXM33': ['fad'], 'MNXM38': ['fadh2'], 'MNXM2899': ['bzsuccoa'], 'MNXM4923': ['phitcoa']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'chebi'):
+            return {'MNXM89795': ['18307', '13487', '13495', '22100', '42751', '9811', '58439', '66914', '67119'], 'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM17': ['17659', '13445', '27230', '46402', '9802', '58223']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'bigg'):
+            return {'MNXM147347': ['12dgr182_9_12'], 'MNXM146474': ['mgdg182_9_12'], 'MNXM89795': ['udpgal'], 'MNXM1': ['h'], 'MNXM17': ['udp']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'chebi'):
+            return {'MNXM89795': ['18307', '13487', '13495', '22100', '42751', '9811', '58439', '66914', '67119'], 'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM17': ['17659', '13445', '27230', '46402', '9802', '58223']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'bigg'):
+            return {'MNXM147347': ['12dgr182_9_12'], 'MNXM146474': ['mgdg182_9_12'], 'MNXM89795': ['udpgal'], 'MNXM1': ['h'], 'MNXM17': ['udp']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'chebi'):
+            return {'MNXM89795': ['18307', '13487', '13495', '22100', '42751', '9811', '58439', '66914', '67119'], 'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM17': ['17659', '13445', '27230', '46402', '9802', '58223']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'bigg'):
+            return {'MNXM147347': ['12dgr182_9_12'], 'MNXM146474': ['mgdg182_9_12'], 'MNXM89795': ['udpgal'], 'MNXM1': ['h'], 'MNXM17': ['udp']}
+        elif q == (['h2o', 'sucr', 'fru', 'glc__D'], 'bigg', 'chebi'):
+            return {'h2o': ['33813', '30490', '29412', '29375', '29356', '5594', '44641', '13419', '13365', '16234', '5585', '44819', '44701', '44292', '43228', '42857', '42043', '27313', '13352', '10743', '15377'], 'glc__D': ['17634', '12965', '20999', '4167'], 'fru': ['28757', '24104', '24110', '5172', '37721', '48095', '4119', '47424'], 'sucr': ['17992', '15128', '26812', '45795', '9314']}
+        elif q == (['h2o', 'sucr', 'fru', 'glc__D'], 'bigg', 'mnx'):
+            return {'h2o': ['MNXM2'], 'glc__D': ['MNXM41'], 'fru': ['MNXM175'], 'sucr': ['MNXM167']}
+        raise NotImplemented(f"Unmocked query!")
+    monkeypatch.setattr(adapter, 'query_identifiers', query_identifiers)
+
     iJO1366.notes['changes'] = get_empty_changes()
     reactions = [
         {'id': 'MNXR69355', 'metabolites': None},
