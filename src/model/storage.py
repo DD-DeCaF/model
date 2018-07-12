@@ -16,7 +16,7 @@ import hashlib
 import json
 import logging
 
-from cobra.io import read_sbml_model
+from cobra.io import load_json_model, read_sbml_model
 from redis import Redis
 
 from model import constants
@@ -30,11 +30,13 @@ redis = Redis(app.config['REDIS_ADDR'], app.config['REDIS_PORT'])
 class ModelMeta:
     """A metabolic model, with metadata and an internal (lazy-loaded in development) cobrapy model instance."""
 
-    def __init__(self, model_id, species, namespace, growth_rate_reaction):
+    def __init__(self, model_id, species, namespace, growth_rate_reaction, file_format='sbml', simulatable=True):
         self.model_id = model_id
         self.species = species
         self.namespace = namespace
         self.growth_rate_reaction = growth_rate_reaction
+        self.file_format = file_format
+        self.simulatable = simulatable
 
         # Preload the model into memory only in the following environments
         if app.config['ENVIRONMENT'] in ('production', 'staging'):
@@ -48,9 +50,15 @@ class ModelMeta:
 
     def _load(self):
         logger.info(f"Loading model {self.model_id} from SBML file")
-        self._model = read_sbml_model(f"data/models/{self.model_id}.sbml.gz")
-        self._model.solver = 'cplex'
-        self._model.notes['namespace'] = self.namespace
+        if self.file_format == 'sbml':
+            self._model = read_sbml_model(f"data/models/{self.model_id}.sbml.gz")
+        elif self.file_format == 'json':
+            self._model = load_json_model(f"data/models/{self.model_id}.json")
+
+        # Use cplex solver. Not necessary for the universal models.
+        if self.simulatable:
+            self._model.solver = 'cplex'
+            self._model.notes['namespace'] = self.namespace
 
 
 MODELS = [
@@ -62,6 +70,7 @@ MODELS = [
     ModelMeta('e_coli_core', 'ECOLX', 'bigg', 'BIOMASS_Ecoli_core_w_GAM'),
     ModelMeta('ecYeast7', 'YEAST', 'yeast7', 'r_2111'),
     ModelMeta('ecYeast7_proteomics', 'YEAST', 'yeast7', 'r_2111'),
+    ModelMeta('metanetx_universal_model_bigg', None, None, None, 'json', False),
 ]
 
 
