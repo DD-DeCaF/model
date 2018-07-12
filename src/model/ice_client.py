@@ -18,16 +18,14 @@ import logging
 import requests
 
 from . import settings
+from .utils import Singleton
 
 
 logger = logging.getLogger(__name__)
 
 
-class _ICE:
-    """
-    ICE API client. Don't instantiate this class; import the `ice` singleton from the same module.
-    Docs: http://ice.jbei.org/api/index.html
-    """
+class ICE(metaclass=Singleton):
+    """ICE API client. Docs: http://ice.jbei.org/api/index.html"""
 
     def __init__(self):
         """On instantiation, request and store a session id for later use."""
@@ -72,7 +70,3 @@ class _ICE:
         if add_session_id:
             headers.update({'X-ICE-Authentication-SessionId': self.SESSION_ID})
         return headers
-
-
-# Singleton instance of the ice client - import and use this instance
-ice = _ICE()

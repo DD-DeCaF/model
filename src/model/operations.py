@@ -27,11 +27,12 @@ from model import settings
 from model.adapter import (
     GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, NoIDMapping, feature_id, full_genotype,
     get_unique_metabolite)
-from model.ice_client import ice
+from model.ice_client import ICE
 from model.metrics import API_REQUESTS
 
 
 logger = logging.getLogger(__name__)
+ice = ICE()
 
 
 async def operate_on_reactions(model, reactions, key, apply_function, undo_function):
