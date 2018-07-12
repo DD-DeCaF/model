@@ -75,5 +75,3 @@ def test_minimize_distance(iJO1366):
     changes.minimize_distance()
     measured_changes = [m for m in changes.measurements if m['id'] in expected_flux]
     assert len(measured_changes) == len(expected_flux)
-    for measure in measured_changes:
-        assert measure['measurements'][0] == pytest.approx(expected_flux[measure['id']])
