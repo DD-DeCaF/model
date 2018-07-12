@@ -70,6 +70,7 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
 
             # For non-fva methods, do return the measured fluxes despite infesability
             if method not in ('fva', 'pfba-fva'):
+                changes = model.notes['changes']
                 if 'measured' in changes:
                     ids_measured_reactions = set(rxn['id'] for rxn in changes['measured']['reactions'])
                     flux_distribution = {
