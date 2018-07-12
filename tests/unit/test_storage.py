@@ -14,6 +14,7 @@
 
 import random
 
+from cobra import Model
 from cobra.io.dict import model_to_dict
 
 from model import storage
@@ -73,3 +74,7 @@ def test_model_immutability(app):
     restored_model = storage.get('e_coli_core').model
     restored_model.notes['test'] = 'different'
     assert model.notes['test'] == 'test'
+
+
+def test_universal_model():
+    assert type(storage.get('metanetx_universal_model_bigg').model) == Model
