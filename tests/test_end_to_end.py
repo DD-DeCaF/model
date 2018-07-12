@@ -92,13 +92,13 @@ def test_simulate_modify(monkeypatch, client):
         elif q == (['MNXM2029', 'MNXM3447', 'MNXM368', 'MNXM7019'], 'mnx', 'bigg'):
             return {'MNXM3447': ['2agpe141'], 'MNXM368': ['g3pe'], 'MNXM7019': ['apg141'], 'MNXM2029': ['pg141']}
         elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'chebi'):
-            return {'MNXM89795': ['18307', '13487', '13495', '22100', '42751', '9811', '58439', '66914', '67119'], 'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM17': ['17659', '13445', '27230', '46402', '9802', '58223']}
+            return {'MNXM89795': ['18307', '13487', '13495', '22100', '42751', '9811', '58439', '66914', '67119'], 'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM17': ['17659', '13445', '27230', '46402', '9802', '58223']}  # noqa
         elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'bigg'):
-            return {'MNXM147347': ['12dgr182_9_12'], 'MNXM146474': ['mgdg182_9_12'], 'MNXM89795': ['udpgal'], 'MNXM1': ['h'], 'MNXM17': ['udp']}
+            return {'MNXM147347': ['12dgr182_9_12'], 'MNXM146474': ['mgdg182_9_12'], 'MNXM89795': ['udpgal'], 'MNXM1': ['h'], 'MNXM17': ['udp']}  # noqa
         elif q == (['glc__D', 'caro'], 'bigg', 'mnx'):
             return {'glc__D': ['MNXM41'], 'caro': ['MNXM614']}
         elif q == (['glc__D', 'caro'], 'bigg', 'chebi'):
-            return {'glc__D': ['17634', '12965', '20999', '4167'], 'caro': ['17579', '10355', '12392', '22834', '40987']}
+            return {'glc__D': ['17634', '12965', '20999', '4167'], 'caro': ['17579', '10355', '12392', '22834', '40987']}  # noqa
         raise NotImplemented(f"Unmocked query!")
     monkeypatch.setattr(adapter, 'query_identifiers', query_identifiers)
 
