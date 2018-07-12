@@ -20,7 +20,6 @@ import os
 import re
 from collections import defaultdict
 
-import aiohttp
 import gnomic
 import networkx as nx
 import numpy as np
@@ -29,6 +28,7 @@ from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 
+import aiohttp
 from model import constants
 from model.driven import adjust_fluxes2model
 from model.metrics import API_REQUESTS

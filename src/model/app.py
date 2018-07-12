@@ -16,9 +16,8 @@ import asyncio
 import logging
 
 import aiohttp_cors
-from aiohttp import web
-
 import model.handlers as handlers
+from aiohttp import web
 
 from .middleware import metrics_middleware, raven_middleware
 

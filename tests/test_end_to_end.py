@@ -14,11 +14,11 @@
 
 from copy import deepcopy
 
-import aiohttp
 import jsonpatch
 import pytest
-from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
+import aiohttp
+from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from model.app import get_app
 
 
