@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import logging
-import time
 
 
 logger = logging.getLogger(__name__)
@@ -65,4 +64,3 @@ def get_empty_changes():
 
 
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
-

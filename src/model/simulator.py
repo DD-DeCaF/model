@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
-import os
-import time
 
 from cobra.exceptions import OptimizationError
 from cobra.flux_analysis import flux_variability_analysis, pfba
@@ -105,12 +102,12 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
 
     if to_return is None or constants.REMOVED_REACTIONS in to_return:
         changes = model.notes.get('changes', constants.get_empty_changes())
-        reactions = list(set([i['id'] for i in changes['removed']['reactions'] ]))
+        reactions = list(set([i['id'] for i in changes['removed']['reactions']]))
         result[constants.REMOVED_REACTIONS] = reactions
 
     if to_return is None or constants.MEASURED_REACTIONS in to_return:
         changes = model.notes.get('changes', constants.get_empty_changes())
-        reactions = list(set([i['id'] for i in changes['measured']['reactions']] ))
+        reactions = list(set([i['id'] for i in changes['measured']['reactions']]))
         result[constants.MEASURED_REACTIONS] = reactions
 
     if to_return is None or constants.ADDED_REACTIONS in to_return:
