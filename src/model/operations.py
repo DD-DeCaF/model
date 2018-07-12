@@ -18,11 +18,11 @@ import os
 from collections import Counter
 
 import gnomic
-from cameo import models, phenotypic_phase_plane
+from cameo import phenotypic_phase_plane
 from cobra.io import read_sbml_model
 from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict, reaction_from_dict, reaction_to_dict
 
-from model import constants
+from model import constants, storage
 from model.adapter import (
     GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, NoIDMapping, feature_id, full_genotype,
     get_unique_metabolite)
@@ -60,7 +60,7 @@ def operate_on_reactions(model, reactions, key, apply_function, undo_function):
 
 
 def add_reaction_from_universal(model, reaction_id):
-    reaction = models.metanetx_universal_model_bigg.reactions.get_by_id(reaction_id)
+    reaction = storage.get('metanetx_universal_model_bigg').model.reactions.get_by_id(reaction_id)
     reaction_string = reaction.build_reaction_string()
     adapter = GenotypeChangeModel(
         model,
