@@ -62,8 +62,8 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
                 with model:
                     add_moma(model, solution=reference, linear=(method == 'lmoma'))
                     solution = model.optimize()
-        except OptimizationError:
-            logger.info(f"Infeasible model")
+        except OptimizationError as error:
+            logger.info(f"Optimization Error: {error}")
             flux_distribution = {}
             growth_rate = 0.0
 
