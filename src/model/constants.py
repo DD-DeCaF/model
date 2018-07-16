@@ -13,49 +13,14 @@
 # limitations under the License.
 
 import logging
-import time
-
-from cobra.flux_analysis import flux_variability_analysis, pfba
-from cobra.flux_analysis.moma import add_moma
 
 
 logger = logging.getLogger(__name__)
-
-
-def pfba_fva(model, reactions=None):
-    return flux_variability_analysis(
-        model,
-        fraction_of_optimum=1,
-        pfba_factor=1.05,
-        reactions_list=reactions
-    )
-
-
-def moma(model, reference, linear=False):
-    with model:
-        start_time = time.time()
-        add_moma(model, solution=reference, linear=linear)
-        logger.info('moma addition finished in %s s', time.time() - start_time)
-        start_time = time.time()
-        solution = model.optimize()
-        logger.info('moma optimization finished in %s s', time.time() - start_time)
-    return solution
-
-
-METHODS = {
-    'fba': lambda model: model.optimize(),
-    'pfba': pfba,
-    'fva': flux_variability_analysis,
-    'pfba-fva': pfba_fva,
-    'moma': moma,
-    'lmoma': lambda model, reference: moma(model, reference, linear=True),
-}
 
 GENOTYPE_CHANGES = 'genotype-changes'
 MEDIUM = 'medium'
 MEASUREMENTS = 'measurements'
 SIMULATION_METHOD = 'simulation-method'
-MAP = 'map'
 REACTIONS_KNOCKOUT = 'reactions-knockout'
 REACTIONS_ADD = 'reactions-add'
 MODEL = 'model'
@@ -64,7 +29,6 @@ GROWTH_RATE = 'growth-rate'
 TMY = 'tmy'
 TMY_OBJECTIVES = 'theoretical-objectives'
 OBJECTIVE = 'objective'
-REQUEST_ID = 'request-id'
 REMOVED_REACTIONS = 'removed-reactions'
 ADDED_REACTIONS = 'added-reactions'
 MISSING_MEASURED_REACTIONS = 'missing-measured-reactions'
@@ -99,17 +63,4 @@ def get_empty_changes():
     }
 
 
-MAPS_DIR = 'data/maps'
-
 REQUEST_KEYS = [GENOTYPE_CHANGES, MEDIUM, MEASUREMENTS]
-
-RETURN_FUNCTIONS = {
-    FLUXES: 'fluxes',
-    TMY: 'theoretical_maximum_yield',
-    MODEL: 'model_json',
-    GROWTH_RATE: 'growth_rate',
-    REMOVED_REACTIONS: 'removed_reactions',
-    MEASURED_REACTIONS: 'measured_reactions',
-    ADDED_REACTIONS: 'added_reactions',
-    MISSING_MEASURED_REACTIONS: 'measured_missing_reactions',
-}

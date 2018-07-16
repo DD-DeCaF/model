@@ -19,9 +19,9 @@ from flask import Response, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
-from model import storage
+from model import constants, storage
 from model.operations import modify_model
-from model.response import respond
+from model.simulator import simulate
 
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,18 @@ def model_modify_simulate(model_id):
         model = model_meta.model.copy()
         model = modify_model(message, model)
         changes_key = storage.save_changes(model, message)
-    return jsonify(respond(model, message, mutated_model_id=changes_key))
+
+    # Parse solver request args and set defaults
+    method = message.get(constants.SIMULATION_METHOD, 'fba')
+    objective_id = message.get(constants.OBJECTIVE)
+    objective_direction = message.get(constants.OBJECTIVE_DIRECTION)
+    tmy_objectives = message.get(constants.TMY_OBJECTIVES, [])
+    to_return = message.get('to-return')
+
+    result = simulate(model, method, objective_id, objective_direction, tmy_objectives, to_return)
+    response = {key: value for key, value in result.items() if key in to_return}
+    response['model-id'] = changes_key
+    return jsonify(response)
 
 
 def model_medium(model_id):
