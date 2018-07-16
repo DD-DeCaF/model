@@ -12,21 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from model import storage
 from model.simulator import METHODS, simulate
 
 
-def test_tmy_result():
-    tmy_objectives = ['bigg:akg']
+@pytest.mark.parametrize("objective", ['bigg:akg'])
+def test_tmy_result(objective):
     to_return = ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions']
-    result = simulate(storage.get('iJO1366').model, 'fba', None, None, tmy_objectives, to_return)
+    result = simulate(storage.get('iJO1366').model, 'fba', None, None, [objective], to_return)
     assert set(result) == set(to_return)
 
 
-def test_simulation_methods():
+@pytest.mark.parametrize("method", METHODS)
+def test_simulation_methods(method):
     model = storage.get('iJO1366').model
-    for method in METHODS:
-        result = simulate(model, method, None, None, [], None)
-        if method not in {'fva', 'pfba-fva'}:
-            reactions_ids = [i.id for i in model.reactions]
-            assert set(result['fluxes']) == set(reactions_ids)
+    result = simulate(model, method, None, None, [], None)
+    if method not in {'fva', 'pfba-fva'}:
+        reactions_ids = [i.id for i in model.reactions]
+        assert set(result['fluxes']) == set(reactions_ids)
