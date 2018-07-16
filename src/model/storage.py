@@ -21,6 +21,7 @@ from redis import Redis
 
 from model import constants
 from model.app import app
+from model.operations import restore_changes
 
 
 logger = logging.getLogger(__name__)
@@ -99,8 +100,6 @@ def restore_from_message(model_id, message):
 
 def restore_from_key(changes_key):
     """Restore model with modifications from cache based on the given unique cache key"""
-    from model.operations import restore_changes  # FIXME: circular dependency issue
-
     changes = redis.get(changes_key)
     if changes is None:
         logger.debug(f"Changes '{changes_key}' not found in cache")
