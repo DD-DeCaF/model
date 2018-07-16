@@ -42,7 +42,7 @@ def e_coli_core():
     model = storage.get('e_coli_core').model
 
     # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
-    original_notes = model.notes
+    original_notes = model.notes.copy()
     with model:
         yield model
     model.notes = original_notes
@@ -54,7 +54,7 @@ def iJO1366():
     model = storage.get('iJO1366').model
 
     # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
-    original_notes = model.notes
+    original_notes = model.notes.copy()
     with model:
         yield model
     model.notes = original_notes
@@ -66,7 +66,7 @@ def iMM904():
     model = storage.get('iMM904').model
 
     # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
-    original_notes = model.notes
+    original_notes = model.notes.copy()
     with model:
         yield model
     model.notes = original_notes
