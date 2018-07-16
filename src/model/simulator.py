@@ -16,7 +16,6 @@ import logging
 
 from cobra.exceptions import OptimizationError
 from cobra.flux_analysis import flux_variability_analysis, pfba
-from cobra.flux_analysis.moma import add_moma
 from cobra.io.dict import model_to_dict
 
 from model import constants, storage
@@ -30,8 +29,6 @@ METHODS = [
     'pfba',
     'fva',
     'pfba-fva',
-    'moma',
-    'lmoma',
 ]
 
 
@@ -56,11 +53,6 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
             elif method == 'pfba-fva':
                 # FIXME: accept list of relevant fva reactions to calculate
                 solution = flux_variability_analysis(model, fraction_of_optimum=1, pfba_factor=1.05)
-            elif method in ('moma', 'lmoma'):
-                reference = pfba(model)
-                with model:
-                    add_moma(model, solution=reference, linear=(method == 'lmoma'))
-                    solution = model.optimize()
         except OptimizationError:
             flux_distribution = {}
             growth_rate = 0.0
@@ -75,7 +67,7 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
                         for rxn in model.reactions if rxn.id in ids_measured_reactions
                     }
         else:
-            if method in ('fba', 'pfba', 'moma', 'lmoma'):
+            if method in ('fba', 'pfba'):
                 flux_distribution = solution.fluxes.to_dict()
                 growth_rate = flux_distribution[storage.get(model.id).growth_rate_reaction]
             elif method in ('fva', 'pfba-fva'):
