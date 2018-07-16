@@ -20,7 +20,7 @@ def test_tmy_result():
     tmy_objectives = ['bigg:akg']
     to_return = ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions']
     result = simulate(storage.get('iJO1366').model, 'fba', None, None, tmy_objectives, to_return)
-    assert set(result.keys()) == set(to_return)
+    assert set(result) == set(to_return)
 
 
 def test_simulation_methods():
@@ -29,4 +29,4 @@ def test_simulation_methods():
         result = simulate(model, method, None, None, [], None)
         if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in model.reactions]
-            assert set(result['fluxes'].keys()) == set(reactions_ids)
+            assert set(result['fluxes']) == set(reactions_ids)
