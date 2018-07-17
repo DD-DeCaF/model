@@ -14,7 +14,7 @@
 
 import pytest
 
-from model.simulator import METHODS, simulate
+from model.simulations import METHODS, simulate
 
 
 @pytest.mark.parametrize("objective", ['bigg:akg'])

@@ -21,7 +21,7 @@ from prometheus_client.multiprocess import MultiProcessCollector
 
 from model import constants, storage
 from model.operations import modify_model
-from model.simulator import simulate
+from model.simulations import simulate
 
 
 logger = logging.getLogger(__name__)
