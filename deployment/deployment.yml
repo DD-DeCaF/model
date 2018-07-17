@@ -54,6 +54,11 @@ spec:
         - mountPath: /prometheus-client
           name: prometheus-client
         command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
+        readinessProbe:
+          httpGet:
+            path: /model/healthz
+            port: 8000
+          initialDelaySeconds: 5
         resources:
           requests:
             cpu: "750m"
@@ -132,6 +137,11 @@ spec:
         - mountPath: /prometheus-client
           name: prometheus-client
         command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
+        readinessProbe:
+          httpGet:
+            path: /model/healthz
+            port: 8000
+          initialDelaySeconds: 5
         resources:
           requests:
             cpu: "100m"
