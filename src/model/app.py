@@ -20,12 +20,14 @@ import logging.config
 from flask import Flask
 from flask_cors import CORS
 from raven.contrib.flask import Sentry
+from werkzeug.contrib.fixers import ProxyFix
 
 from model.settings import Settings
 
 
 app = Flask(__name__)
 app.config.from_object(Settings())
+app.wsgi_app = ProxyFix(app.wsgi_app)
 
 
 def init_app(application, interface):
