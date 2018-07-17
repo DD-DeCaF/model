@@ -14,6 +14,9 @@
 
 import pytest
 
+from model import adapter
+from model.ice_client import ICE
+
 
 MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0],
                  'type': 'compound'},
@@ -55,11 +58,52 @@ def test_model_info(client):
     ]
 
 
-def test_http(client):
-    response = client.get("/species/{}".format('ECOLX'))
+def test_species(client):
+    response = client.get("/species/ECOLX")
     assert response.status_code == 200
+    assert len(response.json) > 0
+
+
+def test_simulate_wrong_id(client):
+    response = client.post("/models/wrong_id/simulate", json={'message': {}})
+    assert response.status_code == 404
+
+
+def test_simulate_no_message(client):
+    response = client.post("/models/iJO1366/simulate", json={})
+    assert response.status_code == 400
+
+
+def test_simulate_infeasible(client):
+    response = client.post("/models/iJO1366/simulate", json={'message': MESSAGE_FLUXES_INFEASIBLE})
+    result = response.json
+    assert result['fluxes']['ATPM'] == pytest.approx(100)
+
+
+def test_simulate_modify(monkeypatch, client):
+    # Disable GPR queries for efficiency
+    monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
+
+    # Mock id-mapper api queries for efficiency
+    def query_identifiers(object_ids, db_from, db_to):
+        q = (object_ids, db_from, db_to)
+        if q == (['MNXM2029', 'MNXM3447', 'MNXM368', 'MNXM7019'], 'mnx', 'chebi'):
+            return {'MNXM368': ['16929', '10647', '12842', '26699', '52330', '57952']}
+        elif q == (['MNXM2029', 'MNXM3447', 'MNXM368', 'MNXM7019'], 'mnx', 'bigg'):
+            return {'MNXM3447': ['2agpe141'], 'MNXM368': ['g3pe'], 'MNXM7019': ['apg141'], 'MNXM2029': ['pg141']}
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'chebi'):
+            return {'MNXM89795': ['18307', '13487', '13495', '22100', '42751', '9811', '58439', '66914', '67119'], 'MNXM1': ['24636', '5584', '13357', '10744', '15378'], 'MNXM17': ['17659', '13445', '27230', '46402', '9802', '58223']}  # noqa
+        elif q == (['MNXM147347', 'MNXM89795', 'MNXM1', 'MNXM146474', 'MNXM17'], 'mnx', 'bigg'):
+            return {'MNXM147347': ['12dgr182_9_12'], 'MNXM146474': ['mgdg182_9_12'], 'MNXM89795': ['udpgal'], 'MNXM1': ['h'], 'MNXM17': ['udp']}  # noqa
+        elif q == (['glc__D', 'caro'], 'bigg', 'mnx'):
+            return {'glc__D': ['MNXM41'], 'caro': ['MNXM614']}
+        elif q == (['glc__D', 'caro'], 'bigg', 'chebi'):
+            return {'glc__D': ['17634', '12965', '20999', '4167'], 'caro': ['17579', '10355', '12392', '22834', '40987']}  # noqa
+        raise NotImplemented(f"Unmocked query!")
+    monkeypatch.setattr(adapter, 'query_identifiers', query_identifiers)
+
     for query, message in {'modify': MESSAGE_MODIFY, 'fluxes': MESSAGE_FLUXES}.items():
-        response = client.post("/models/{}/simulate".format('iJO1366'), json={'message': message})
+        response = client.post("/models/iJO1366/simulate", json={'message': message})
         assert response.status_code == 200
         model = response.json
         assert set(model.keys()) == set(message['to-return'] + ['model-id'])
@@ -75,21 +119,16 @@ def test_http(client):
             assert 'PFK' in {rxn['id'] for rxn in changes['measured']['reactions']}
             assert 'b2297' in {rxn['id'] for rxn in changes['removed']['genes']}
             assert 'BAD_ID' in {rxn['id'] for rxn in changes['measured-missing']['reactions']}
-    response = client.post("/models/{}/simulate".format('iJO1366'), json={'message': MESSAGE_FLUXES_INFEASIBLE})
-    model = response.json
-    assert model['fluxes']['ATPM'] == pytest.approx(100)
-    response = client.post("/models/{}/simulate".format('wrong_id'), json={'message': {}})
-    assert response.status_code == 404
-    response = client.post("/models/{}/simulate".format('iJO1366'), json={})
-    assert response.status_code == 400
-    response_etoh = client.post("/models/{}/simulate".format('iJO1366'),
-                                json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+
+
+def test_simulate_different_objective(client):
+    response_etoh = client.post("/models/iJO1366/simulate", json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
     assert response_etoh.status_code == 200
-    model = response_etoh.json
-    assert abs(model['fluxes']['EX_etoh_e']) - 20.0 < 0.001
+    result = response_etoh.json
+    assert abs(result['fluxes']['EX_etoh_e']) - 20.0 < 0.001
+
     MESSAGE_DIFFERENT_OBJECTIVE.pop('objective')
-    response_etoh = client.post("/models/{}/simulate".format('iJO1366'),
-                                json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
+    response_etoh = client.post("/models/iJO1366/simulate", json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
     assert response_etoh.status_code == 200
-    model = response_etoh.json
-    assert abs(model['fluxes']['EX_etoh_e']) < 0.001
+    result = response_etoh.json
+    assert abs(result['fluxes']['EX_etoh_e']) < 0.001

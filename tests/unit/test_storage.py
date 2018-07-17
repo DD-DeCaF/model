@@ -14,10 +14,12 @@
 
 import random
 
+from cobra import Model
 from cobra.io.dict import model_to_dict
 
 from model import storage
 from model.constants import GENOTYPE_CHANGES, MEASUREMENTS, MEDIUM
+from model.ice_client import ICE
 from model.operations import modify_model
 
 
@@ -36,7 +38,10 @@ def test_key_from_model_info(app):
         assert storage._changes_key(model_id, message1) == storage._changes_key(model_id, message4)
 
 
-def test_save_and_restore(app):
+def test_save_and_restore(monkeypatch, app):
+    # Disable GPR queries for efficiency
+    monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
+
     model_id = 'e_coli_core'
     storage.save_changes(storage.get(model_id).model, {})
     message = {
@@ -69,3 +74,7 @@ def test_model_immutability(app):
     restored_model = storage.get('e_coli_core').model
     restored_model.notes['test'] = 'different'
     assert model.notes['test'] == 'test'
+
+
+def test_universal_model():
+    assert type(storage.get('metanetx_universal_model_bigg').model) == Model

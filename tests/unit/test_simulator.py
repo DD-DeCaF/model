@@ -14,21 +14,20 @@
 
 import pytest
 
-from model import storage
 from model.simulator import METHODS, simulate
 
 
 @pytest.mark.parametrize("objective", ['bigg:akg'])
-def test_tmy_result(objective):
+def test_tmy_result(e_coli_core, objective):
     to_return = ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions']
-    result = simulate(storage.get('iJO1366').model, 'fba', None, None, [objective], to_return)
+    result = simulate(e_coli_core, 'fba', None, None, [objective], to_return)
     assert set(result) == set(to_return)
 
 
 @pytest.mark.parametrize("method", METHODS)
-def test_simulation_methods(method):
-    model = storage.get('iJO1366').model
-    result = simulate(model, method, None, None, [], None)
-    if method not in {'fva', 'pfba-fva'}:
-        reactions_ids = [i.id for i in model.reactions]
-        assert set(result['fluxes']) == set(reactions_ids)
+def test_simulation_methods(e_coli_core, method):
+    for method in METHODS:
+        result = simulate(e_coli_core, method, None, None, [], None)
+        if method not in {'fva', 'pfba-fva'}:
+            reactions_ids = [i.id for i in e_coli_core.reactions]
+            assert set(result['fluxes']) == set(reactions_ids)

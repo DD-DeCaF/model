@@ -14,7 +14,6 @@
 
 from math import isclose
 
-from model import storage
 from model.adapter import full_genotype
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
 from model.operations import (
@@ -32,27 +31,24 @@ def test_mg_to_mmol():
     assert is_close(convert_mg_to_mmol(18, 18), 1.0)
 
 
-def test_b_number():
-    model_id = 'iJO1366'
+def test_b_number(iJO1366):
     message = {
         GENOTYPE_CHANGES: ['-b3067,-b3172,-b1084'],
     }
-    model = modify_model(message, storage.get(model_id).model.copy())
-    assert not model.genes.b3172.functional
+    iJO1366 = modify_model(message, iJO1366)
+    assert not iJO1366.genes.b3172.functional
 
 
-def test_product_reaction_variable():
-    ecoli = storage.get('iJO1366').model
-    assert product_reaction_variable(ecoli, 'bigg:akg').id == 'EX_akg_e'
-    assert product_reaction_variable(ecoli, 'bigg:e4p') is None
+def test_product_reaction_variable(e_coli_core):
+    assert product_reaction_variable(e_coli_core, 'bigg:akg').id == 'EX_akg_e'
+    assert product_reaction_variable(e_coli_core, 'bigg:e4p') is None
 
 
-def test_phase_plane_to_dict():
-    ecoli = storage.get('iJO1366').model
-    result = phase_plane_to_dict(ecoli, 'bigg:glu__L')
+def test_phase_plane_to_dict(e_coli_core):
+    result = phase_plane_to_dict(e_coli_core, 'bigg:glu__L')
     assert set(result.keys()) == {'EX_glu__L_e', 'objective_lower_bound', 'objective_upper_bound'}
     assert len(set([len(v) for v in result.values()])) == 1
-    assert phase_plane_to_dict(ecoli, 'bigg:g3p') == {}
+    assert phase_plane_to_dict(e_coli_core, 'bigg:g3p') == {}
 
 
 def test_new_features_identifiers():
@@ -61,53 +57,49 @@ def test_new_features_identifiers():
     assert set(result) == {'C', 'D', 'E', 'F', 'G', 'Y'}
 
 
-def test_reactions_knockouts():
-    ecoli_original = storage.get('iJO1366').model.copy()
-    ecoli = ecoli_original.copy()
-    ecoli.notes['changes'] = get_empty_changes()
+def test_reactions_knockouts(iJO1366):
+    iJO1366_copy = iJO1366.copy()
+    iJO1366_copy.notes['changes'] = get_empty_changes()
     reaction_ids = {'GLUDy', 'GLUDy', '3HAD160'}
-    GLUDy_upper_bound = ecoli.reactions.get_by_id('GLUDy').upper_bound
+    GLUDy_upper_bound = iJO1366_copy.reactions.get_by_id('GLUDy').upper_bound
     assert GLUDy_upper_bound != 0
-    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
-    assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == reaction_ids
-    assert ecoli.reactions.get_by_id('GLUDy').upper_bound == 0
+    iJO1366_copy = apply_reactions_knockouts(iJO1366_copy, list(reaction_ids))
+    assert set([i['id'] for i in iJO1366_copy.notes['changes']['removed']['reactions']]) == reaction_ids
+    assert iJO1366_copy.reactions.get_by_id('GLUDy').upper_bound == 0
     reaction_ids = reaction_ids - {'GLUDy'}
-    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
-    assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == {'3HAD160'}
-    assert GLUDy_upper_bound == ecoli.reactions.get_by_id('GLUDy').upper_bound
+    iJO1366_copy = apply_reactions_knockouts(iJO1366_copy, list(reaction_ids))
+    assert set([i['id'] for i in iJO1366_copy.notes['changes']['removed']['reactions']]) == {'3HAD160'}
+    assert GLUDy_upper_bound == iJO1366_copy.reactions.get_by_id('GLUDy').upper_bound
     reaction_ids = reaction_ids - {'3HAD160'}
-    ecoli = apply_reactions_knockouts(ecoli, list(reaction_ids))
-    assert set([i['id'] for i in ecoli.notes['changes']['removed']['reactions']]) == set()
-    assert is_close(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
+    iJO1366_copy = apply_reactions_knockouts(iJO1366_copy, list(reaction_ids))
+    assert set([i['id'] for i in iJO1366_copy.notes['changes']['removed']['reactions']]) == set()
+    assert is_close(iJO1366_copy.optimize().objective_value, iJO1366.optimize().objective_value)
 
 
-def test_reactions_change_bounds():
-    ecoli_original = storage.get('iJO1366').model.copy()
-    ecoli = ecoli_original.copy()
-    ecoli.notes['changes'] = get_empty_changes()
+def test_reactions_change_bounds(iJO1366):
+    iJO1366_copy = iJO1366.copy()
+    iJO1366_copy.notes['changes'] = get_empty_changes()
     reaction_ids = [{'id': "ACONTb", 'lower_bound': -3, 'upper_bound': 3.5},
                     {'id': "FBA3", 'lower_bound': -996, 'upper_bound': 1000}]
-    FBA3_upper_bound = ecoli.reactions.get_by_id('FBA3').upper_bound
+    FBA3_upper_bound = iJO1366_copy.reactions.get_by_id('FBA3').upper_bound
     assert FBA3_upper_bound != 0
-    ecoli = change_bounds(ecoli, list(reaction_ids))
+    iJO1366_copy = change_bounds(iJO1366_copy, list(reaction_ids))
     reaction_ids = [{'id': "FBA3", 'lower_bound': -996, 'upper_bound': 1000}]
-    ecoli = change_bounds(ecoli, list(reaction_ids))
-    assert is_close(ecoli.optimize().objective_value, ecoli_original.optimize().objective_value)
+    iJO1366_copy = change_bounds(iJO1366_copy, list(reaction_ids))
+    assert is_close(iJO1366_copy.optimize().objective_value, iJO1366.optimize().objective_value)
 
 
-def test_convert_measurements_to_mmol():
-    ecoli = storage.get('iJO1366').model.copy()
+def test_convert_measurements_to_mmol(iJO1366):
     measurements = [{'id': 'chebi:17790', 'measurements': [32.04186], 'unit': 'mg', 'type': 'compound'}]
-    assert convert_measurements_to_mmol(measurements, ecoli) == [
+    assert convert_measurements_to_mmol(measurements, iJO1366) == [
         {'id': 'chebi:17790', 'measurements': [1.0], 'unit': 'mmol', 'type': 'compound'}]
 
 
-def test_add_reactions():
-    ecoli = storage.get('iJO1366').model.copy()
+def test_add_reactions(e_coli_core):
     keys = ('id', 'name', 'metabolites', 'lower_bound', 'upper_bound', 'gene_reaction_rule')
     info = ('newid', '', {}, 0, 0, '')
     changes = [dict(zip(keys, info))] * 2
-    add_reactions(ecoli, changes)
+    add_reactions(e_coli_core, changes)
 
 
 def test_build_string_from_metabolites():
