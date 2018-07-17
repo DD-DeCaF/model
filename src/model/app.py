@@ -51,6 +51,7 @@ def init_app(application, interface):
     app.add_url_rule('/models/<model_id>/simulate', view_func=resources.model_modify_simulate, methods=['POST'])
     app.add_url_rule('/models/<model_id>/medium', view_func=resources.model_medium)
     app.add_url_rule('/metrics', view_func=resources.metrics)
+    app.add_url_rule('/healthz', view_func=resources.healthz)
 
     # Add CORS information for all resources.
     CORS(application)

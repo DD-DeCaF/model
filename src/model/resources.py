@@ -88,3 +88,13 @@ def model_medium(model_id):
 
 def metrics():
     return Response(generate_latest(MultiProcessCollector(CollectorRegistry())), mimetype=CONTENT_TYPE_LATEST)
+
+
+def healthz():
+    """
+    HTTP endpoint for readiness probes.
+
+    Return an empty response. This response will not be ready until the application has finished initializing, e.g.,
+    preloading models, which takes a few minutes.
+    """
+    return ""
