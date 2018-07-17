@@ -10,7 +10,7 @@ services:
 env:
   global:
     - IMAGE_REPO=gcr.io/dd-decaf-cfbf6/model
-    - IMAGE_TAG=travis-ci-test
+    - IMAGE_TAG=${TRAVIS_BRANCH}
 
 before_install:
   - echo ${DOCKER_PASSWORD} | docker login -u=decaftravis --password-stdin
