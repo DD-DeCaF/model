@@ -16,6 +16,7 @@ services:
       - redis
     environment:
       - ENVIRONMENT=development
+      - SCRIPT_NAME=${SCRIPT_NAME}
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - ICE_API=${ICE_API:-https://ice.dd-decaf.eu}

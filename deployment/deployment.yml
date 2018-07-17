@@ -23,6 +23,8 @@ spec:
         env:
         - name: ENVIRONMENT
           value: production
+        - name: SCRIPT_NAME
+          value: /model
         - name: REDIS_ADDR
           value: localhost
         - name: REDIS_PORT
@@ -99,6 +101,8 @@ spec:
         env:
         - name: ENVIRONMENT
           value: staging
+        - name: SCRIPT_NAME
+          value: /model
         - name: REDIS_ADDR
           value: localhost
         - name: REDIS_PORT
