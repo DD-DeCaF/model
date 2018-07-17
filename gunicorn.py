@@ -15,6 +15,15 @@
 
 """Configure the gunicorn server."""
 
+# Ensure gevent is monkeypatched before ssl is imported (gunicorn does this too
+# late). This is only necessary when `preload_app` is True. The gevent warning
+# is still printed, but testing shows that recursion errors do not occur (eg. on
+# use of `requests`) when monkey-patching here.
+# See also https://github.com/gevent/gevent/issues/1016 and
+# https://github.com/benoitc/gunicorn/issues/1566
+import gevent.monkey
+gevent.monkey.patch_all()
+
 import os
 
 from prometheus_client import multiprocess
