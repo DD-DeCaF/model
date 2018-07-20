@@ -28,10 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def species(species):
-    try:
-        return jsonify([model_meta.model_id for model_meta in storage.MODELS if model_meta.species == species])
-    except KeyError:
-        return f"Unknown species {species}", 404
+    return jsonify([model_meta.model_id for model_meta in storage.MODELS if model_meta.species == species])
 
 
 def model_get(model_id):
