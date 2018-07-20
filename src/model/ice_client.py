@@ -29,7 +29,12 @@ class ICE(metaclass=Singleton):
 
     def __init__(self):
         """On instantiation, request and store a session id for later use."""
-        self._update_session_id()
+        if app.config['ENVIRONMENT'] in ('production', 'staging', 'testing'):
+            self._update_session_id()
+        else:
+            # To speed up development, don't set a valid session id on init but rely on the re-authentication logic
+            # should ICE be needed.
+            self.SESSION_ID = ''
 
     def get_reaction_equations(self, genotype):
         """Request genotype part info from ICE and return reaction map information from the references field."""
