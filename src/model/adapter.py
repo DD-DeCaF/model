@@ -30,6 +30,7 @@ from cobra.manipulation import find_gene_knockout_reactions
 from model import storage
 from model.app import app
 from model.driven import adjust_fluxes2model
+from model.gnomic_helpers import feature_id, insert_feature
 from model.metrics import API_REQUESTS
 from model.salts import MEDIUM_SALTS
 from model.utils import log_time
@@ -123,10 +124,6 @@ def find_metabolite_info(met_id):
         return metanetx.chem_prop.loc[metanetx.all2mnx['bigg:' + met_id]]
     except KeyError:
         return None
-
-
-def feature_id(feature):
-    return feature.name if feature.name else feature.accession.identifier
 
 
 class ModelModificationMixin(object):
@@ -280,33 +277,6 @@ def map_equation_to_model(equation, metabolite_mapping, native_namespace='bigg',
     return ' '.join(result)
 
 
-def full_genotype(genotype_changes):
-    """Construct gnomic Genotype object from the list of strings with changes
-
-    :param genotype_changes: list of changes, f.e. ['-tyrA::kanMX+', 'kanMX-']
-    :return:
-    """
-
-    def chain(definitions, **kwargs):
-        if not definitions:
-            return gnomic.Genotype([])
-        genotype = gnomic.Genotype.parse(definitions[0], **kwargs)
-        for definition in definitions[1:]:
-            genotype = gnomic.Genotype.parse(definition, parent=genotype, **kwargs)
-        return genotype
-
-    return chain(genotype_changes)
-
-
-def insert(feature, dict1, dict2):
-    """Helper function for managing two feature storages"""
-    if not feature.name:
-        return
-    if feature.name in dict2:
-        dict2.pop(feature.name)
-    else:
-        dict1[feature.name] = feature
-
 
 DELETE_GENE = 'delta8bp'  # the gene mutation which disables its functions
 
@@ -396,13 +366,13 @@ class GenotypeChangeModel(ModelModificationMixin):
             if isinstance(change, gnomic.Mutation):
                 old = change.old.features() if change.old else []
                 for feature in old:
-                    insert(feature, to_remove, to_add)
+                    insert_feature(feature, to_remove, to_add)
                 new = change.new.features() if change.new else []
                 for feature in new:
-                    insert(feature, to_add, to_remove)
+                    insert_feature(feature, to_add, to_remove)
             if isinstance(change, gnomic.Plasmid):
                 for feature in change.features():
-                    insert(feature, to_add, to_remove)
+                    insert_feature(feature, to_add, to_remove)
 
         detect_mutations(to_remove, to_add)
 

@@ -14,8 +14,8 @@
 
 from math import isclose
 
-from model.adapter import full_genotype
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
+from model.gnomic_helpers import full_genotype
 from model.operations import (
     add_reactions, apply_reactions_knockouts, build_string_from_metabolites, change_bounds,
     convert_measurements_to_mmol, convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict,

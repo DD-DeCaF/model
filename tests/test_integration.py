@@ -15,8 +15,8 @@
 from deepdiff import DeepDiff
 
 from model import adapter, storage
-from model.adapter import full_genotype
 from model.constants import get_empty_changes
+from model.gnomic_helpers import full_genotype
 from model.ice_client import ICE
 from model.operations import apply_reactions_add, get_genotype_reactions, modify_model
 
