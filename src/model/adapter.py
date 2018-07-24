@@ -22,18 +22,15 @@ import gnomic
 import networkx as nx
 import numpy as np
 import pandas as pd
-import requests
 from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.manipulation import find_gene_knockout_reactions
 
 from model import storage
-from model.app import app
 from model.driven import adjust_fluxes2model
 from model.gnomic_helpers import feature_id, insert_feature
-from model.metrics import API_REQUESTS
+from model.id_mapper_client import query_identifiers
 from model.salts import MEDIUM_SALTS
-from model.utils import log_time
 
 
 logger = logging.getLogger(__name__)
@@ -49,22 +46,6 @@ class NoIDMapping(Exception):
 
 def add_prefix(x, prefix):
     return [f'{prefix}:{i}' if not re.match(f'^{prefix}:', i) else i for i in x]
-
-
-def query_identifiers(object_ids, db_from, db_to):
-    """Call the id mapper service.
-
-    :param object_ids: list of identifiers to query
-    :param db_from: the source of the identifier, e.g. 'kegg'
-    :param db_to: the destination type of the identifier, e.g. 'bigg'
-    """
-    if len(object_ids) == 0:
-        return {}
-    query = json.dumps({'ids': object_ids, 'dbFrom': db_from, 'dbTo': db_to, 'type': 'Metabolite'})
-    logger.info('query id mapper at %s with %s', app.config['ID_MAPPER_API'], str(query))
-    with log_time(operation=f"ID map request for ids: {object_ids}"):
-        with API_REQUESTS.labels('model', app.config['ENVIRONMENT'], 'id-mapper', app.config['ID_MAPPER_API']).time():
-            return requests.post(app.config['ID_MAPPER_API'], data=query).json()['ids']
 
 
 def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
