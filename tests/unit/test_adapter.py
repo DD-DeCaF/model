@@ -15,7 +15,8 @@
 import pytest
 
 from model.adapter import (
-    MeasurementChangeModel, MediumChangeModel, MediumSalts, NoIDMapping, get_unique_metabolite, next_measured_reaction)
+    MeasurementChangeModel, MediumChangeModel, NoIDMapping, get_unique_metabolite, next_measured_reaction)
+from model.salts import MEDIUM_SALTS
 
 
 def test_existing_metabolite(iJO1366):
@@ -27,11 +28,10 @@ def test_existing_metabolite(iJO1366):
 
 
 def test_medium_salts(e_coli_core):
-    salts = MediumSalts.get()
-    assert len(salts) > 2000
-    assert len(salts['75832']) == 2
-    assert len(salts['30808']) == 2
-    assert len(salts['86254']) == 4
+    assert len(MEDIUM_SALTS) > 2000
+    assert len(MEDIUM_SALTS['75832']) == 2
+    assert len(MEDIUM_SALTS['30808']) == 2
+    assert len(MEDIUM_SALTS['86254']) == 4
 
 
 def test_medium_change_model(iJO1366):

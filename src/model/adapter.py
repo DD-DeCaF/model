@@ -15,7 +15,6 @@
 import itertools
 import json
 import logging
-import os
 import re
 from collections import defaultdict
 
@@ -32,6 +31,7 @@ from model import storage
 from model.app import app
 from model.driven import adjust_fluxes2model
 from model.metrics import API_REQUESTS
+from model.salts import MEDIUM_SALTS
 from model.utils import log_time
 
 
@@ -479,28 +479,6 @@ class GenotypeChangeModel(ModelModificationMixin):
         self.annotate_new_metabolites(reaction)
 
 
-def load_salts():
-    result = {}
-    path = os.path.join('data', 'salts.csv')
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                salt, compounds = line.split(':')
-                result[salt] = [comp.split(',') for comp in compounds.split(';')]
-    return result
-
-
-class MediumSalts(object):
-    _cache = None
-
-    @classmethod
-    def get(cls):
-        if cls._cache is None:
-            cls._cache = load_salts()
-        return cls._cache
-
-
 class MediumChangeModel(ModelModificationMixin):
     """
     Applies medium on cameo model
@@ -524,12 +502,11 @@ class MediumChangeModel(ModelModificationMixin):
 
     def detect_salt_compounds(self):
         result = []
-        salts = MediumSalts.get()
         chebi_ids = [c['id'] for c in self.medium]
         for compound in chebi_ids:
             chebi_id = compound.replace('chebi:', '')
-            if chebi_id in salts:
-                compounds = salts[chebi_id]
+            if chebi_id in MEDIUM_SALTS:
+                compounds = MEDIUM_SALTS[chebi_id]
                 n_not_found = len([i for i in compounds if not i])
                 logger.info('Metabolite %s can be splitted up to %s', chebi_id, str(compounds))
                 if n_not_found:
