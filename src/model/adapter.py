@@ -38,6 +38,18 @@ from model.salts import MEDIUM_SALTS
 logger = logging.getLogger(__name__)
 
 
+def adapt_from_medium(model_meta, medium):
+    return []
+
+
+def adapt_from_genotype(model_meta, genotype):
+    return []
+
+
+def adapt_from_measurements(model_meta, measurements):
+    return []
+
+
 class ModelModificationMixin(object):
     """
     Base model modification class, providing methods for adding adapter, exchange and demand reactions for new

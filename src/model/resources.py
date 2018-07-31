@@ -20,6 +20,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_l
 from prometheus_client.multiprocess import MultiProcessCollector
 
 from model import constants, storage
+from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements
 from model.operations import modify_model
 from model.simulations import simulate
 
@@ -29,6 +30,50 @@ logger = logging.getLogger(__name__)
 
 def species(species):
     return jsonify([model_meta.model_id for model_meta in storage.MODELS if model_meta.species == species])
+
+
+def delta_create():
+    if not request.is_json:
+        return "Non-JSON request content is not supported", 415
+
+    try:
+        model_id = request.json['model_id']
+    except KeyError:
+        return "Missing field 'model_id'", 400
+
+    try:
+        model_meta = storage.get(model_id)
+    except KeyError:
+        return f"Unknown model '{model_id}'", 400
+
+    # Build list of operations to perform on the model
+    operations = []
+    if 'medium' in request.json:
+        operations.extend(adapt_from_medium(model_meta, request.json['medium']))
+
+    if 'genotype' in request.json:
+        operations.extend(adapt_from_genotype(model_meta, request.json['genotype']))
+
+    if 'measurements' in request.json:
+        operations.extend(adapt_from_measurements(model_meta, request.json['measurements']))
+
+    if 'operations' in request.json:
+        operations.extend(request.json['operations'])
+
+    # TODO: Save operations, get id
+    def create_delta(operations):
+        pass
+
+    operations_id = create_delta(operations)
+    return jsonify({'id': operations_id, 'operations': operations})
+
+
+def delta_get(delta_id):
+    pass
+
+
+def delta_update(delta_id):
+    pass
 
 
 def model_get(model_id):

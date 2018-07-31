@@ -49,6 +49,9 @@ def init_app(application, interface):
     # TODO: use flask-restplus
     from model import resources
     app.add_url_rule('/species/<species>', view_func=resources.species)
+    app.add_url_rule('/deltas', view_func=resources.delta_create, methods=['POST'])
+    app.add_url_rule('/deltas/<delta_id>', view_func=resources.delta_get)
+    app.add_url_rule('/deltas/<delta_id>', view_func=resources.delta_update, methods=['POST'])
     app.add_url_rule('/models/<model_id>', view_func=resources.model_get)
     app.add_url_rule('/models/<model_id>/simulate', view_func=resources.model_modify_simulate, methods=['POST'])
     app.add_url_rule('/models/<model_id>/medium', view_func=resources.model_medium)
