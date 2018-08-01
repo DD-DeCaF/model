@@ -15,7 +15,8 @@
 import pytest
 
 from model.adapter import (
-    MeasurementChangeModel, MediumChangeModel, NoIDMapping, get_unique_metabolite, next_measured_reaction)
+    MeasurementChangeModel, MediumChangeModel, get_unique_metabolite, next_measured_reaction)
+from model.exceptions import NoIDMapping
 from model.salts import MEDIUM_SALTS
 
 

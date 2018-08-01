@@ -28,20 +28,13 @@ from cobra.manipulation import find_gene_knockout_reactions
 
 from model import storage
 from model.driven import adjust_fluxes2model
+from model.exceptions import NoIDMapping
 from model.gnomic_helpers import feature_id, insert_feature
 from model.id_mapper_client import query_identifiers
 from model.salts import MEDIUM_SALTS
 
 
 logger = logging.getLogger(__name__)
-
-
-class NoIDMapping(Exception):
-    def __init__(self, compound_id):
-        self.value = compound_id
-
-    def __str__(self):
-        return 'No metabolite associated with {}'.format(self.value)
 
 
 def add_prefix(x, prefix):

@@ -24,8 +24,9 @@ from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict
 
 from model import constants, storage
 from model.adapter import (
-    GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, NoIDMapping, get_unique_metabolite)
+    GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, get_unique_metabolite)
 from model.app import app
+from model.exceptions import NoIDMapping
 from model.gnomic_helpers import feature_id, full_genotype
 from model.ice_client import ICE
 from model.metrics import API_REQUESTS
