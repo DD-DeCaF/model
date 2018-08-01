@@ -37,10 +37,6 @@ from model.salts import MEDIUM_SALTS
 logger = logging.getLogger(__name__)
 
 
-def add_prefix(x, prefix):
-    return [f'{prefix}:{i}' if not re.match(f'^{prefix}:', i) else i for i in x]
-
-
 def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
     """Get the only metabolite for given compound / compartment.
 
@@ -199,8 +195,10 @@ class ModelModificationMixin(object):
         if self.metabolite_mapping is not None:
             mapped_id = find_key_for_id(strip_compartment(metabolite.id), self.metabolite_mapping)
             if mapped_id is not None:
-                metabolite.annotation['CHEBI'] = add_prefix(
-                    self.metabolite_mapping[mapped_id].get('chebi', []), 'CHEBI')
+                metabolite.annotation['CHEBI'] = [
+                    f'{prefix}:{i}' if not i.startswith(f"{prefix}:") else i
+                    for i in self.metabolite_mapping[mapped_id].get('chebi', [])
+                ]
                 metabolite.annotation['metanetx.chemical'] = self.metabolite_mapping[mapped_id].get('mnx', [])
                 metabolite.annotation['bigg.metabolite'] = self.metabolite_mapping[mapped_id].get('bigg', [])
             else:

@@ -22,7 +22,6 @@ from cobra.io import read_sbml_model, write_sbml_model
 from tqdm import tqdm
 
 from model import storage
-from model.adapter import add_prefix
 from model.app import app
 
 
@@ -77,7 +76,10 @@ def update_local_models(model_id, model_store=None):
             metabolite = model.metabolites.get_by_id(metabolite_id)
             if db_name not in metabolite.annotation:
                 metabolite.annotation[db_name] = []
-            metabolite.annotation[db_name].extend(add_prefix(model_xref[compound_id], db_name))
+            metabolite.annotation[db_name].extend([
+                f'{db_name}:{i}' if not i.startswith(f"{db_name}:") else i
+                for i in model_xref[compound_id]
+            ])
             # TODO: For some reason, id-mapper doesn't make this link, add manually for now
             if compound_id in GLUCOSE and db_name == 'CHEBI':
                 metabolite.annotation[db_name].append('CHEBI:42758')
