@@ -23,13 +23,13 @@ from cobra.io import read_sbml_model
 from cobra.io.dict import gene_to_dict, metabolite_from_dict, metabolite_to_dict, reaction_from_dict, reaction_to_dict
 
 from model import constants, storage
-from model.adapter import (
-    GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel, get_unique_metabolite)
+from model.adapter import GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel
 from model.app import app
 from model.exceptions import NoIDMapping
 from model.gnomic_helpers import feature_id, full_genotype
 from model.ice_client import ICE
 from model.metrics import API_REQUESTS
+from model.model_helpers import get_unique_metabolite
 
 
 logger = logging.getLogger(__name__)
