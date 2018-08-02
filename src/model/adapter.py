@@ -38,8 +38,80 @@ from model.salts import MEDIUM_SALTS
 logger = logging.getLogger(__name__)
 
 
-def adapt_from_medium(model_meta, medium):
-    return []
+def adapt_from_medium(model, medium):
+    """
+    Returns a list of operations to apply the given medium to the given model
+
+    :param model: cobra.Model
+    :param medium: list of dictionaries of format
+        {'id': <compound id (<database>:<id>, f.e. chebi:12345)>, 'concentration': <compound concentration (float)>}
+    """
+
+    operations = []
+
+    for reaction_id in model.medium:
+        reaction = model.reactions.get_by_id(reaction_id)
+        reaction.lower_bound = 0
+        operations.append({
+            'operation': 'modify',
+            'type': 'reaction',
+            'id': reaction.id,
+            'data': {'bounds': reaction.bounds},
+        })
+
+    # Detect salt compounds
+    # NOTES(Ali): can this be improved? seems to be many edge cases
+    chebi_ids = [c['id'] for c in medium]
+    for compound in chebi_ids:
+        chebi_id = compound.replace('chebi:', '')
+        if chebi_id in MEDIUM_SALTS:
+            compounds = MEDIUM_SALTS[chebi_id]
+            n_not_found = len([i for i in compounds if not i])
+            logger.info('Metabolite %s can be splitted up to %s', chebi_id, str(compounds))
+            if n_not_found:
+                logger.info('For %s %d mappings of %d is not found', chebi_id, n_not_found, len(compounds))
+            for array in compounds:
+                for compound in array:
+                    if compound:
+                        medium.append({'id': 'chebi:' + compound})
+
+    # Add trace metals
+    # NOTES(Ali): why these hardcoded metals?
+    medium.extend([
+        {'id': 'chebi:25517', 'name': 'nickel'},
+        {'id': 'chebi:25368', 'name': 'molybdate'},
+    ])
+
+    # Make all metabolites in the medium consumable by setting the exchange reactions lower bound to a negative number
+    for compound in medium:
+        try:
+            existing_metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
+        except NoIDMapping:
+            # NOTES(Ali): why not add the metabolite? maybe we don't know which reactions to bind it to? do we need to tho?
+            logger.info(f"Cannot add medium compund '{compound['id']}' - metabolite not found in in extracellular "
+                        "compartment")
+            continue
+        else:
+            exchange_reaction = list(set(metabolite.reactions).intersection(model.exchanges))[0]
+            # NOTES(Ali): Why only if >= 0?
+            if exchange_reaction.lower_bound >= 0:
+                if not metabolite.formula:
+                    logger.warning(f"No formula for metabolite {metabolite.id}, it's unknown if there is carbon in it. "
+                                   "Assuming that there is no carbon")
+                if not metabolite.formula or 'C' not in metabolite.elements:
+                    exchange_reaction.lower_bound = -1000
+                else:
+                    exchange_reaction.lower_bound = -10
+            operations.append({
+                'operation': 'modify',
+                'type': 'reaction',
+                'id': reaction.id,
+                'data': {'bounds': reaction.bounds},
+            })
+
+            # ALINOTES: why annotate?
+            self.annotate_new_metabolites(exchange_reaction)
+    return operations
 
 
 def adapt_from_genotype(model_meta, genotype):
@@ -103,26 +175,6 @@ class ModelModificationMixin(object):
             logger.debug('Adapter reaction added: %s <--> %s', metabolite.id, existing_metabolite.id)
         except Exception:  # TODO: raise a reasonable exception on cobra side if the reaction exists
             logger.debug('Adapter reaction exists: %s <--> %s', metabolite.id, existing_metabolite.id)
-
-    def make_consumable(self, metabolite, key='measured'):
-        """For metabolite in e compartment with existing exchange reaction, make it possible to consume metabolite
-        by decreasing the lower bound of exchange reaction
-
-        :param metabolite: cobra.Metabolite, metabolite from e compartment, f.e. melatn_e
-        :param key: where to save the reactions, default is 'measured'
-        """
-        def contains_carbon(metabolite):  # TODO: use method from Metabolite class when this change is merged
-            if not metabolite.formula:
-                logger.warning(f"No formula for metabolite {metabolite.id}, it's unknown if there is carbon in it. "
-                               "Assuming that there is no carbon")
-                return False
-            return 'C' in metabolite.elements
-
-        exchange_reaction = list(set(metabolite.reactions).intersection(self.model.exchanges))[0]
-        if exchange_reaction.lower_bound >= 0:
-            exchange_reaction.lower_bound = -10 if contains_carbon(metabolite) else -1000
-        self.changes[key]['reactions'].add(exchange_reaction)
-        self.annotate_new_metabolites(exchange_reaction)
 
     def annotate_new_metabolite(self, metabolite):
         """Find information about new metabolite in chem_prop dictionary and add it to model
@@ -390,72 +442,6 @@ class GenotypeChangeModel(ModelModificationMixin):
             reaction.gene_reaction_rule = gene_name
         self.changes['added']['reactions'].add(reaction)
         self.annotate_new_metabolites(reaction)
-
-
-class MediumChangeModel(ModelModificationMixin):
-    """
-    Applies medium on cameo model
-    """
-    TRACE_METALS = [
-        {'id': 'chebi:25517', 'name': 'nickel'},
-        {'id': 'chebi:25368', 'name': 'molybdate'},
-    ]
-
-    def __init__(self, model, medium):
-        """
-        :param model: cobra.Model
-        :param medium: list of dictionaries of format
-            {'id': <compound id (<database>:<id>, f.e. chebi:12345)>, 'concentration': <compound concentration (float)>}
-        """
-        self.medium = medium
-        self.model = model
-        self.changes = {
-            'measured-medium': {'reactions': set()},
-        }
-
-    def detect_salt_compounds(self):
-        result = []
-        chebi_ids = [c['id'] for c in self.medium]
-        for compound in chebi_ids:
-            chebi_id = compound.replace('chebi:', '')
-            if chebi_id in MEDIUM_SALTS:
-                compounds = MEDIUM_SALTS[chebi_id]
-                n_not_found = len([i for i in compounds if not i])
-                logger.info('Metabolite %s can be splitted up to %s', chebi_id, str(compounds))
-                if n_not_found:
-                    logger.info('For %s %d mappings of %d is not found', chebi_id, n_not_found, len(compounds))
-                for array in compounds:
-                    for compound in array:
-                        if compound:
-                            result.append({
-                                'id': 'chebi:' + compound,
-                            })
-        return result
-
-    def apply_medium(self):
-        """For each metabolite in medium try to find corresponding metabolite in e compartment of the model.
-        If metabolite is found, change the lower limit of the reaction to a negative number,
-        so the model would be able to consume this compound.
-        If metabolite is not found in e compartment, log and continue.
-        """
-        old_medium = []
-        for r in self.model.medium:
-            reaction = self.model.reactions.get_by_id(r)
-            reaction.lower_bound = 0
-            old_medium.append(reaction)
-        self.medium.extend(self.detect_salt_compounds())
-        self.medium.extend(self.TRACE_METALS)
-        for compound in self.medium:
-            try:
-                existing_metabolite = get_unique_metabolite(self.model, compound['id'], 'e', 'CHEBI')
-            except NoIDMapping:
-                logger.info('No metabolite %s in external compartment', compound['id'])
-                continue
-            logger.info('Found metabolite %s', compound['id'])
-            self.make_consumable(existing_metabolite, key='measured-medium')
-        for reaction in old_medium:
-            if reaction.id not in self.changes['measured-medium']['reactions']:
-                self.changes['measured-medium']['reactions'].add(reaction)
 
 
 class MeasurementChangeModel(ModelModificationMixin):
