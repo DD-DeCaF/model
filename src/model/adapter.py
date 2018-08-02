@@ -68,32 +68,8 @@ def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
     return metabolites[0]
 
 
-def contains_carbon(metabolite):  # TODO: use method from Metabolite class when this change is merged
-    if not metabolite.formula:
-        logger.warning("No formula for metabolite {}, it's unknown if there is carbon in it."
-                       "Assuming that there is no carbon".format(metabolite.id))
-        return False
-    return 'C' in metabolite.elements
-
-
 def strip_compartment(x):
     return x[:-2] if re.match('.*_[cepm]$', x) else x
-
-
-def find_metabolite_info(met_id):
-    """Find chemical formula of metabolite in metanetx.chem_prop dictionary
-
-    :param met_id: string, string of format "<metabolite_id>_<compartment_id>", where <metabolite_id> is a BIGG id or
-    a Metanetx id
-    :returns: pandas row or None
-    """
-    met_id = strip_compartment(met_id)
-    try:
-        if met_id in metanetx.chem_prop.index:
-            return metanetx.chem_prop.loc[met_id]
-        return metanetx.chem_prop.loc[metanetx.all2mnx['bigg:' + met_id]]
-    except KeyError:
-        return None
 
 
 class ModelModificationMixin(object):
@@ -157,6 +133,13 @@ class ModelModificationMixin(object):
         :param metabolite: cobra.Metabolite, metabolite from e compartment, f.e. melatn_e
         :param key: where to save the reactions, default is 'measured'
         """
+        def contains_carbon(metabolite):  # TODO: use method from Metabolite class when this change is merged
+            if not metabolite.formula:
+                logger.warning(f"No formula for metabolite {metabolite.id}, it's unknown if there is carbon in it. "
+                               "Assuming that there is no carbon")
+                return False
+            return 'C' in metabolite.elements
+
         exchange_reaction = list(set(metabolite.reactions).intersection(self.model.exchanges))[0]
         if exchange_reaction.lower_bound >= 0:
             exchange_reaction.lower_bound = -10 if contains_carbon(metabolite) else -1000
@@ -184,6 +167,21 @@ class ModelModificationMixin(object):
                 return keys[0]
             else:
                 raise KeyError('multiply mapping keys for {}'.format(met_id))
+
+        def find_metabolite_info(met_id):
+            """Find chemical formula of metabolite in metanetx.chem_prop dictionary
+
+            :param met_id: string, string of format "<metabolite_id>_<compartment_id>", where <metabolite_id> is a BIGG id or
+            a Metanetx id
+            :returns: pandas row or None
+            """
+            met_id = strip_compartment(met_id)
+            try:
+                if met_id in metanetx.chem_prop.index:
+                    return metanetx.chem_prop.loc[met_id]
+                return metanetx.chem_prop.loc[metanetx.all2mnx['bigg:' + met_id]]
+            except KeyError:
+                return None
 
         info = find_metabolite_info(metabolite.id)
         if info is not None:
@@ -214,61 +212,6 @@ class ModelModificationMixin(object):
             if getattr(metabolite, 'added_by_model_adjustment', False):
                 self.annotate_new_metabolite(metabolite)
                 self.changes['added']['metabolites'].add(metabolite)
-
-
-def map_equation_to_model(equation, metabolite_mapping, native_namespace='bigg', compartment=''):
-    """Map given equation with some metabolite identifiers to those used in the model's namespace.
-
-    If compartment is given, metabolites ids will have it as postfix.
-
-    Example:
-    Input: C00002 + C00033 <=> C00013 + C05993, compartment='_c', {'C00002': 'atp_c', 'C00033': 'ac_c', ...}
-    Output: atp_c + ac_c <=> ppi_c + MNXM4377_c
-
-    :param equation: string
-    :param compartment: f.e. "_c"
-    :param metabolite_mapping: A dict that maps metabolite identifiers to those used in the model
-    :param native_namespace: string, the model's namespace to prefer for the identifiers
-    :return:
-    """
-
-    def map_metabolite(met_id):
-        for namespace in [native_namespace, 'mnx']:
-            if namespace in metabolite_mapping[met_id]:
-                return metabolite_mapping[met_id][namespace][0]
-        return met_id
-
-    array = equation.split()
-    re_id = re.compile("^[A-Za-z0-9_-]+$")
-    result = []
-    for el in array:
-        if el.isdigit() or not re.match(re_id, el):
-            result.append(el)
-        else:
-            result.append(map_metabolite(el) + compartment)
-    return ' '.join(result)
-
-
-
-DELETE_GENE = 'delta8bp'  # the gene mutation which disables its functions
-
-
-def detect_mutations(remove, add):
-    """Check if deletion-addition combination is in fact mutation and should be skipped.
-    If the feature has DELETE_GENE suffix, consider this gene deleted
-    """
-    drop_remove, drop_add = [], []
-    for old_feature in remove:
-        for new_feature in add:
-            if new_feature.startswith(old_feature):
-                logger.info('Gene %s is replaced with %s', old_feature, new_feature)
-                drop_add.append(new_feature)
-                if DELETE_GENE not in new_feature:
-                    drop_remove.append(old_feature)
-    for name in drop_remove:
-        remove.pop(name)
-    for name in drop_add:
-        add.pop(name)
 
 
 class GenotypeChangeModel(ModelModificationMixin):
@@ -331,6 +274,24 @@ class GenotypeChangeModel(ModelModificationMixin):
 
         :return:
         """
+        def detect_mutations(remove, add):
+            """Check if deletion-addition combination is in fact mutation and should be skipped.
+            If the feature has DELETE_GENE suffix, consider this gene deleted
+            """
+            DELETE_GENE = 'delta8bp'  # the gene mutation which disables its functions
+            drop_remove, drop_add = [], []
+            for old_feature in remove:
+                for new_feature in add:
+                    if new_feature.startswith(old_feature):
+                        logger.info('Gene %s is replaced with %s', old_feature, new_feature)
+                        drop_add.append(new_feature)
+                        if DELETE_GENE not in new_feature:
+                            drop_remove.append(old_feature)
+            for name in drop_remove:
+                remove.pop(name)
+            for name in drop_add:
+                add.pop(name)
+
         to_remove = {}
         to_add = {}
 
@@ -397,6 +358,38 @@ class GenotypeChangeModel(ModelModificationMixin):
         :param gene_name: gene name
         :return:
         """
+        def map_equation_to_model(equation, metabolite_mapping, native_namespace='bigg', compartment=''):
+            """Map given equation with some metabolite identifiers to those used in the model's namespace.
+
+            If compartment is given, metabolites ids will have it as postfix.
+
+            Example:
+            Input: C00002 + C00033 <=> C00013 + C05993, compartment='_c', {'C00002': 'atp_c', 'C00033': 'ac_c', ...}
+            Output: atp_c + ac_c <=> ppi_c + MNXM4377_c
+
+            :param equation: string
+            :param compartment: f.e. "_c"
+            :param metabolite_mapping: A dict that maps metabolite identifiers to those used in the model
+            :param native_namespace: string, the model's namespace to prefer for the identifiers
+            :return:
+            """
+
+            def map_metabolite(met_id):
+                for namespace in [native_namespace, 'mnx']:
+                    if namespace in metabolite_mapping[met_id]:
+                        return metabolite_mapping[met_id][namespace][0]
+                return met_id
+
+            array = equation.split()
+            re_id = re.compile("^[A-Za-z0-9_-]+$")
+            result = []
+            for el in array:
+                if el.isdigit() or not re.match(re_id, el):
+                    result.append(el)
+                else:
+                    result.append(map_metabolite(el) + compartment)
+            return ' '.join(result)
+
         if compartment is None:
             compartment = self.compartment
         if self.model.reactions.has_id(reaction_id):
@@ -485,29 +478,6 @@ class MediumChangeModel(ModelModificationMixin):
         for reaction in old_medium:
             if reaction.id not in self.changes['measured-medium']['reactions']:
                 self.changes['measured-medium']['reactions'].add(reaction)
-
-
-def next_measured_reaction(exchange_reaction):
-    """Find the reaction flux of which would be fully defined by the corresponding exchange reaction.
-
-    :param exchange_reaction: cobra.Reaction
-    :return: cobra.Reaction or None
-    """
-    met = list(exchange_reaction.metabolites.keys())[0]
-    connected_reactions = [r for r in met.reactions if r != exchange_reaction]
-    if len(connected_reactions) == 0:
-        logger.warning('No reactions except exchange is connected to %s', met)
-        return
-    if len(connected_reactions) > 1:
-        return
-    next_reaction = connected_reactions[0]
-    metabolites = [m for m in next_reaction.metabolites if m != met]
-    if len(metabolites) > 1:
-        return
-    met2 = metabolites[0]
-    if next_reaction.metabolites[met] * next_reaction.metabolites[met2] > 0:
-        return
-    return next_reaction
 
 
 class MeasurementChangeModel(ModelModificationMixin):
@@ -678,6 +648,28 @@ class MeasurementChangeModel(ModelModificationMixin):
         """For each measured flux (production-rate / uptake-rate), constrain the model by setting upper and lower
         bound to either the max/min values of the measurements if less than three observations, otherwise to 97%
         normal distribution range i.e., mean +- 1.96 * stdev. """
+        def next_measured_reaction(exchange_reaction):
+            """Find the reaction flux of which would be fully defined by the corresponding exchange reaction.
+
+            :param exchange_reaction: cobra.Reaction
+            :return: cobra.Reaction or None
+            """
+            met = list(exchange_reaction.metabolites.keys())[0]
+            connected_reactions = [r for r in met.reactions if r != exchange_reaction]
+            if len(connected_reactions) == 0:
+                logger.warning('No reactions except exchange is connected to %s', met)
+                return
+            if len(connected_reactions) > 1:
+                return
+            next_reaction = connected_reactions[0]
+            metabolites = [m for m in next_reaction.metabolites if m != met]
+            if len(metabolites) > 1:
+                return
+            met2 = metabolites[0]
+            if next_reaction.metabolites[met] * next_reaction.metabolites[met2] > 0:
+                return
+            return next_reaction
+
         for scalar in self.measurements:
             scalar_data = np.array([v for v in scalar['measurements'] if not np.isnan(v)])
             if len(scalar_data) > 2:
