@@ -99,7 +99,7 @@ def test_simulate_modify(monkeypatch, client):
             return {'glc__D': ['MNXM41'], 'caro': ['MNXM614']}
         elif q == (['glc__D', 'caro'], 'bigg', 'chebi'):
             return {'glc__D': ['17634', '12965', '20999', '4167'], 'caro': ['17579', '10355', '12392', '22834', '40987']}  # noqa
-        raise NotImplemented(f"Unmocked query!")
+        raise NotImplementedError(f"Unmocked query!")
     monkeypatch.setattr(adapter, 'query_identifiers', query_identifiers)
 
     for query, message in {'modify': MESSAGE_MODIFY, 'fluxes': MESSAGE_FLUXES}.items():
