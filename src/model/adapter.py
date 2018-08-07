@@ -108,8 +108,8 @@ def adapt_from_medium(model, medium):
             operations.append({
                 'operation': 'modify',
                 'type': 'reaction',
-                'id': reaction.id,
-                'data': {'bounds': reaction.bounds},
+                'id': exchange_reaction.id,
+                'data': {'bounds': exchange_reaction.bounds},
             })
             # NOTES(Ali): annotation has been removed here, hope that's okay?
     return operations
