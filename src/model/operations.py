@@ -115,13 +115,14 @@ def add_apply(model, to_apply):
     before = {r['id'] for r in model.notes['changes']['added']['reactions']}
     for rn in to_apply:
         if rn['metabolites']:
+            # NOTES(Ali): why not just use reaction_from_dict here?
             model = add_reaction_from_string(
                 model,
                 rn['id'],
                 build_string_from_metabolites(rn['metabolites'])
             )
         else:
-            # NOTES(Ali): is this ever the case, that an added reaction has no associated metabolites?
+            # NOTES(Ali): is this ever the case, that an added reaction has no associated metabolites? when is the universal model necessary?
             model = add_reaction_from_universal(model, rn['id'])
     for reaction in model.notes['changes']['added']['reactions']:
         if reaction['id'] not in before:
