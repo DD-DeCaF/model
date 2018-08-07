@@ -16,6 +16,7 @@ import pytest
 
 from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements, _allow_transport, _has_transport
 from model.exceptions import NoIDMapping
+from model.ice_client import ICE
 
 
 def test_medium_adapter(iJO1366):
@@ -29,6 +30,26 @@ def test_medium_adapter(iJO1366):
     assert len(operations) == 38
     assert set(iJO1366.medium) == {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e', 'EX_ni2_e', 'EX_mn2_e', 'EX_cl_e'}  # noqa
     assert all(iJO1366.reactions.get_by_id(r).lower_bound == -1000 for r in iJO1366.medium)
+
+
+def test_genotype_adapter(monkeypatch, iJO1366):
+    # Disable GPR queries for efficiency
+    monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
+
+    genotype_changes = ['+Aac', '-pta']
+    operations = adapt_from_genotype(iJO1366, genotype_changes)
+    assert len(operations) == 1
+
+
+def test_measurements_adapter(iJO1366):
+    measurements = [
+        {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},
+        {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},
+        {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
+        {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
+    ]
+    operations = adapt_from_measurements(iJO1366, measurements)
+    assert len(operations) == 3
 
 
 def test_transport_reaction(iJO1366):
