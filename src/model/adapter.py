@@ -302,7 +302,7 @@ def adapt_from_measurements(model, measurements):
                     logger.warn('using first of %s', ', '.join([r.id for r in possible_reactions]))
                 reaction = possible_reactions[0]
 
-                _allow_transport(model, model_metabolite, lower_bound)
+                operations.extend(_allow_transport(model, model_metabolite, lower_bound))
 
                 # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
                 # have <-- x, then multiply with -1
@@ -424,7 +424,7 @@ def _allow_transport(model, metabolite_e, direction):
     met_id = metabolite_e.id.replace('_e', '')
     metabolite_c = model.metabolites.get_by_id(met_id + '_c')
     if _has_transport(model, met_id, direction):
-        return
+        return []
     if direction > 0:
         m_from, m_to = metabolite_c, metabolite_e
     else:
@@ -437,6 +437,10 @@ def _allow_transport(model, metabolite_e, direction):
     transport_reaction.add_metabolites(
         {m_from: -1, m_to: 1}
     )
-    model.add_reactions([transport_reaction])
-    # TODO add transport reaction to operations
-    # self.changes['added']['reactions'].add(transport_reaction)
+    model.add_reaction(transport_reaction)
+    return [{
+        'operation': 'add',
+        'type': 'reaction',
+        'id': transport_reaction.id,
+        'data': reaction_to_dict(transport_reaction),
+    }]
