@@ -14,7 +14,7 @@
 
 import pytest
 
-from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements
+from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements, _allow_transport, _has_transport
 from model.exceptions import NoIDMapping
 
 
@@ -32,15 +32,14 @@ def test_medium_adapter(iJO1366):
 
 
 def test_transport_reaction(iJO1366):
-    changes = MeasurementChangeModel(iJO1366, [])
-    assert changes.has_transport('o2', 1)
-    assert changes.has_transport('fe2', -1)
-    assert not changes.has_transport('btn', 1)
-    changes.model.reactions.EX_btn_e.bounds = (0.1, 0.1)
+    assert _has_transport(iJO1366, 'o2', 1)
+    assert _has_transport(iJO1366, 'fe2', -1)
+    assert not _has_transport(iJO1366, 'btn', 1)
+    iJO1366.reactions.EX_btn_e.bounds = (0.1, 0.1)
     with pytest.warns(UserWarning):
-        solution = changes.model.optimize()
+        solution = iJO1366.optimize()
     assert solution.status == 'infeasible'
-    changes.allow_transport(changes.model.metabolites.btn_e, 1)
-    assert changes.has_transport('btn', 1)
-    solution = changes.model.optimize()
+    _allow_transport(iJO1366, iJO1366.metabolites.btn_e, 1)
+    assert _has_transport(iJO1366, 'btn', 1)
+    solution = iJO1366.optimize()
     assert solution.status == 'optimal'
