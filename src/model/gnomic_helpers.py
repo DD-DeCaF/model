@@ -15,10 +15,6 @@
 import gnomic
 
 
-def feature_id(feature):
-    return feature.name if feature.name else feature.accession.identifier
-
-
 def full_genotype(genotype_changes):
     """
     Construct gnomic Genotype object from the list of strings with changes
@@ -46,3 +42,19 @@ def insert_feature(feature, dict1, dict2):
         dict2.pop(feature.name)
     else:
         dict1[feature.name] = feature
+
+
+def new_features_identifiers(genotype_changes: gnomic.Genotype):
+    """Extract identifiers for features which addition is defined in gnomic string
+
+    :param genotype_changes: gnomic string with genotype changes
+    :return:
+    """
+    for change in genotype_changes.changes():
+        if isinstance(change, gnomic.Mutation):
+            if change.new:
+                for feature in change.new.features():
+                    yield feature_id(feature)
+        if isinstance(change, gnomic.Plasmid):
+            for feature in change.features():
+                yield feature_id(feature)

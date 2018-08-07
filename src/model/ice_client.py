@@ -18,6 +18,8 @@ import logging
 import requests
 
 from model.app import app
+from model.exceptions import PartNotFound
+from model.metrics import API_REQUESTS
 from model.utils import Singleton
 
 
@@ -39,17 +41,19 @@ class ICE(metaclass=Singleton):
     def get_reaction_equations(self, genotype):
         """Request genotype part info from ICE and return reaction map information from the references field."""
         logger.info(f"Requesting genotype '{genotype}' from ICE")
-        response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
+        with API_REQUESTS.labels('model', app.config['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
+            response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
 
         # In case of authentication failure, get a new session id and re-try the request. The ICE documentation says
         # nothing about access token expiry, so it's not clear whether this can or will ever occur.
         if response.status_code in (401, 403):
             self._update_session_id()
-            response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
+            with API_REQUESTS.labels('model', app.config['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
+                response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
 
-        # If the part is not found, return an empty response
+        # If the part is not found, raise the corresponding exception
         if response.status_code == 404:
-            return {}
+            raise PartNotFound()
 
         response.raise_for_status()
         result = response.json()

@@ -49,13 +49,13 @@ def delta_create():
     # Build list of operations to perform on the model
     operations = []
     if 'medium' in request.json:
-        operations.extend(adapt_from_medium(model_meta, request.json['medium']))
+        operations.extend(adapt_from_medium(model_meta.model, request.json['medium']))
 
     if 'genotype' in request.json:
-        operations.extend(adapt_from_genotype(model_meta, request.json['genotype']))
+        operations.extend(adapt_from_genotype(model_meta.model, request.json['genotype']))
 
     if 'measurements' in request.json:
-        operations.extend(adapt_from_measurements(model_meta, request.json['measurements']))
+        operations.extend(adapt_from_measurements(model_meta.model, request.json['measurements']))
 
     if 'operations' in request.json:
         operations.extend(request.json['operations'])

@@ -26,9 +26,8 @@ from model import constants, storage
 # from model.adapter import GenotypeChangeModel, MeasurementChangeModel, MediumChangeModel
 from model.app import app
 from model.exceptions import NoIDMapping
-from model.gnomic_helpers import feature_id, full_genotype
+from model.gnomic_helpers import full_genotype
 from model.ice_client import ICE
-from model.metrics import API_REQUESTS
 from model.model_helpers import get_unique_metabolite
 
 
@@ -63,6 +62,7 @@ def operate_on_reactions(model, reactions, key, apply_function, undo_function):
 def add_reaction_from_universal(model, reaction_id):
     reaction = storage.get('metanetx_universal_model_bigg').model.reactions.get_by_id(reaction_id)
     reaction_string = reaction.build_reaction_string()
+    # NOTES(Ali): why is the genotype adapter used to add a reaction?
     adapter = GenotypeChangeModel(
         model,
         [],
@@ -153,6 +153,7 @@ def add_undo(model, to_undo):
 
 def add_reaction_from_string(model, reaction_id, reaction_string):
     reaction_string = reaction_string.strip()
+    # NOTES(Ali): why is the genotype adapter used to add a reaction?
     adapter = GenotypeChangeModel(
         model,
         [],
@@ -209,12 +210,8 @@ def get_genotype_reactions(genotype_features):
     :param genotype_features: generator of new genes ids
     :return:
     """
-    def get_reaction_equations(genotype):
-        with API_REQUESTS.labels('model', app.config['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
-            return ice.get_reaction_equations(genotype)
-
     identifiers = list(new_features_identifiers(genotype_features))
-    results = [get_reaction_equations(genotype=identifier) for identifier in identifiers]
+    results = [ice.get_reaction_equations(genotype=identifier) for identifier in identifiers]
     return {k: v for k, v in zip(identifiers, results)}
 
 
@@ -410,22 +407,6 @@ def phase_plane_to_dict(model, metabolite_id):
                      'mass_yield_lower_bound', 'mass_yield_upper_bound'}:
             result[k] = [float(v[point]) if not math.isnan(float(v[point])) else None for point in sorted(v.keys())]
     return result
-
-
-def new_features_identifiers(genotype_changes: gnomic.Genotype):
-    """Extract identifiers for features which addition is defined in gnomic string
-
-    :param genotype_changes: gnomic string with genotype changes
-    :return:
-    """
-    for change in genotype_changes.changes():
-        if isinstance(change, gnomic.Mutation):
-            if change.new:
-                for feature in change.new.features():
-                    yield feature_id(feature)
-        if isinstance(change, gnomic.Plasmid):
-            for feature in change.features():
-                yield feature_id(feature)
 
 
 def change_bounds(model, reaction_ids):

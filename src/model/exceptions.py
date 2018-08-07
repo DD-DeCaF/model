@@ -19,3 +19,8 @@ class NoIDMapping(Exception):
 
     def __str__(self):
         return f"No metabolite associated with {self.value}"
+
+
+class PartNotFound(Exception):
+    """Thrown by the ICE client when a requested genotype part is not found"""
+    pass

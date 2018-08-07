@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
+
 def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
     """Get the only metabolite for given compound / compartment.
 
