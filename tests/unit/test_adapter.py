@@ -14,17 +14,8 @@
 
 import pytest
 
-from model.adapter import (
-    MeasurementChangeModel, MediumChangeModel, get_unique_metabolite, next_measured_reaction)
+from model.adapter import MeasurementChangeModel, MediumChangeModel, next_measured_reaction
 from model.exceptions import NoIDMapping
-
-
-def test_existing_metabolite(iJO1366):
-    assert get_unique_metabolite(iJO1366, 'chebi:17790') == get_unique_metabolite(
-        iJO1366, 'meoh', db_name='bigg.metabolite')
-    assert get_unique_metabolite(iJO1366, 'succ', db_name='bigg.metabolite').formula == 'C4H4O4'
-    with pytest.raises(NoIDMapping):
-        get_unique_metabolite(iJO1366, 'wrong_id')
 
 
 def test_medium_change_model(iJO1366):
