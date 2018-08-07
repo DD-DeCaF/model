@@ -116,14 +116,12 @@ def adapt_from_medium(model, medium):
     return operations
 
 
-def adapt_from_genotype(model, genotype_string):
+def adapt_from_genotype(model, genotype_changes):
     """
-    Applies genotype change on cameo model
+    Return a list of operations to apply to a model based on the given genotype changes.
 
     :param model: cobra.Model
-    :param genotype_changes: gnomic.Genotype object
-    :param genes_to_reactions: dictionary like {<gene name>: {<reaction id>: <reactions equation>, ...}, ...}
-    :param namespace: the namespace for the model's identifiers
+    :param genotype_changes: list of genotype change strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
     """
     # NOTES(Ali): metabolite mappings are completely removed now, what are the consequences?
     # NOTES(Ali): review gene duplication logic below (`insert_feature` vs duplication check)
@@ -133,7 +131,7 @@ def adapt_from_genotype(model, genotype_string):
     to_remove = {}
     to_add = {}
 
-    for change in full_genotype(genotype_string).changes():
+    for change in full_genotype(genotype_changes).changes():
         if isinstance(change, gnomic.Mutation):
             old = change.old.features() if change.old else []
             for feature in old:
