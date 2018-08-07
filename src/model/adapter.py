@@ -124,13 +124,6 @@ def adapt_from_genotype(model, genotype_string):
     :param namespace: the namespace for the model's identifiers
     """
     # NOTES(Ali): metabolite mappings are completely removed now, what are the consequences?
-
-    # self.compartment = '_c'
-    # self.model = model
-    # self.genes_to_reactions = genes_to_reactions
-    # self.genotype_changes = genotype_changes
-    # self.namespace = namespace
-
     # NOTES(Ali): review gene duplication logic below (`insert_feature` vs duplication check)
 
     operations = []
