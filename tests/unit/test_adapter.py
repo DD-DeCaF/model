@@ -14,22 +14,21 @@
 
 import pytest
 
-from model.adapter import MeasurementChangeModel, MediumChangeModel, next_measured_reaction
+from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements
 from model.exceptions import NoIDMapping
 
 
-def test_medium_change_model(iJO1366):
+def test_medium_adapter(iJO1366):
     medium = [
         {'id': 'chebi:63041'},
         {'id': 'chebi:91249'},
         {'id': 'chebi:86244'},
         {'id': 'chebi:131387'},
     ]
-    changes = MediumChangeModel(iJO1366, medium)
-    changes.apply_medium()
-    model = changes.model
-    assert 5 <= len(model.medium) <= 10
-    assert {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e'} <= set(list(model.medium.keys()))
+    operations = adapt_from_medium(iJO1366, medium)
+    assert len(operations) == 38
+    assert set(iJO1366.medium) == {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e', 'EX_ni2_e', 'EX_mn2_e', 'EX_cl_e'}  # noqa
+    assert all(iJO1366.reactions.get_by_id(r).lower_bound == -1000 for r in iJO1366.medium)
 
 
 def test_transport_reaction(iJO1366):
