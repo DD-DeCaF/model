@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 from cameo.data import metanetx
 from cobra import Metabolite, Reaction
+from cobra.io.dict import reaction_to_dict
 from cobra.manipulation import find_gene_knockout_reactions
 
 from model import storage
@@ -184,64 +185,78 @@ def adapt_from_genotype(model, genotype_string):
             continue
 
         try:
+            # :param equation: equation string, where metabolites are defined by kegg ids
             for reaction_id, equation in ice.get_reaction_equations(genotype=feature_id):
-                _add_reaction(model, reaction_id, equation, feature_id)
-                logger.info('Gene added: %s', identifier)
+                logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_id}'")
+
+                # Add the reaction
+                try:
+                    reaction = Reaction(reaction_id)
+                    reaction.gene_reaction_rule = feature_id
+                    model.add_reaction(reaction)
+                except ValueError:
+                    # The reaction ID is already in the model
+                    continue
+
+                # Before building the reaction's metabolites, keep track of the existing ones to detect new metabolites
+                # added to the model
+                metabolites_before = set(model.metabolites)
+                # NOTES(Ali): this equation comes *directly* from user input in ICE; very error-prone.
+                # NOTES(Ali): how to ensure db namespace compatibility?
+                # NOTES(Ali): should unrecognized metabolites simply be created? should compartment ('_c') be appended first?
+                # NOTES(Ali): e.g. 2.0 ggdp <=> 2.0 h + phyto + 2.0 ppi  --  'h' is not recognized as 'h_c' for example
+                reaction.build_reaction_from_string(equation)
+                new_metabolites = set(model.metabolites).difference(metabolites_before)
+
+                operations.append({
+                    'operation': 'add',
+                    'type': 'reaction',
+                    'id': reaction.id,
+                    'data': reaction_to_dict(reaction),
+                })
+
+                # NOTES(Ali): not mapping equation ids to model namespace now
+
+                # For all new metabolites created from this reaction, create:
+                # a) corresponding metabolite A_e from e compartment;
+                # b) transport reaction A_<x> <--> A_e
+                # c) exchange reaction A_e -->
+                for metabolite in new_metabolites:
+                    metabolite_e = Metabolite(f"{metabolite.id[:-2]}_e", formula=metabolite.formula, compartment='e')
+
+                    try:
+                        # Create transport reaction between the compartment
+                        transport_reaction = Reaction(f"adapter_{metabolite.id}_{metabolite_e.id}")
+                        transport_reaction.lower_bound = -1000
+                        transport_reaction.add_metabolites({metabolite: -1, metabolite_e: 1})
+                        model.add_reaction(transport_reaction)
+                        operations.append({
+                            'operation': 'add',
+                            'type': 'reaction',
+                            'id': transport_reaction.id,
+                            'data': reaction_to_dict(transport_reaction),
+                        })
+                    except Exception:  # TODO: raise a reasonable exception on cobra side if the reaction exists
+                        logger.debug(f"Adapter reaction exists: {metabolite.id} <--> {metabolite_e.id}")
+                        # NOTES(Ali): this will never happen I think, since you're dealing with a NEW metabolite here
+                        # NOTES(Ali): should probably check for any 'A_e' metabolite already existing instead
+
+                    try:
+                        # Create demand reaction for the extracellular metabolite
+                        demand_reaction = model.add_boundary(metabolite_e, type='demand')
+                        operations.append({
+                            'operation': 'add',
+                            'type': 'reaction',
+                            'id': demand_reaction.id,
+                            'data': reaction_to_dict(demand_reaction),
+                        })
+                    except ValueError:
+                        logger.debug(f"Demand reaction already exists for metabolite '{metabolite_e.id}'")
+                        # NOTES(Ali): same as exception handler above
         except PartNotFound:
             logger.warning(f"Cannot add gene '{feature_id}', no gene-protein-reaction rules were found in ICE")
 
     return operations
-
-def _add_reaction(model, reaction_id, equation, gene_name):
-    """
-    Add new reaction by rn ID from equation, where metabolites defined by kegg ids.
-
-    :param reaction_id: reaction rn ID
-    :param equation: equation string, where metabolites are defined by kegg ids
-    :param gene_name: gene name
-    :return:
-    """
-    if model.reactions.has_id(reaction_id):
-        return
-
-    reaction = Reaction(reaction_id)
-    if gene_name:
-        reaction.gene_reaction_rule = gene_name
-    model.add_reaction(reaction)
-    # NOTES(Ali): not mapping equation ids to model namespace now
-
-    # For all new metabolites created from this reaction, create:
-    # a) corresponding metabolite A_e from e compartment;
-    # b) transport reaction A_<x> <--> A_e
-    # c) exchange reaction A_e -->
-    metabolites_before = model.metabolites
-    # NOTES(Ali): this equation comes *directly* from user input in ICE; very error-prone.
-    # NOTES(Ali): should unrecognized metabolites simply be created? should compartment ('_c') be appended first?
-    # NOTES(Ali): e.g. 2.0 ggdp <=> 2.0 h + phyto + 2.0 ppi  --  'h' is not recognized as 'h_c' for example
-    reaction.build_reaction_from_string(equation)
-    metabolites_after = model.metabolites
-    for metabolite in metabolites_after.difference(metabolites_before):
-        metabolite_e = Metabolite(f"{metabolite.id[:-2]}_e", formula=metabolite.formula, compartment='e')
-
-        try:
-            # Create transport reaction between the compartment
-            transport_reaction = Reaction(f"adapter_{metabolite.id}_{metabolite_e.id}")
-            transport_reaction.lower_bound = -1000
-            transport_reaction.add_metabolites({metabolite: -1, metabolite_e: 1})
-            model.add_reaction(transport_reaction)
-            # TODO: add to operations
-        except Exception:  # TODO: raise a reasonable exception on cobra side if the reaction exists
-            logger.debug('Adapter reaction exists: %s <--> %s', metabolite.id, metabolite_e.id)
-            # NOTES(Ali): this will never happen I think, since you're dealing with a NEW metabolite here
-            # NOTES(Ali): should probably check for any 'A_e' metabolite already existing instead
-
-        try:
-            # Create demand reaction for the extracellular metabolite
-            demand_reaction = model.add_boundary(metabolite_e, type='demand')
-            # TODO: add to operations
-        except ValueError:
-            logger.debug(f"Demand reaction already exists for metabolite '{metabolite_e.id}'")
-            # NOTES(Ali): same as exception handler above
 
 
 def adapt_from_measurements(model, measurements):
