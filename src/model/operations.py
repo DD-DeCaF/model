@@ -121,6 +121,7 @@ def add_apply(model, to_apply):
                 build_string_from_metabolites(rn['metabolites'])
             )
         else:
+            # NOTES(Ali): is this ever the case, that an added reaction has no associated metabolites?
             model = add_reaction_from_universal(model, rn['id'])
     for reaction in model.notes['changes']['added']['reactions']:
         if reaction['id'] not in before:
