@@ -45,8 +45,3 @@ def test_transport_reaction(iJO1366):
     assert changes.has_transport('btn', 1)
     solution = changes.model.optimize()
     assert solution.status == 'optimal'
-
-
-def test_next_measured_reaction(iJO1366):
-    assert next_measured_reaction(iJO1366.reactions.EX_co2_e) == iJO1366.reactions.CO2tex
-    assert next_measured_reaction(iJO1366.reactions.EX_glc__D_e) is None
