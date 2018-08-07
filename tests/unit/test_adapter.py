@@ -17,7 +17,6 @@ import pytest
 from model.adapter import (
     MeasurementChangeModel, MediumChangeModel, get_unique_metabolite, next_measured_reaction)
 from model.exceptions import NoIDMapping
-from model.salts import MEDIUM_SALTS
 
 
 def test_existing_metabolite(iJO1366):
@@ -26,13 +25,6 @@ def test_existing_metabolite(iJO1366):
     assert get_unique_metabolite(iJO1366, 'succ', db_name='bigg.metabolite').formula == 'C4H4O4'
     with pytest.raises(NoIDMapping):
         get_unique_metabolite(iJO1366, 'wrong_id')
-
-
-def test_medium_salts(e_coli_core):
-    assert len(MEDIUM_SALTS) > 2000
-    assert len(MEDIUM_SALTS['75832']) == 2
-    assert len(MEDIUM_SALTS['30808']) == 2
-    assert len(MEDIUM_SALTS['86254']) == 4
 
 
 def test_medium_change_model(iJO1366):
