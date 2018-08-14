@@ -269,8 +269,6 @@ def adapt_from_measurements(model, measurements):
         {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurements': list(<measurement (float)>)}
     """
     operations = []
-    warnings = []
-    measured_reactions = []
 
     # First, improve the fluxomics dataset by minimizing the distance to a feasible problem
     measurements = minimize_distance(model, measurements)
@@ -315,18 +313,6 @@ def adapt_from_measurements(model, measurements):
                     'id': reaction.id,
                     'data': reaction_to_dict(reaction),
                 })
-
-                # If there is a *single* corresponding transport reaction, then include that in the measured reactions
-                # NOTES(Ali): isn't it technically more correct to display the exchange reaction as measured? is this just because it is missing from the map?
-                met = list(reaction.metabolites.keys())[0]
-                connected_reactions = [r for r in met.reactions if r != reaction]
-                if len(connected_reactions) == 1:
-                    next_reaction = connected_reactions[0]
-                    metabolites = [m for m in next_reaction.metabolites if m != met]
-                    if len(metabolites) == 1:
-                        met2 = metabolites[0]
-                        if next_reaction.metabolites[met] * next_reaction.metabolites[met2] < 0:
-                            measured_reactions.append(next_reaction.id)
         elif scalar['type'] == 'reaction':
             try:
                 reaction = model.reactions.get_by_id(scalar['id'])
@@ -372,7 +358,7 @@ def adapt_from_measurements(model, measurements):
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
 
-    return (operations, warnings, measured_reactions)
+    return operations
 
 
 def _has_transport(model, metabolite_id, direction):
