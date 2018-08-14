@@ -54,7 +54,7 @@ def new_features_identifiers(genotype_changes: gnomic.Genotype):
         if isinstance(change, gnomic.Mutation):
             if change.new:
                 for feature in change.new.features():
-                    yield feature_id(feature)
+                    yield feature.name or feature.accession.identifier
         if isinstance(change, gnomic.Plasmid):
             for feature in change.features():
-                yield feature_id(feature)
+                yield feature.name or feature.accession.identifier
