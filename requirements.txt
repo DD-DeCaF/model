@@ -13,7 +13,6 @@ gunicorn==19.7.1
 uvloop==0.8.1
 venom==1.0.0a1
 grpcio==1.7.0
-deepdiff==1.0.0
 tqdm==4.19.4
 raven[flask]
 yarl==1.1.1
