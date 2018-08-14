@@ -16,10 +16,8 @@ import logging
 
 from cobra.exceptions import OptimizationError
 from cobra.flux_analysis import flux_variability_analysis, pfba
-from cobra.io.dict import model_to_dict
 
-from model import constants, storage
-from model.operations import is_dummy, phase_plane_to_dict
+from model import storage
 
 
 logger = logging.getLogger(__name__)
