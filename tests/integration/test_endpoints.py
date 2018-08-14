@@ -145,18 +145,23 @@ def test_deltas_post(monkeypatch, client):
 
     response = client.post('/deltas', json={
         'model_id': 'iJO1366',
-        'medium': [
-            {'id': 'chebi:44080'}, {'id': 'chebi:15075'}, {'id': 'chebi:15377'}, {'id': 'chebi:15378'}, {'id': 'chebi:15379'}, {'id': 'chebi:15982'}, {'id': 'chebi:16189'}, {'id': 'chebi:16526'}, {'id': 'chebi:16643'}, {'id': 'chebi:17883'}, {'id': 'chebi:18212'}, {'id': 'chebi:18367'}, {'id': 'chebi:18420'}, {'id': 'chebi:25371'}, {'id': 'chebi:27638'}, {'id': 'chebi:28938'}, {'id': 'chebi:29033'}, {'id': 'chebi:29034'}, {'id': 'chebi:29035'}, {'id': 'chebi:29036'}, {'id': 'chebi:29101'}, {'id': 'chebi:29103'}, {'id': 'chebi:29105'}, {'id': 'chebi:29108'}, {'id': 'chebi:36271'}, {'id': 'chebi:42758'}, {'id': 'chebi:49786'}  # noqa
-        ],
-        'genotype': ['+Aac', '-pta'],
-        'measurements': [
-            {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},
-            {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},
-            {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
-            {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
-        ],
-        # TODO add custom operations
-        'operations': [],
+        'conditions': {
+            'medium': [
+                {'id': 'chebi:44080'}, {'id': 'chebi:15075'}, {'id': 'chebi:15377'}, {'id': 'chebi:15378'}, {'id': 'chebi:15379'}, {'id': 'chebi:15982'}, {'id': 'chebi:16189'}, {'id': 'chebi:16526'}, {'id': 'chebi:16643'}, {'id': 'chebi:17883'}, {'id': 'chebi:18212'}, {'id': 'chebi:18367'}, {'id': 'chebi:18420'}, {'id': 'chebi:25371'}, {'id': 'chebi:27638'}, {'id': 'chebi:28938'}, {'id': 'chebi:29033'}, {'id': 'chebi:29034'}, {'id': 'chebi:29035'}, {'id': 'chebi:29036'}, {'id': 'chebi:29101'}, {'id': 'chebi:29103'}, {'id': 'chebi:29105'}, {'id': 'chebi:29108'}, {'id': 'chebi:36271'}, {'id': 'chebi:42758'}, {'id': 'chebi:49786'}  # noqa
+            ],
+            'genotype': ['+Aac', '-pta'],
+            'measurements': [
+                {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},
+                {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},
+                {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
+                {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
+            ],
+        },
+        'operations': [{
+            'operation': 'remove',
+            'type': 'reaction',
+            'id': 'KARA1',
+        }],
     })
     assert response.status_code == 200
-    assert len(response.json['operations']) == 71
+    assert len(response.json['operations']) == 72
