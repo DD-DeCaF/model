@@ -27,8 +27,6 @@ MEASUREMENTS = [{'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:4275
                 {'id': 'PFK', 'measurements': [5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'},
                 {'id': 'BAD_ID', 'measurements': [5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
 MESSAGE_FLUXES = {'to-return': ['fluxes'], 'measurements': MEASUREMENTS}
-MESSAGE_FLUXES_INFEASIBLE = {'to-return': ['fluxes'], 'measurements': [
-    {'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]}
 MESSAGE_TMY_FLUXES = {'to-return': ['fluxes', 'tmy', 'model'], 'theoretical-objectives': ['chebi:17790']}
 MESSAGE_MODIFY = {
     'simulation-method': 'pfba',
@@ -77,9 +75,14 @@ def test_simulate_no_message(client):
 
 
 def test_simulate_infeasible(client):
-    response = client.post("/models/iJO1366/simulate", json={'message': MESSAGE_FLUXES_INFEASIBLE})
-    result = response.json
-    assert result['fluxes']['ATPM'] == pytest.approx(100)
+    measurements = [{'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
+    response = client.post("/deltas", json={'model_id': 'iJO1366', 'conditions': {'measurements': measurements}})
+    assert response.status_code == 200
+
+    operations = response.json['operations']
+    response = client.post("/models/iJO1366/simulate", json={'operations': operations})
+    assert response.status_code == 200
+    assert response.json['flux_distribution']['ATPM'] == pytest.approx(100)
 
 
 def test_simulate_modify(monkeypatch, client):
