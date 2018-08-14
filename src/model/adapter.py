@@ -59,7 +59,7 @@ def adapt_from_medium(model, medium):
             'operation': 'modify',
             'type': 'reaction',
             'id': reaction.id,
-            'data': {'bounds': reaction.bounds},
+            'data': reaction_to_dict(reaction),
         })
 
     # Detect salt compounds
@@ -110,7 +110,7 @@ def adapt_from_medium(model, medium):
                 'operation': 'modify',
                 'type': 'reaction',
                 'id': exchange_reaction.id,
-                'data': {'bounds': exchange_reaction.bounds},
+                'data': reaction_to_dict(exchange_reaction),
             })
             # NOTES(Ali): annotation has been removed here, hope that's okay?
     return operations
@@ -313,7 +313,7 @@ def adapt_from_measurements(model, measurements):
                     'operation': 'modify',
                     'type': 'reaction',
                     'id': reaction.id,
-                    'data': {'bounds': reaction.bounds},
+                    'data': reaction_to_dict(reaction),
                 })
 
                 # If there is a *single* corresponding transport reaction, then include that in the measured reactions
@@ -339,7 +339,7 @@ def adapt_from_measurements(model, measurements):
                     'operation': 'modify',
                     'type': 'reaction',
                     'id': reaction.id,
-                    'data': {'bounds': reaction.bounds},
+                    'data': reaction_to_dict(reaction),
                 })
         elif scalar['type'] == 'growth-rate':
             reaction = model.reactions.get_by_id(storage.get(model.id).growth_rate_reaction)
@@ -348,7 +348,7 @@ def adapt_from_measurements(model, measurements):
                 'operation': 'modify',
                 'type': 'reaction',
                 'id': reaction.id,
-                'data': {'bounds': reaction.bounds},
+                'data': reaction_to_dict(reaction),
             })
         elif scalar['type'] == 'protein' and scalar['mode'] == 'quantitative':
             try:
@@ -367,7 +367,7 @@ def adapt_from_measurements(model, measurements):
                     'operation': 'modify',
                     'type': 'reaction',
                     'id': reaction.id,
-                    'data': {'bounds': reaction.bounds},
+                    'data': reaction_to_dict(reaction),
                 })
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")

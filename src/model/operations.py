@@ -43,7 +43,8 @@ def _add_reaction(model, id, data):
 
 def _modify_reaction(model, id, data):
     logger.debug(f"Modifying reaction '{id}' in model '{model.id}'")
-    model.reactions.get_by_id(id).bounds = data['bounds']
+    # NOTES(Ali): could modifications other than bounds, e.g. metabolites, be relevant?
+    model.reactions.get_by_id(id).bounds = data['lower_bound'], data['upper_bound']
 
 
 def _remove_reaction(model, id):
