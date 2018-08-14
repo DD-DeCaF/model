@@ -37,7 +37,7 @@ def apply_operations(model, operations):
 
 def _add_reaction(model, id, data):
     logger.debug(f"Adding reaction '{id}' to model '{model.id}'")
-    reaction = reaction_from_dict(data)
+    reaction = reaction_from_dict(data, model)
     model.add_reaction(reaction)
 
 
