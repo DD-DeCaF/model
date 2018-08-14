@@ -19,7 +19,7 @@ from flask import Response, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
-from model import constants, deltas, storage
+from model import deltas, storage
 from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements
 from model.operations import apply_operations
 from model.simulations import simulate

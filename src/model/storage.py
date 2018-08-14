@@ -19,7 +19,6 @@ import logging
 from cobra.io import load_json_model, read_sbml_model
 from redis import Redis
 
-from model import constants
 from model.app import app
 
 
