@@ -372,7 +372,6 @@ def adapt_from_measurements(model, measurements):
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
 
-    logger.critical(operations)
     return (operations, warnings, measured_reactions)
 
 
