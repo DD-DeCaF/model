@@ -67,9 +67,9 @@ def test_simulate_wrong_id(client):
     assert response.status_code == 404
 
 
-def test_simulate_no_message(client):
+def test_simulate_no_operations(client):
     response = client.post("/models/iJO1366/simulate", json={})
-    assert response.status_code == 400
+    assert response.status_code == 200
 
 
 def test_simulate_infeasible(client):
