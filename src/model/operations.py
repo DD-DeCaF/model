@@ -22,25 +22,17 @@ logger = logging.getLogger(__name__)
 
 def apply_operations(model, operations):
     for operation in operations:
-        if operation['operation'] == 'add':
-            if operation['type'] == 'reaction':
-                _add_reaction(model, operation['id'], operation['data'])
-            else:
-                raise ValueError(f"Invalid operation: Cannot add type '{operation['type']}'")
-        elif operation['operation'] == 'modify':
-            if operation['type'] == 'reaction':
-                _modify_reaction(model, operation['id'], operation['data'])
-            else:
-                raise ValueError(f"Invalid operation: Cannot modify type '{operation['type']}'")
-        elif operation['operation'] == 'remove':
-            if operation['type'] == 'reaction':
-                _remove_reaction(model, operation['id'])
-            elif operation['type'] == 'gene':
-                _remove_gene(model, operation['id'])
-            else:
-                raise ValueError(f"Invalid operation: Cannot modify type '{operation['type']}'")
+        if operation['operation'] == 'add' and operation['type'] == 'reaction':
+            _add_reaction(model, operation['id'], operation['data'])
+        elif operation['operation'] == 'modify' and operation['type'] == 'reaction':
+            _modify_reaction(model, operation['id'], operation['data'])
+        elif operation['operation'] == 'remove' and operation['type'] == 'reaction':
+            _remove_reaction(model, operation['id'])
+        elif operation['operation'] == 'remove' and operation['type'] == 'gene':
+            _remove_gene(model, operation['id'])
         else:
-            raise ValueError(f"Invalid operation: Cannot perform operation '{operation['operation']}'")
+            raise ValueError(f"Invalid operation: Cannot perform operation '{operation['operation']}' on type "
+                             f"'{operation['type']}")
 
 
 def _add_reaction(model, id, data):
