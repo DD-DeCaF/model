@@ -375,6 +375,7 @@ def adapt_from_measurements(model, measurements):
     logger.critical(operations)
     return (operations, warnings, measured_reactions)
 
+
 def _has_transport(model, metabolite_id, direction):
     """
     Check if transport between cytosol and extracellular space in desired direction exists.
