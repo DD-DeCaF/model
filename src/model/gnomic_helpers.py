@@ -45,7 +45,10 @@ def insert_feature(feature, dict1, dict2):
 
 
 def new_features_identifiers(genotype_changes: gnomic.Genotype):
-    """Extract identifiers for features which addition is defined in gnomic string
+    """
+    Extract identifiers for features which addition is defined in gnomic string
+
+    NOTES(Ali): remove? This function is not in use by the adapter.
 
     :param genotype_changes: gnomic string with genotype changes
     :return:
