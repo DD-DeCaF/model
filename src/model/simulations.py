@@ -32,7 +32,7 @@ METHODS = [
 ]
 
 
-def simulate(model, method, objective_id, objective_direction, tmy_objectives, to_return):
+def simulate(model, method, objective_id, objective_direction, tmy_objectives):
     if method not in METHODS:
         raise ValueError(f"Unsupported simulation method '{method}'")
 
@@ -80,40 +80,4 @@ def simulate(model, method, objective_id, objective_direction, tmy_objectives, t
                 flux_distribution = df.T.to_dict()
                 growth_rate = flux_distribution[storage.get(model.id).growth_rate_reaction]['upper_bound']
 
-    # Add/generate requested results
-    result = {}
-
-    if to_return is None or constants.FLUXES in to_return:
-        result[constants.FLUXES] = flux_distribution
-
-    if to_return is None or constants.TMY in to_return:
-        logger.info("Adding theoretical maximum yields")
-        result[constants.TMY] = {key: phase_plane_to_dict(model, key) for key in tmy_objectives}
-
-    if to_return is None or constants.MODEL in to_return:
-        result[constants.MODEL] = model_to_dict(model)
-
-    if to_return is None or constants.GROWTH_RATE in to_return:
-        result[constants.GROWTH_RATE] = growth_rate
-
-    if to_return is None or constants.REMOVED_REACTIONS in to_return:
-        changes = model.notes.get('changes', constants.get_empty_changes())
-        reactions = list(set([i['id'] for i in changes['removed']['reactions']]))
-        result[constants.REMOVED_REACTIONS] = reactions
-
-    if to_return is None or constants.MEASURED_REACTIONS in to_return:
-        changes = model.notes.get('changes', constants.get_empty_changes())
-        reactions = list(set([i['id'] for i in changes['measured']['reactions']]))
-        result[constants.MEASURED_REACTIONS] = reactions
-
-    if to_return is None or constants.ADDED_REACTIONS in to_return:
-        changes = model.notes.get('changes', constants.get_empty_changes())
-        reactions = list(set([i['id'] for i in changes['added']['reactions'] if not is_dummy(i['id'])]))
-        result[constants.ADDED_REACTIONS] = reactions
-
-    if to_return is None or constants.MISSING_MEASURED_REACTIONS in to_return:
-        changes = model.notes.get('changes', constants.get_empty_changes())
-        reactions = list(set([i['id'] for i in changes['measured-missing']['reactions']]))
-        result[constants.MISSING_MEASURED_REACTIONS] = reactions
-
-    return result
+    return flux_distribution, growth_rate
