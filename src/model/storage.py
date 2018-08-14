@@ -21,7 +21,6 @@ from redis import Redis
 
 from model import constants
 from model.app import app
-from model.operations import restore_changes
 
 
 logger = logging.getLogger(__name__)
@@ -82,38 +81,3 @@ def get(model_id):
             return model_meta
     else:
         raise KeyError(f"No model with id '{model_id}'")
-
-
-def save_changes(model, message):
-    """Save adapted changes in cache based on the given model and message"""
-    changes_key = _changes_key(model.id, message)
-    value = json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())})
-    redis.set(changes_key, value)
-    logger.info(f"Stored changes for {model.id} as '{changes_key}'")
-    return changes_key
-
-
-def restore_from_message(model_id, message):
-    """Restore model with modifications from cache based on the given model and message"""
-    return restore_from_key(_changes_key(model_id, message))
-
-
-def restore_from_key(changes_key):
-    """Restore model with modifications from cache based on the given unique cache key"""
-    changes = redis.get(changes_key)
-    if changes is None:
-        logger.debug(f"Changes '{changes_key}' not found in cache")
-        raise KeyError(f"Changes '{changes_key}' not found in cache")
-
-    changes = json.loads(changes.decode('utf-8'))
-    model = get(changes['model']).model.copy()
-    model = restore_changes(model, changes['changes'])
-    model.notes['changes'] = changes['changes']
-    return model
-
-
-def _changes_key(model_id, message):
-    """Generate unique string used for cache key based on the model id and full message"""
-    d = {k: message.get(k, []) for k in constants.MESSAGE_HASH_KEYS}
-    d['model_id'] = model_id
-    return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
