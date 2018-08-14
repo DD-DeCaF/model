@@ -17,6 +17,7 @@ import pytest
 from model.simulations import METHODS, simulate
 
 
+@pytest.mark.skip(reason="TMY results is currently not implemented")
 @pytest.mark.parametrize("objective", ['bigg:akg'])
 def test_tmy_result(e_coli_core, objective):
     to_return = ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions']
