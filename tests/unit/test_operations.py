@@ -15,7 +15,6 @@
 from math import isclose
 
 from model.constants import GENOTYPE_CHANGES, get_empty_changes
-from model.gnomic_helpers import full_genotype
 from model.operations import (
     add_reactions, apply_reactions_knockouts, build_string_from_metabolites, change_bounds,
     convert_measurements_to_mmol, convert_mg_to_mmol, modify_model, new_features_identifiers, phase_plane_to_dict,
@@ -49,12 +48,6 @@ def test_phase_plane_to_dict(e_coli_core):
     assert set(result.keys()) == {'EX_glu__L_e', 'objective_lower_bound', 'objective_upper_bound'}
     assert len(set([len(v) for v in result.values()])) == 1
     assert phase_plane_to_dict(e_coli_core, 'bigg:g3p') == {}
-
-
-def test_new_features_identifiers():
-    changes = full_genotype(['-A -B +promoter.C:#D:#E:terminator.F', '+G', '+Y -H'])
-    result = new_features_identifiers(changes)
-    assert set(result) == {'C', 'D', 'E', 'F', 'G', 'Y'}
 
 
 def test_reactions_knockouts(iJO1366):
