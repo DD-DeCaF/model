@@ -12,21 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from deepdiff import DeepDiff
+"""Test integrations between different modules"""
 
-from model import adapter, storage
-from model.constants import get_empty_changes
-from model.gnomic_helpers import full_genotype
+import pytest
+
+from model import deltas, storage
+from model.adapter import adapt_from_medium
 from model.ice_client import ICE
-from model.operations import apply_reactions_add, get_genotype_reactions, modify_model
+from model.operations import apply_operations
 
 
-def test_get_genotype_reactions():
-    changes = full_genotype(['-aceA -sucCD +promoter.BBa_J23100:#AB326105:#NP_600058:terminator.BBa_0010'])
-    result = get_genotype_reactions(changes)
-    assert set(result.keys()) == {'BBa_J23100', 'AB326105', 'NP_600058', 'BBa_0010'}
+def test_modify_restore(iJO1366):
+    """
+    Modifying a model, saving it, loading the operations, and re-applying them to a wild type model, should yield a
+    model with the same modifications.
+    """
+    original_medium = iJO1366.medium
+    medium = [
+        {'id': 'chebi:44080'},
+        {'id': 'chebi:15075'},
+        {'id': 'chebi:15377'},
+        {'id': 'chebi:15378'},
+    ]
+
+    # Applying the new medium should yield a different composition
+    with iJO1366:
+        operations = adapt_from_medium(iJO1366, medium)
+        apply_operations(iJO1366, operations)
+        modified_medium = iJO1366.medium
+        assert original_medium != modified_medium
+
+    # Cache and reload the operations
+    deltas.save(iJO1366.id, {'medium': medium}, operations)
+    loaded_operations = deltas.load(iJO1366.id, {'medium': medium})
+
+    # Reapplying the loaded operations to a clean model should result in the exact same medium composition again
+    with iJO1366:
+        apply_operations(iJO1366, loaded_operations)
+        assert iJO1366.medium == modified_medium
 
 
+@pytest.mark.skip(reason="Namespaces are not currently mapped. Large test; unclear what exactly is tested for.")
 def test_reactions_additions(monkeypatch, iJO1366):
     # Mock id-mapper api queries for efficiency
     def query_identifiers(object_ids, db_from, db_to):
@@ -112,87 +138,3 @@ def test_reactions_additions(monkeypatch, iJO1366):
                                                                            'sucr_c': -1,
                                                                            'fru_c': 1,
                                                                            'glc__D_c': 1}}])
-
-
-def test_modify_model(iJO1366):
-    message = {
-        'to-return': ['tmy', 'fluxes', 'growth-rate', 'removed-reactions'],
-        'theoretical-objectives': ['chebi:17790'],
-        'genotype-changes': ['+Aac'],
-        'medium': [
-            {'id': 'chebi:44080', 'concentration': 0.01},
-            {'id': 'chebi:15075', 'concentration': 0.01},
-            {'id': 'chebi:15377', 'concentration': 0.01},
-            {'id': 'chebi:15378', 'concentration': 0.01},
-            {'id': 'chebi:15379', 'concentration': 0.01},
-            {'id': 'chebi:15982', 'concentration': 0.01},
-            {'id': 'chebi:16189', 'concentration': 0.01},
-            {'id': 'chebi:16526', 'concentration': 0.01},
-            {'id': 'chebi:16643', 'concentration': 0.01},
-            {'id': 'chebi:17883', 'concentration': 0.01},
-            {'id': 'chebi:18212', 'concentration': 0.01},
-            {'id': 'chebi:18367', 'concentration': 0.01},
-            {'id': 'chebi:18420', 'concentration': 0.01},
-            {'id': 'chebi:25371', 'concentration': 0.01},
-            {'id': 'chebi:27638', 'concentration': 0.01},
-            {'id': 'chebi:28938', 'concentration': 0.01},
-            {'id': 'chebi:29033', 'concentration': 0.01},
-            {'id': 'chebi:29034', 'concentration': 0.01},
-            {'id': 'chebi:29035', 'concentration': 0.01},
-            {'id': 'chebi:29036', 'concentration': 0.01},
-            {'id': 'chebi:29101', 'concentration': 0.01},
-            {'id': 'chebi:29103', 'concentration': 0.01},
-            {'id': 'chebi:29105', 'concentration': 0.01},
-            {'id': 'chebi:29108', 'concentration': 0.01},
-            {'id': 'chebi:36271', 'concentration': 0.01},
-            {'id': 'chebi:42758', 'concentration': 0.01},
-            {'id': 'chebi:49786', 'concentration': 0.01}
-        ],
-        'measurements': [{'id': 'chebi:44080', 'measurements': [-15, -11, -14, -12], 'unit': 'mg', 'name': 'glucose',
-                          'type': 'compound'},
-                         {'id': 'PFK', 'measurements': [5, 5, 5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'}],
-        'reactions-knockout': ['GLUDy', '3HAD160'],
-    }
-    modified = modify_model(message, iJO1366)
-    assert 'EX_meoh_e' in modified.medium
-    db_key = storage.save_changes(modified, message)
-    restored_model = storage.restore_from_key(db_key)
-    assert restored_model.medium == modified.medium
-
-
-FATTY_ACID_ECOLI = ['HACD2', 'ACACT1r', 'ECOAH3', 'HACD3', 'ECOAH1', 'ECOAH7', 'ACACT5r', 'ECOAH2', 'BUTCT',
-                    'FACOAL60t2pp', 'ACACT6r', 'HACD7', 'ECOAH6', 'ACACT4r', 'FACOAL100t2pp', 'FACOAL160t2pp', 'ECOAH4',
-                    'CTECOAI7', 'HACD1', 'ACOAD4f', 'FACOAL161t2pp', 'FACOAL80t2pp', 'CTECOAI8', 'HACD5', 'ACOAD1f',
-                    'ACACT7r', 'ECOAH5', 'FACOAL180t2pp', 'CTECOAI6', 'FACOAL140t2pp', 'ACOAD7f', 'ACACT2r',
-                    'FACOAL141t2pp', 'FACOAL181t2pp', 'HACD8', 'ACOAD8f', 'ACOAD2f', 'ECOAH8', 'ACACT3r', 'ACOAD3f',
-                    'ACACT8r', 'HACD4', 'HACD6', 'ACOAD5f', 'ACOAD6f', 'FACOAL120t2pp']
-
-
-def test_restore_from_cache(monkeypatch, iMM904):
-    # Disable GPR queries for efficiency
-    monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
-
-    message = {
-        'to-return': ['model', 'fluxes'],
-        'genotype-changes': [
-            ('+promoter.Sc_TDH3:crtE_WT:terminator.Sc_CYC1,+promoter.Sc_TDH3:crtYB_WT:terminator.Sc_CYC1,'
-             '+promoter.Sc_TDH3:crtI_WT:terminator.Sc_CYC1')],
-        'simulation-method': 'pfba',
-        'measurements': [{'unit': 'mmol', 'id': 'chebi:12965', 'measurements': [-1.1, -1.0],
-                          'name': 'aldehydo-D-glucose', 'type': 'compound'},
-                         {'unit': 'mmol', 'id': 'chebi:17579', 'measurements': [0.006, 0.008, 0.0065, 0.0007],
-                          'name': 'beta-carotene', 'type': 'compound'},
-                         {'id': 'PFK', 'measurements': [5], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
-    }
-    model = modify_model(message, iMM904)
-    db_key = storage.save_changes(model, message)
-    restored_model = storage.restore_from_key(db_key).copy()
-    reactions = {
-        r.id: dict(lower_bound=r.lower_bound, upper_bound=r.upper_bound)
-        for r in model.reactions
-    }
-    reactions_restored = {
-        r.id: dict(lower_bound=r.lower_bound, upper_bound=r.upper_bound)
-        for r in restored_model.reactions
-    }
-    assert DeepDiff(reactions, reactions_restored) == {}
