@@ -28,7 +28,7 @@ def test_tmy_result(e_coli_core, objective):
 @pytest.mark.parametrize("method", METHODS)
 def test_simulation_methods(e_coli_core, method):
     for method in METHODS:
-        result = simulate(e_coli_core, method, None, None, [], None)
+        fluxes, growth_rate = simulate(e_coli_core, method, None, None, [])
         if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in e_coli_core.reactions]
-            assert set(result['fluxes']) == set(reactions_ids)
+            assert set(fluxes) == set(reactions_ids)
