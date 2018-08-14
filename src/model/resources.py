@@ -19,9 +19,9 @@ from flask import Response, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
-from model import constants, storage
+from model import constants, deltas, storage
 from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements
-from model.operations import modify_model
+from model.operations import apply_operations
 from model.simulations import simulate
 
 
@@ -42,34 +42,40 @@ def delta_create():
         return "Missing field 'model_id'", 400
 
     try:
+        # NOTES(Ali): context manager doesn't seem to work within the request?
         model_meta = storage.get(model_id)
     except KeyError:
         return f"Unknown model '{model_id}'", 400
 
+    try:
+        conditions = request.json['conditions']
+    except KeyError:
+        return "Missing field 'conditions'", 400
+
     # Build list of operations to perform on the model
     operations = []
-    if 'medium' in request.json:
-        operations.extend(adapt_from_medium(model_meta.model, request.json['medium']))
+    if 'medium' in conditions:
+        operations.extend(adapt_from_medium(model_meta.model, conditions['medium']))
 
-    if 'genotype' in request.json:
-        operations.extend(adapt_from_genotype(model_meta.model, request.json['genotype']))
+    if 'genotype' in conditions:
+        operations.extend(adapt_from_genotype(model_meta.model, conditions['genotype']))
 
-    if 'measurements' in request.json:
-        operations.extend(adapt_from_measurements(model_meta.model, request.json['measurements']))
+    if 'measurements' in conditions:
+        operations.extend(adapt_from_measurements(model_meta.model, conditions['measurements']))
 
-    if 'operations' in request.json:
-        operations.extend(request.json['operations'])
+    if 'operations' in conditions:
+        operations.extend(conditions['operations'])
 
-    # TODO: Save operations, get id
-    def create_delta(operations):
-        pass
-
-    operations_id = create_delta(operations)
-    return jsonify({'id': operations_id, 'operations': operations})
+    delta_id = deltas.save(model_meta.model.id, conditions, operations)
+    return jsonify({'id': delta_id, 'operations': operations})
 
 
 def delta_get(delta_id):
-    pass
+    try:
+        operations = deltas.load_from_key(delta_id)
+        return jsonify({'operations': operations})
+    except KeyError:
+        return f"Unknown delta key '{delta_id}'", 404
 
 
 def delta_update(delta_id):
@@ -83,37 +89,41 @@ def model_get(model_id):
         return f"Unknown model {model_id}", 404
 
 
-def model_modify_simulate(model_id):
+def model_simulate(model_id):
     if not request.is_json:
         return "Non-JSON request content is not supported", 415
 
-    if 'message' not in request.json:
-        return "Missing field 'message'", 400
-    message = request.json['message']
+    try:
+        model_meta = storage.get(model_id)
+    except KeyError:
+        return f"Unknown model {model_id}", 404
 
     try:
-        model = storage.restore_from_message(model_id, message)
-        changes_key = storage._changes_key(model_id, message)  # FIXME: shouldn't need to know changes_key here
+        operations = request.json['operations']
     except KeyError:
         try:
-            model_meta = storage.get(model_id)
+            delta_id = request.json['delta_id']
         except KeyError:
-            return f"Unknown model {model_id}", 404
-        model = model_meta.model.copy()
-        model = modify_model(message, model)
-        changes_key = storage.save_changes(model, message)
+            return "Missing field 'operations' or 'delta_id'", 400
+
+        try:
+            operations = deltas.load_from_key(delta_id)
+        except KeyError:
+            return f"Cannot find delta id '{delta_id}'", 404
+
+
+    # NOTES(Ali): context manager doesn't seem to work within the request?
+    model = model_meta.model.copy()
+    apply_operations(model, operations)
 
     # Parse solver request args and set defaults
-    method = message.get(constants.SIMULATION_METHOD, 'fba')
-    objective_id = message.get(constants.OBJECTIVE)
-    objective_direction = message.get(constants.OBJECTIVE_DIRECTION)
-    tmy_objectives = message.get(constants.TMY_OBJECTIVES, [])
-    to_return = message.get('to-return')
+    method = request.json.get('method', 'fba')
+    objective_id = request.json.get('objective')
+    objective_direction = request.json.get('objective_direction')
+    tmy_objectives = request.json.get('tmy-objectives', [])
 
-    result = simulate(model, method, objective_id, objective_direction, tmy_objectives, to_return)
-    response = {key: value for key, value in result.items() if key in to_return}
-    response['model-id'] = changes_key
-    return jsonify(response)
+    flux_distribution, growth_rate = simulate(model, method, objective_id, objective_direction, tmy_objectives)
+    return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
 def model_medium(model_id):
