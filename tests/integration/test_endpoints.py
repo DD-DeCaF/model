@@ -41,8 +41,6 @@ MESSAGE_MODIFY = {
     'measurements': MEASUREMENTS,
 }
 
-MESSAGE_DIFFERENT_OBJECTIVE = {'to-return': ['fluxes'], 'objective': 'EX_etoh_e'}
-
 
 def test_model_info(client):
     response = client.get('/models/{}/medium'.format('e_coli_core'))
@@ -127,16 +125,15 @@ def test_simulate_modify(monkeypatch, client):
 
 
 def test_simulate_different_objective(client):
-    response_etoh = client.post("/models/iJO1366/simulate", json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
-    assert response_etoh.status_code == 200
-    result = response_etoh.json
-    assert abs(result['fluxes']['EX_etoh_e']) - 20.0 < 0.001
+    response = client.post("/models/iJO1366/simulate", json={'objective': 'EX_etoh_e'})
+    assert response.status_code == 200
+    result = response.json
+    assert abs(result['flux_distribution']['EX_etoh_e']) - 20.0 < 0.001
 
-    MESSAGE_DIFFERENT_OBJECTIVE.pop('objective')
-    response_etoh = client.post("/models/iJO1366/simulate", json={'message': MESSAGE_DIFFERENT_OBJECTIVE})
-    assert response_etoh.status_code == 200
-    result = response_etoh.json
-    assert abs(result['fluxes']['EX_etoh_e']) < 0.001
+    response = client.post("/models/iJO1366/simulate", json={})
+    assert response.status_code == 200
+    result = response.json
+    assert abs(result['flux_distribution']['EX_etoh_e']) < 0.001
 
 
 def test_deltas_post(monkeypatch, client):
