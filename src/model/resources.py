@@ -96,8 +96,6 @@ def model_simulate(model_id):
         return f"Unknown model {model_id}", 404
 
     operations = []
-    if 'operations' in request.json:
-        operations.extend(request.json['operations'])
 
     if 'delta_id' in request.json:
         delta_id = request.json['delta_id']
@@ -105,6 +103,9 @@ def model_simulate(model_id):
             operations.extend(deltas.load_from_key(delta_id))
         except KeyError:
             return f"Cannot find delta id '{delta_id}'", 404
+
+    if 'operations' in request.json:
+        operations.extend(request.json['operations'])
 
     # NOTES(Ali): context manager doesn't seem to work within the request?
     model = model_meta.model.copy()
