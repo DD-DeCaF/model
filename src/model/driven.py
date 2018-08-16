@@ -18,6 +18,8 @@ import numpy as np
 from optlang.symbolics import Zero
 import pandas as pd
 
+from model import storage
+
 
 logger = logging.getLogger(__name__)
 
