@@ -49,7 +49,7 @@ def test_measurements_adapter(iJO1366):
         {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
     ]
     operations = adapt_from_measurements(iJO1366, measurements)
-    assert len(operations) == 3
+    assert len(operations) == 4
 
 
 def test_transport_reaction(iJO1366):
