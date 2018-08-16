@@ -63,9 +63,6 @@ def delta_create():
     if 'measurements' in conditions:
         operations.extend(adapt_from_measurements(model_meta.model, conditions['measurements']))
 
-    if 'operations' in request.json:
-        operations.extend(request.json['operations'])
-
     delta_id = deltas.save(model_meta.model.id, conditions, operations)
     return jsonify({'id': delta_id, 'operations': operations})
 
