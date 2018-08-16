@@ -50,7 +50,7 @@ isort-save:
 
 ## Run the tests.
 test:
-	docker-compose run --rm web py.test -vx --cov=src/model tests/
+	docker-compose run --rm web pytest -v --cov=src/model tests
 
 ## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
 test-travis:
