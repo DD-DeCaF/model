@@ -185,7 +185,7 @@ def adapt_from_genotype(model, genotype_changes):
 
         try:
             # :param equation: equation string, where metabolites are defined by kegg ids
-            for reaction_id, equation in ice.get_reaction_equations(genotype=feature_id):
+            for reaction_id, equation in ice.get_reaction_equations(genotype=feature_id).items():
                 logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_id}'")
 
                 # Add the reaction
