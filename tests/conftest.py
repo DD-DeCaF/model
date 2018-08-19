@@ -39,34 +39,19 @@ def e_coli_core():
     Provide a modifiable copy of the e_coli_core cobrapy model.  This model is fairly small and should be preferred in
     test cases where possible.
     """
-    model = storage.get('e_coli_core').model
-
-    # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
-    original_notes = model.notes.copy()
-    with model:
+    with storage.get('e_coli_core').model as model:
         yield model
-    model.notes = original_notes
 
 
 @pytest.fixture(scope="function")
 def iJO1366():
     """Provide a modifiable copy of the iJO1366 cobrapy model"""
-    model = storage.get('iJO1366').model
-
-    # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
-    original_notes = model.notes.copy()
-    with model:
+    with storage.get('iJO1366').model as model:
         yield model
-    model.notes = original_notes
 
 
 @pytest.fixture(scope="function")
 def iMM904():
     """Provide a modifiable copy of the iMM904 cobrapy model"""
-    model = storage.get('iMM904').model
-
-    # The context processor will not reset the `notes` field on exit, so keep a copy and reset it manually
-    original_notes = model.notes.copy()
-    with model:
+    with storage.get('iMM904').model as model:
         yield model
-    model.notes = original_notes

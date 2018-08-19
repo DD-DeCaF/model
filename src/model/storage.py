@@ -57,7 +57,6 @@ class ModelMeta:
         # Use cplex solver. Not necessary for the universal models.
         if self.simulatable:
             self._model.solver = 'cplex'
-            self._model.notes['namespace'] = self.namespace
 
 
 MODELS = [
