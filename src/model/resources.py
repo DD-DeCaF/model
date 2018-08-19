@@ -42,10 +42,14 @@ def delta_create():
         return "Missing field 'model_id'", 400
 
     try:
-        # NOTES(Ali): context manager doesn't seem to work within the request?
         model_meta = storage.get(model_id)
     except KeyError:
         return f"Unknown model '{model_id}'", 400
+
+    # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
+    # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
+    # This is an expensive operation, it can take a few seconds for large models.
+    model = model_meta.model.copy()
 
     try:
         conditions = request.json['conditions']
@@ -55,15 +59,15 @@ def delta_create():
     # Build list of operations to perform on the model
     operations = []
     if 'medium' in conditions:
-        operations.extend(adapt_from_medium(model_meta.model, conditions['medium']))
+        operations.extend(adapt_from_medium(model, conditions['medium']))
 
     if 'genotype' in conditions:
-        operations.extend(adapt_from_genotype(model_meta.model, conditions['genotype']))
+        operations.extend(adapt_from_genotype(model, conditions['genotype']))
 
     if 'measurements' in conditions:
-        operations.extend(adapt_from_measurements(model_meta.model, conditions['measurements']))
+        operations.extend(adapt_from_measurements(model, conditions['measurements']))
 
-    delta_id = deltas.save(model_meta.model.id, conditions, operations)
+    delta_id = deltas.save(model.id, conditions, operations)
     return jsonify({'id': delta_id, 'operations': operations})
 
 
@@ -95,6 +99,11 @@ def model_simulate(model_id):
     except KeyError:
         return f"Unknown model {model_id}", 404
 
+    # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
+    # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
+    # This is an expensive operation, it can take a few seconds for large models.
+    model = model_meta.model.copy()
+
     operations = []
 
     if 'delta_id' in request.json:
@@ -107,8 +116,6 @@ def model_simulate(model_id):
     if 'operations' in request.json:
         operations.extend(request.json['operations'])
 
-    # NOTES(Ali): context manager doesn't seem to work within the request?
-    model = model_meta.model.copy()
     apply_operations(model, operations)
 
     # Parse solver request args and set defaults
