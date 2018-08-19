@@ -22,4 +22,4 @@ def test_get_model():
 
 
 def test_get_universal_model():
-    assert type(storage.get('metanetx_universal_model_bigg').model) == Model
+    assert type(storage.UNIVERSAL_MODELS['metanetx_universal_model_bigg'].model) == Model
