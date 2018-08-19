@@ -29,13 +29,11 @@ redis = Redis(app.config['REDIS_ADDR'], app.config['REDIS_PORT'])
 class ModelMeta:
     """A metabolic model, with metadata and an internal (lazy-loaded in development) cobrapy model instance."""
 
-    def __init__(self, model_id, species, namespace, growth_rate_reaction, file_format='sbml', simulatable=True):
+    def __init__(self, model_id, species, namespace, growth_rate_reaction):
         self.model_id = model_id
         self.species = species
         self.namespace = namespace
         self.growth_rate_reaction = growth_rate_reaction
-        self.file_format = file_format
-        self.simulatable = simulatable
 
         # Preload the model into memory only in the following environments
         if app.config['ENVIRONMENT'] in ('production', 'staging'):
@@ -49,14 +47,21 @@ class ModelMeta:
 
     def _load(self):
         logger.info(f"Loading model {self.model_id} from SBML file")
-        if self.file_format == 'sbml':
-            self._model = read_sbml_model(f"data/models/{self.model_id}.sbml.gz")
-        elif self.file_format == 'json':
-            self._model = load_json_model(f"data/models/{self.model_id}.json")
+        self._model = read_sbml_model(f"data/models/{self.model_id}.sbml.gz")
 
-        # Use cplex solver. Not necessary for the universal models.
-        if self.simulatable:
-            self._model.solver = 'cplex'
+        # Use cplex solver
+        self._model.solver = 'cplex'
+
+
+class UniversalModel:
+    def __init__(self, model_id):
+        self.model_id = model_id
+
+    @property
+    def model(self):
+        if not hasattr(self, '_model'):
+            self._model = load_json_model(f"data/models/{self.model_id}.json")
+        return self._model
 
 
 MODELS = [
@@ -68,8 +73,12 @@ MODELS = [
     ModelMeta('e_coli_core', 'ECOLX', 'bigg', 'BIOMASS_Ecoli_core_w_GAM'),
     ModelMeta('ecYeast7', 'YEAST', 'yeast7', 'r_2111'),
     ModelMeta('ecYeast7_proteomics', 'YEAST', 'yeast7', 'r_2111'),
-    ModelMeta('metanetx_universal_model_bigg', None, None, None, 'json', False),
 ]
+
+
+UNIVERSAL_MODELS = {
+    'metanetx_universal_model_bigg': UniversalModel('metanetx_universal_model_bigg'),
+}
 
 
 def get(model_id):
