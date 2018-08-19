@@ -12,18 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import json
 import logging
 
 from cobra.io import load_json_model, read_sbml_model
-from redis import Redis
 
 from model.app import app
 
 
 logger = logging.getLogger(__name__)
-redis = Redis(app.config['REDIS_ADDR'], app.config['REDIS_PORT'])
 
 
 class ModelMeta:
