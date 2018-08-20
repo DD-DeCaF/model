@@ -14,10 +14,7 @@
 
 import random
 
-from cobra.io.dict import model_to_dict
-
-from model import deltas, storage
-from model.ice_client import ICE
+from model import deltas
 
 
 def test_delta_key_from_conditions():

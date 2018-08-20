@@ -20,4 +20,3 @@ def test_medium_salts():
     assert len(MEDIUM_SALTS['75832']) == 2
     assert len(MEDIUM_SALTS['30808']) == 2
     assert len(MEDIUM_SALTS['86254']) == 4
-

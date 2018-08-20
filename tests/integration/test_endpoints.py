@@ -16,7 +16,6 @@
 
 import pytest
 
-from model import adapter
 from model.ice_client import ICE
 
 
@@ -91,7 +90,7 @@ def test_simulate_modify(monkeypatch, client):
 
     operations = response.json['operations']
     assert any([op['operation'] == 'remove' and op['type'] == 'gene' and op['id'] == 'b2297' for op in operations])
-    assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'EX_etoh_e' for op in operations])
+    assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'EX_etoh_e' for op in operations])  # noqa
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'PFK' for op in operations])
 
     response = client.post("/models/iJO1366/simulate", json={'method': 'pfba', 'operations': operations})
@@ -127,8 +126,8 @@ def test_deltas_post(monkeypatch, client):
             ],
             'genotype': ['+Aac', '-pta'],
             'measurements': [
-                {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},
-                {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},
+                {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},  # noqa
+                {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},  # noqa
                 {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
                 {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
             ],

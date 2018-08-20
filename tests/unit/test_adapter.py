@@ -14,8 +14,8 @@
 
 import pytest
 
-from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements, _allow_transport, _has_transport
-from model.exceptions import NoIDMapping
+from model.adapter import (
+    _allow_transport, _has_transport, adapt_from_genotype, adapt_from_measurements, adapt_from_medium)
 from model.ice_client import ICE
 
 
@@ -44,7 +44,7 @@ def test_genotype_adapter(monkeypatch, iJO1366):
 def test_measurements_adapter(iJO1366):
     measurements = [
         {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},
-        {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},
+        {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},  # noqa
         {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
         {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
     ]

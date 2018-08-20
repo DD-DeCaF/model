@@ -13,27 +13,20 @@
 # limitations under the License.
 
 import itertools
-import json
 import logging
-import re
-from collections import defaultdict
 
 import gnomic
 import networkx as nx
 import numpy as np
-import pandas as pd
-from cameo.data import metanetx
 from cobra import Metabolite, Reaction
 from cobra.io.dict import reaction_to_dict
-from cobra.manipulation import find_gene_knockout_reactions
 
 from model import storage
 from model.driven import minimize_distance
 from model.exceptions import NoIDMapping, PartNotFound
 from model.gnomic_helpers import full_genotype, insert_feature
 from model.ice_client import ICE
-from model.id_mapper_client import query_identifiers
-from model.model_helpers import get_unique_metabolite, strip_compartment
+from model.model_helpers import get_unique_metabolite
 from model.salts import MEDIUM_SALTS
 
 
@@ -90,8 +83,8 @@ def adapt_from_medium(model, medium):
         try:
             metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
         except NoIDMapping:
-            # NOTES(Ali): why not add the metabolite? maybe we don't know which reactions to bind it to? do we need to tho?
-            # NOTES(Ali): well, if it's an ionic compound then both it and its salts will be attempted added to the medium
+            # NOTES(Ali): why not add the metabolite? maybe we don't know which reactions to bind it to? do we need to?
+            # NOTES(Ali): if it's an ionic compound then both it and its salts will be attempted added to the medium
             logger.info(f"Cannot add medium compund '{compound['id']}' - metabolite not found in in extracellular "
                         "compartment")
             continue
@@ -170,7 +163,8 @@ def adapt_from_genotype(model, genotype_changes):
                 'type': 'gene',
                 'id': gene.id,
             })
-            # NOTES(Ali): removed `find_gene_knockout_reactions` added to changes - adding the gene removal operation directly instead
+            # NOTES(Ali): removed `find_gene_knockout_reactions` added to changes - adding the gene removal operation
+            # NOTES(Ali): directly instead
         except IndexError:
             logger.warning(f"Cannot knockout gene '{feature.name}', not found in the model")
 
@@ -202,8 +196,8 @@ def adapt_from_genotype(model, genotype_changes):
                 metabolites_before = set(model.metabolites)
                 # NOTES(Ali): this equation comes *directly* from user input in ICE; very error-prone.
                 # NOTES(Ali): how to ensure db namespace compatibility?
-                # NOTES(Ali): should unrecognized metabolites simply be created? should compartment ('_c') be appended first?
-                # NOTES(Ali): e.g. 2.0 ggdp <=> 2.0 h + phyto + 2.0 ppi  --  'h' is not recognized as 'h_c' for example
+                # NOTES(Ali): should unrecognized metabolites simply be created? should compartment ('_c') be appended
+                # NOTES(Ali): first? e.g. 2.0 ggdp <=> 2.0 h + phyto + 2.0 ppi  --  'h' is not recognized as 'h_c' f.e.
                 reaction.build_reaction_from_string(equation)
                 new_metabolites = set(model.metabolites).difference(metabolites_before)
 

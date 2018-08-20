@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import logging
+
 import requests
 
 from model.app import app
 from model.metrics import API_REQUESTS
 from model.utils import log_time
+
+
+logger = logging.getLogger(__name__)
 
 
 def query_identifiers(object_ids, db_from, db_to):

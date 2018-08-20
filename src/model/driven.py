@@ -15,8 +15,8 @@
 import logging
 
 import numpy as np
-from optlang.symbolics import Zero
 import pandas as pd
+from optlang.symbolics import Zero
 
 from model import storage
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class NoIDMapping(Exception):
     """Thrown when a search for a given metabolite identifier does not yield any result."""
     def __init__(self, compound_id):

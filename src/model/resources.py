@@ -20,7 +20,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_l
 from prometheus_client.multiprocess import MultiProcessCollector
 
 from model import deltas, storage
-from model.adapter import adapt_from_medium, adapt_from_genotype, adapt_from_measurements
+from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 from model.operations import apply_operations
 from model.simulations import simulate
 
