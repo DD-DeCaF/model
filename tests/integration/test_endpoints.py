@@ -59,7 +59,7 @@ def test_simulate_no_operations(client):
 
 def test_simulate_infeasible(client):
     measurements = [{'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
-    response = client.post("/deltas", json={'model_id': 'iJO1366', 'conditions': {'measurements': measurements}})
+    response = client.post("/models/iJO1366/modify", json={'conditions': {'measurements': measurements}})
     assert response.status_code == 200
 
     operations = response.json['operations']
@@ -69,7 +69,7 @@ def test_simulate_infeasible(client):
 
 
 def test_simulate_fluxomics(monkeypatch, client):
-    response = client.post("/deltas", json={'model_id': 'iJO1366', 'conditions': {'measurements': MEASUREMENTS}})
+    response = client.post("/models/iJO1366/modify", json={'conditions': {'measurements': MEASUREMENTS}})
     assert response.status_code == 200
 
     operations = response.json['operations']
@@ -85,7 +85,7 @@ def test_simulate_modify(monkeypatch, client):
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
     conditions = {'measurements': MEASUREMENTS, 'genotype': ['+Aac', '-pta']}
-    response = client.post("/deltas", json={'model_id': 'iJO1366', 'conditions': conditions})
+    response = client.post("/models/iJO1366/modify", json={'conditions': conditions})
     assert response.status_code == 200
 
     operations = response.json['operations']
@@ -118,8 +118,7 @@ def test_deltas_post(monkeypatch, client):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
-    response = client.post('/deltas', json={
-        'model_id': 'iJO1366',
+    response = client.post("/models/iJO1366/modify", json={
         'conditions': {
             'medium': [
                 {'id': 'chebi:44080'}, {'id': 'chebi:15075'}, {'id': 'chebi:15377'}, {'id': 'chebi:15378'}, {'id': 'chebi:15379'}, {'id': 'chebi:15982'}, {'id': 'chebi:16189'}, {'id': 'chebi:16526'}, {'id': 'chebi:16643'}, {'id': 'chebi:17883'}, {'id': 'chebi:18212'}, {'id': 'chebi:18367'}, {'id': 'chebi:18420'}, {'id': 'chebi:25371'}, {'id': 'chebi:27638'}, {'id': 'chebi:28938'}, {'id': 'chebi:29033'}, {'id': 'chebi:29034'}, {'id': 'chebi:29035'}, {'id': 'chebi:29036'}, {'id': 'chebi:29101'}, {'id': 'chebi:29103'}, {'id': 'chebi:29105'}, {'id': 'chebi:29108'}, {'id': 'chebi:36271'}, {'id': 'chebi:42758'}, {'id': 'chebi:49786'}  # noqa
