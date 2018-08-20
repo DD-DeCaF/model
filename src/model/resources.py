@@ -90,6 +90,28 @@ def model_get(model_id):
         return f"Unknown model {model_id}", 404
 
 
+def model_get_modified(model_id):
+    if not request.is_json:
+        return "Non-JSON request content is not supported", 415
+
+    try:
+        model_meta = storage.get(model_id)
+    except KeyError:
+        return f"Unknown model {model_id}", 404
+
+    # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
+    # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
+    # This is an expensive operation, it can take a few seconds for large models.
+    model = model_meta.model.copy()
+
+    try:
+        apply_operations(model, request.json['operations'])
+    except KeyError:
+        return "Missing field 'operations'", 400
+
+    return jsonify(model_to_dict(model))
+
+
 def model_simulate(model_id):
     if not request.is_json:
         return "Non-JSON request content is not supported", 415
