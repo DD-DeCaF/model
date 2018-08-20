@@ -127,7 +127,6 @@ def model_simulate(model_id):
     method = request.json.get('method', 'fba')
     objective_id = request.json.get('objective')
     objective_direction = request.json.get('objective_direction')
-    tmy_objectives = request.json.get('tmy-objectives', [])
 
     flux_distribution, growth_rate = simulate(model, method, objective_id, objective_direction, tmy_objectives)
     return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})

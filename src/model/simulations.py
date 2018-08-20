@@ -30,7 +30,7 @@ METHODS = [
 ]
 
 
-def simulate(model, method, objective_id, objective_direction, tmy_objectives):
+def simulate(model, method, objective_id, objective_direction):
     if method not in METHODS:
         raise ValueError(f"Unsupported simulation method '{method}'")
 
