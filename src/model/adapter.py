@@ -184,10 +184,6 @@ def adapt_from_genotype(model, genotype_changes):
                 # Before building the reaction's metabolites, keep track of the existing ones to detect new metabolites
                 # added to the model
                 metabolites_before = set(model.metabolites)
-                # NOTES(Ali): this equation comes *directly* from user input in ICE; very error-prone.
-                # NOTES(Ali): how to ensure db namespace compatibility?
-                # NOTES(Ali): should unrecognized metabolites simply be created? should compartment ('_c') be appended
-                # NOTES(Ali): first? e.g. 2.0 ggdp <=> 2.0 h + phyto + 2.0 ppi  --  'h' is not recognized as 'h_c' f.e.
                 reaction.build_reaction_from_string(equation)
                 new_metabolites = set(model.metabolites).difference(metabolites_before)
 

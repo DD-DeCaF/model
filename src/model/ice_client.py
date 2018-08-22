@@ -59,6 +59,8 @@ class ICE(metaclass=Singleton):
         result = response.json()
 
         # Extract reaction id -> string map from the expected format in the references field
+        # Note: This could be removed in the future, in favor of storing only the reaction IDs in ICE, and looking up
+        # the corresponding stoichiometry/reaction equations from the BiGG database instead.
         reactions = result['references'].split(',')
         reaction_tuples = [reaction.split(':') for reaction in reactions]
         reactions_map = {id.strip(): string.strip() for id, string in reaction_tuples}
