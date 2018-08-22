@@ -90,15 +90,22 @@ def adapt_from_medium(model, medium):
             continue
         else:
             exchange_reaction = list(set(metabolite.reactions).intersection(model.exchanges))[0]
-            # NOTES(Ali): Why only if >= 0?
-            if exchange_reaction.lower_bound >= 0:
-                if not metabolite.formula:
-                    logger.warning(f"No formula for metabolite {metabolite.id}, it's unknown if there is carbon in it. "
-                                   "Assuming that there is no carbon")
-                if not metabolite.formula or 'C' not in metabolite.elements:
-                    exchange_reaction.lower_bound = -1000
-                else:
-                    exchange_reaction.lower_bound = -10
+
+            # If someone already figured out the uptake rate for the compound, it's likely more accurate than our
+            # assumptions, so keep it
+            if exchange_reaction.lower_bound < 0:
+                continue
+
+            if not metabolite.formula:
+                logger.warning(f"No formula for metabolite '{metabolite.id}', cannot check if it is a carbon source")
+                # If we don't know, it's most likely that the metabolite does not have a higher uptake rate than a
+                # carbon source, so set the bound still to -10
+                exchange_reaction.lower_bound = -10
+            elif 'C' in metabolite.elements:
+                # Limit the uptake rate for carbon sources to -10
+                exchange_reaction.lower_bound = -10
+            else:
+                exchange_reaction.lower_bound = -1000
             operations.append({
                 'operation': 'modify',
                 'type': 'reaction',
