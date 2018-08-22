@@ -49,17 +49,6 @@ class ModelMeta:
         self._model.solver = 'cplex'
 
 
-class UniversalModel:
-    def __init__(self, model_id):
-        self.model_id = model_id
-
-    @property
-    def model(self):
-        if not hasattr(self, '_model'):
-            self._model = load_json_model(f"data/models/{self.model_id}.json")
-        return self._model
-
-
 MODELS = [
     ModelMeta('iJO1366', 'ECOLX', 'bigg', 'BIOMASS_Ec_iJO1366_core_53p95M'),
     ModelMeta('iMM904', 'YEAST', 'bigg', 'BIOMASS_SC5_notrace'),
@@ -70,11 +59,6 @@ MODELS = [
     ModelMeta('ecYeast7', 'YEAST', 'yeast7', 'r_2111'),
     ModelMeta('ecYeast7_proteomics', 'YEAST', 'yeast7', 'r_2111'),
 ]
-
-
-UNIVERSAL_MODELS = {
-    'metanetx_universal_model_bigg': UniversalModel('metanetx_universal_model_bigg'),
-}
 
 
 def get(model_id):
