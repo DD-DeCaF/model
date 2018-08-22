@@ -121,40 +121,30 @@ def adapt_from_genotype(model, genotype_changes):
 
     operations = []
 
-    to_remove = {}
-    to_add = {}
+    features_to_remove = {}
+    features_to_add = {}
 
     for change in full_genotype(genotype_changes).changes():
         if isinstance(change, gnomic.Mutation):
             old = change.old.features() if change.old else []
             for feature in old:
-                insert_feature(feature, to_remove, to_add)
+                insert_feature(feature, features_to_remove, features_to_add)
             new = change.new.features() if change.new else []
             for feature in new:
-                insert_feature(feature, to_add, to_remove)
+                insert_feature(feature, features_to_add, features_to_remove)
         if isinstance(change, gnomic.Plasmid):
             for feature in change.features():
-                insert_feature(feature, to_add, to_remove)
+                insert_feature(feature, features_to_add, features_to_remove)
 
     # Check if deletion-addition combination is in fact mutation and should be skipped.
-    # If the feature has DELETE_GENE suffix, consider this gene deleted
-    DELETE_GENE = 'delta8bp'  # the gene mutation which disables its functions
-    drop_remove, drop_add = [], []
-    for old_feature in to_remove:
-        for new_feature in to_add:
-            # NOTES(Ali): startswith?
+    for old_feature in features_to_remove:
+        for new_feature in features_to_add:
             if new_feature.startswith(old_feature):
-                logger.info('Gene %s is replaced with %s', old_feature, new_feature)
-                drop_add.append(new_feature)
-                if DELETE_GENE not in new_feature:
-                    drop_remove.append(old_feature)
-    for name in drop_remove:
-        to_remove.pop(name)
-    for name in drop_add:
-        to_add.pop(name)
+                logger.info(f"Dropping new feature '{new_feature}' because it was already removed")
+                del features_to_add[new_feature]
 
     # Perform gene knockout. Use feature name as gene name
-    for feature in to_remove.values():
+    for feature in features_to_remove.values():
         try:
             gene = model.genes.query(lambda g: feature.name in (g.id, g.name))[0]
             gene.knock_out()
@@ -170,7 +160,7 @@ def adapt_from_genotype(model, genotype_changes):
 
     # Perform gene insertion.
     # Find all the reactions associated with this gene using KEGGClient and add them to the model
-    for feature in to_add.values():
+    for feature in features_to_add.values():
         feature_id = feature.name or feature.accession.identifier
         if model.genes.query(lambda g: feature.name in (g.id, g.name)):
             # do not add if gene is already in the model
