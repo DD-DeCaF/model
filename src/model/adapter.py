@@ -250,9 +250,9 @@ def adapt_from_measurements(model, measurements):
             else:
                 exchange_reactions = metabolite.reactions.intersection(model.exchanges)
                 if len(exchange_reactions) != 1:
-                    # TODO: return errors
-                    raise ValueError(f"Metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange reactions; "
-                                     f"expected 1")
+                    errors.append(f"Measured metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange "
+                                  f"reactions in the model; expected 1")
+                    continue
                 exchange_reaction = next(iter(exchange_reactions))
 
                 # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
