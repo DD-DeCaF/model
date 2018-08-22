@@ -200,42 +200,15 @@ def adapt_from_genotype(model, genotype_changes):
 
                 # NOTES(Ali): not mapping equation ids to model namespace now
 
-                # For all new metabolites created from this reaction, create:
-                # a) corresponding metabolite A_e from e compartment;
-                # b) transport reaction A_<x> <--> A_e
-                # c) exchange reaction A_e -->
+                # For all new metabolites, create a demand reaction so that it may leave the system
                 for metabolite in new_metabolites:
-                    metabolite_e = Metabolite(f"{metabolite.id[:-2]}_e", formula=metabolite.formula, compartment='e')
-
-                    try:
-                        # Create transport reaction between the compartment
-                        transport_reaction = Reaction(f"adapter_{metabolite.id}_{metabolite_e.id}")
-                        transport_reaction.lower_bound = -1000
-                        transport_reaction.add_metabolites({metabolite: -1, metabolite_e: 1})
-                        model.add_reaction(transport_reaction)
-                        operations.append({
-                            'operation': 'add',
-                            'type': 'reaction',
-                            'id': transport_reaction.id,
-                            'data': reaction_to_dict(transport_reaction),
-                        })
-                    except Exception:  # TODO: raise a reasonable exception on cobra side if the reaction exists
-                        logger.debug(f"Adapter reaction exists: {metabolite.id} <--> {metabolite_e.id}")
-                        # NOTES(Ali): this will never happen I think, since you're dealing with a NEW metabolite here
-                        # NOTES(Ali): should probably check for any 'A_e' metabolite already existing instead
-
-                    try:
-                        # Create demand reaction for the extracellular metabolite
-                        demand_reaction = model.add_boundary(metabolite_e, type='demand')
-                        operations.append({
-                            'operation': 'add',
-                            'type': 'reaction',
-                            'id': demand_reaction.id,
-                            'data': reaction_to_dict(demand_reaction),
-                        })
-                    except ValueError:
-                        logger.debug(f"Demand reaction already exists for metabolite '{metabolite_e.id}'")
-                        # NOTES(Ali): same as exception handler above
+                    demand_reaction = model.add_boundary(metabolite, type='demand')
+                    operations.append({
+                        'operation': 'add',
+                        'type': 'reaction',
+                        'id': demand_reaction.id,
+                        'data': reaction_to_dict(demand_reaction),
+                    })
         except PartNotFound:
             logger.warning(f"Cannot add gene '{feature_id}', no gene-protein-reaction rules were found in ICE")
 
