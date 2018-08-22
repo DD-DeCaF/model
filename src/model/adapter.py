@@ -246,8 +246,7 @@ def adapt_from_measurements(model, measurements):
                 compound = scalar['id']
                 metabolite = get_unique_metabolite(model, compound, 'e', 'CHEBI')
             except NoIDMapping:
-                # NOTES(Ali): how to deal with measurement not found in the model?
-                continue
+                errors.append(f"Cannot find compound '{compound}' in the model")
             else:
                 exchange_reactions = metabolite.reactions.intersection(model.exchanges)
                 if len(exchange_reactions) != 1:
@@ -272,8 +271,7 @@ def adapt_from_measurements(model, measurements):
             try:
                 reaction = model.reactions.get_by_id(scalar['id'])
             except KeyError:
-                # NOTES(Ali): how to deal with measurement not found in the model?
-                continue
+                errors.append(f"Cannot find reaction '{scalar['id']}' in the model")
             else:
                 reaction.bounds = lower_bound, upper_bound
                 operations.append({
@@ -300,8 +298,7 @@ def adapt_from_measurements(model, measurements):
 
                 reaction = model.reactions.query(query_fun)[0]
             except (IndexError, KeyError):
-                # NOTES(Ali): how to deal with measurement not found in the model?
-                continue
+                errors.append(f"Cannot find reaction '{scalar['id']}' in the model")
             else:
                 reaction.bounds = 0, upper_bound
                 operations.append({
