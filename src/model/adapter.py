@@ -16,7 +16,6 @@ import itertools
 import logging
 
 import gnomic
-import networkx as nx
 import numpy as np
 from cobra import Metabolite, Reaction
 from cobra.io.dict import reaction_to_dict
@@ -252,8 +251,6 @@ def adapt_from_measurements(model, measurements):
                     logger.warn('using first of %s', ', '.join([r.id for r in possible_reactions]))
                 reaction = possible_reactions[0]
 
-                operations.extend(_allow_transport(model, model_metabolite, lower_bound))
-
                 # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
                 # have <-- x, then multiply with -1
                 direction = reaction.metabolites[model_metabolite]
@@ -311,73 +308,3 @@ def adapt_from_measurements(model, measurements):
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
 
-    return operations
-
-
-def _has_transport(model, metabolite_id, direction):
-    """
-    Check if transport between cytosol and extracellular space in desired direction exists.
-    Use the graph of the transport reaction between the same metabolite
-    in different compartments.
-    """
-    G = nx.DiGraph()
-    m_c, m_e = metabolite_id + '_c', metabolite_id + '_e'
-    G.add_node(m_c)
-    G.add_node(m_e)
-    metabolites = []
-    for c in model.compartments:
-        m_id = metabolite_id + '_' + c
-        if model.metabolites.has_id(m_id):
-            metabolites.append(model.metabolites.get_by_id(m_id))
-    for a, b in itertools.combinations(metabolites, 2):
-        for reaction in set(a.reactions).intersection(set(b.reactions)):
-            a_coef, b_coef = reaction.metabolites[a], reaction.metabolites[b]
-            if a_coef * b_coef < 0:
-                l_bound, r_bound = reaction.bounds
-                if l_bound < 0 and r_bound > 0:
-                    G.add_edge(a.id, b.id)
-                    G.add_edge(b.id, a.id)
-                else:
-                    if b_coef > 0:
-                        pair = a.id, b.id
-                    else:
-                        pair = b.id, a.id
-                    if l_bound < 0:
-                        G.add_edge(pair[1], pair[0])
-                    else:
-                        G.add_edge(*pair)
-    if direction > 0:
-        return nx.has_path(G, m_c, m_e)
-    return nx.has_path(G, m_e, m_c)
-
-
-def _allow_transport(model, metabolite_e, direction):
-    """
-    If transport between cytosol and extracellular space in desired direction
-    does not already exist, create a helper transport reaction.
-    """
-    # NOTES(Ali): can we do the same as for the `create_exchange` logic here?
-    # NOTES(Ali): different phrasing: for a measured compound, what is really required here?
-    met_id = metabolite_e.id.replace('_e', '')
-    metabolite_c = model.metabolites.get_by_id(met_id + '_c')
-    if _has_transport(model, met_id, direction):
-        return []
-    if direction > 0:
-        m_from, m_to = metabolite_c, metabolite_e
-    else:
-        m_from, m_to = metabolite_e, metabolite_c
-    logger.info('Transport reaction for %s is not found, '
-                'creating a transport reaction from %s to %s',
-                met_id, m_from, m_to)
-    transport_reaction = Reaction('adapter_' + met_id)
-    transport_reaction.bounds = -1000, 1000
-    transport_reaction.add_metabolites(
-        {m_from: -1, m_to: 1}
-    )
-    model.add_reaction(transport_reaction)
-    return [{
-        'operation': 'add',
-        'type': 'reaction',
-        'id': transport_reaction.id,
-        'data': reaction_to_dict(transport_reaction),
-    }]
