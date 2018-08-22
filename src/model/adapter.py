@@ -241,27 +241,29 @@ def adapt_from_measurements(model, measurements):
         if scalar['type'] == 'compound':
             try:
                 compound = scalar['id']
-                model_metabolite = get_unique_metabolite(model, compound, 'e', 'CHEBI')
+                metabolite = get_unique_metabolite(model, compound, 'e', 'CHEBI')
             except NoIDMapping:
                 # NOTES(Ali): how to deal with measurement not found in the model?
                 continue
             else:
-                possible_reactions = list(set(model_metabolite.reactions).intersection(model.exchanges))
-                if len(possible_reactions) > 1:
-                    logger.warn('using first of %s', ', '.join([r.id for r in possible_reactions]))
-                reaction = possible_reactions[0]
+                exchange_reactions = metabolite.reactions.intersection(model.exchanges)
+                if len(exchange_reactions) != 1:
+                    # TODO: return errors
+                    raise ValueError(f"Metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange reactions; "
+                                     f"expected 1")
+                exchange_reaction = next(iter(exchange_reactions))
 
                 # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
                 # have <-- x, then multiply with -1
-                direction = reaction.metabolites[model_metabolite]
+                direction = exchange_reaction.metabolites[metabolite]
                 if direction > 0:
                     lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
-                reaction.bounds = lower_bound, upper_bound
+                exchange_reaction.bounds = lower_bound, upper_bound
                 operations.append({
                     'operation': 'modify',
                     'type': 'reaction',
-                    'id': reaction.id,
-                    'data': reaction_to_dict(reaction),
+                    'id': exchange_reaction.id,
+                    'data': reaction_to_dict(exchange_reaction),
                 })
         elif scalar['type'] == 'reaction':
             try:
