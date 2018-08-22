@@ -43,6 +43,7 @@ def adapt_from_medium(model, medium):
     """
 
     operations = []
+    errors = []
 
     for reaction_id in model.medium:
         reaction = model.reactions.get_by_id(reaction_id)
@@ -105,7 +106,7 @@ def adapt_from_medium(model, medium):
                 'data': reaction_to_dict(exchange_reaction),
             })
             # NOTES(Ali): annotation has been removed here, hope that's okay?
-    return operations
+    return operations, errors
 
 
 def adapt_from_genotype(model, genotype_changes):
@@ -119,6 +120,7 @@ def adapt_from_genotype(model, genotype_changes):
     # NOTES(Ali): review gene duplication logic below (`insert_feature` vs duplication check)
 
     operations = []
+    errors = []
 
     features_to_remove = {}
     features_to_add = {}
@@ -207,7 +209,7 @@ def adapt_from_genotype(model, genotype_changes):
         except PartNotFound:
             logger.warning(f"Cannot add gene '{feature_id}', no gene-protein-reaction rules were found in ICE")
 
-    return operations
+    return operations, errors
 
 
 def adapt_from_measurements(model, measurements):
@@ -221,6 +223,7 @@ def adapt_from_measurements(model, measurements):
         {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurements': list(<measurement (float)>)}
     """
     operations = []
+    errors = []
 
     # First, improve the fluxomics dataset by minimizing the distance to a feasible problem
     measurements = minimize_distance(model, measurements)
@@ -309,4 +312,5 @@ def adapt_from_measurements(model, measurements):
                 })
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
+    return operations, errors
 

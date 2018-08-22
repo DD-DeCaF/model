@@ -82,17 +82,29 @@ def model_modify(model_id):
 
     # Build list of operations to perform on the model
     operations = []
+    errors = []
     if 'medium' in conditions:
-        operations.extend(adapt_from_medium(model, conditions['medium']))
+        operations_medium, errors_medium = adapt_from_medium(model, conditions['medium'])
+        operations.extend(operations_medium)
+        errors.extend(errors_medium)
 
     if 'genotype' in conditions:
-        operations.extend(adapt_from_genotype(model, conditions['genotype']))
+        operations_genotype, errors_genotype = adapt_from_genotype(model, conditions['genotype'])
+        operations.extend(operations_genotype)
+        errors.extend(errors_genotype)
 
     if 'measurements' in conditions:
-        operations.extend(adapt_from_measurements(model, conditions['measurements']))
+        operations_measurements, errors_measurements = adapt_from_measurements(model, conditions['measurements'])
+        operations.extend(operations_measurements)
+        errors.extend(errors_measurements)
 
-    delta_id = deltas.save(model.id, conditions, operations)
-    return jsonify({'id': delta_id, 'operations': operations})
+    if errors:
+        # If any errors occured during modifications, discard generated operations and return the error messages to the
+        # client for follow-up
+        return jsonify({'errors': errors})
+    else:
+        delta_id = deltas.save(model.id, conditions, operations)
+        return jsonify({'id': delta_id, 'operations': operations})
 
 
 def model_simulate(model_id):
