@@ -22,16 +22,12 @@ def full_genotype(genotype_changes):
     :param genotype_changes: list of changes, f.e. ['-tyrA::kanMX+', 'kanMX-']
     :return:
     """
-
-    def chain(definitions):
-        if not definitions:
-            return gnomic.Genotype([])
-        genotype = gnomic.Genotype.parse(definitions[0])
-        for definition in definitions[1:]:
-            genotype = gnomic.Genotype.parse(definition, parent=genotype)
-        return genotype
-
-    return chain(genotype_changes)
+    if not genotype_changes:
+        return gnomic.Genotype([])
+    genotype = gnomic.Genotype.parse(genotype_changes[0])
+    for definition in genotype_changes[1:]:
+        genotype = gnomic.Genotype.parse(definition, parent=genotype)
+    return genotype
 
 
 def insert_feature(feature, dict1, dict2):
