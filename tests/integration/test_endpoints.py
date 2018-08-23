@@ -138,4 +138,4 @@ def test_deltas_post(monkeypatch, client):
         }],
     })
     assert response.status_code == 200
-    assert len(response.json['operations']) == 72
+    assert len(response.json['operations']) == 335

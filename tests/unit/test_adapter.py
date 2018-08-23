@@ -26,8 +26,8 @@ def test_medium_adapter(iJO1366):
         {'id': 'chebi:131387'},
     ]
     operations, errors = adapt_from_medium(iJO1366, medium)
-    assert len(operations) == 38
-    assert len(errors) == 0
+    assert len(operations) == 330
+    assert len(errors) == 5
     assert set(iJO1366.medium) == {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e', 'EX_ni2_e', 'EX_mn2_e', 'EX_cl_e'}  # noqa
     assert all(iJO1366.reactions.get_by_id(r).lower_bound == -1000 for r in iJO1366.medium)
 
