@@ -14,8 +14,7 @@
 
 import pytest
 
-from model.adapter import (
-    _allow_transport, _has_transport, adapt_from_genotype, adapt_from_measurements, adapt_from_medium)
+from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 from model.ice_client import ICE
 
 
@@ -50,17 +49,3 @@ def test_measurements_adapter(iJO1366):
     ]
     operations = adapt_from_measurements(iJO1366, measurements)
     assert len(operations) == 4
-
-
-def test_transport_reaction(iJO1366):
-    assert _has_transport(iJO1366, 'o2', 1)
-    assert _has_transport(iJO1366, 'fe2', -1)
-    assert not _has_transport(iJO1366, 'btn', 1)
-    iJO1366.reactions.EX_btn_e.bounds = (0.1, 0.1)
-    with pytest.warns(UserWarning):
-        solution = iJO1366.optimize()
-    assert solution.status == 'infeasible'
-    _allow_transport(iJO1366, iJO1366.metabolites.btn_e, 1)
-    assert _has_transport(iJO1366, 'btn', 1)
-    solution = iJO1366.optimize()
-    assert solution.status == 'optimal'
