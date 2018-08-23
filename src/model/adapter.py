@@ -74,11 +74,8 @@ def adapt_from_medium(model, medium):
         try:
             metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
         except NoIDMapping:
-            # NOTES(Ali): why not add the metabolite? maybe we don't know which reactions to bind it to? do we need to?
-            # NOTES(Ali): if it's an ionic compound then both it and its salts will be attempted added to the medium
-            logger.info(f"Cannot add medium compund '{compound['id']}' - metabolite not found in in extracellular "
+            errors.append(f"Cannot add medium compund '{compound['id']}' - metabolite not found in in extracellular "
                         "compartment")
-            continue
         else:
             exchange_reactions = metabolite.reactions.intersection(model.exchanges)
             if len(exchange_reactions) != 1:
