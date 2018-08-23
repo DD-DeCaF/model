@@ -14,7 +14,7 @@
 
 import logging
 
-from cobra.io import load_json_model, read_sbml_model
+from cobra.io import read_sbml_model
 
 from model.app import app
 

@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
 import logging
 
 import gnomic
 import numpy as np
-from cobra import Metabolite, Reaction
+from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
 from model import storage
@@ -75,7 +74,7 @@ def adapt_from_medium(model, medium):
             metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
         except NoIDMapping:
             errors.append(f"Cannot add medium compund '{compound['id']}' - metabolite not found in in extracellular "
-                        "compartment")
+                          "compartment")
         else:
             exchange_reactions = metabolite.reactions.intersection(model.exchanges)
             if len(exchange_reactions) != 1:
@@ -317,4 +316,3 @@ def adapt_from_measurements(model, measurements):
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
     return operations, errors
-
