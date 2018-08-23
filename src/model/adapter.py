@@ -45,16 +45,6 @@ def adapt_from_medium(model, medium):
     operations = []
     errors = []
 
-    for reaction_id in model.medium:
-        reaction = model.reactions.get_by_id(reaction_id)
-        reaction.lower_bound = 0
-        operations.append({
-            'operation': 'modify',
-            'type': 'reaction',
-            'id': reaction.id,
-            'data': reaction_to_dict(reaction),
-        })
-
     # Detect salt compounds
     # NOTES(Ali): could be simplified by generating a different datastructre from `update_salts
     chebi_ids = [c['id'] for c in medium]
@@ -79,6 +69,7 @@ def adapt_from_medium(model, medium):
     ])
 
     # Make all metabolites in the medium consumable by setting the exchange reactions lower bound to a negative number
+    medium_mapping = {}
     for compound in medium:
         try:
             metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
@@ -89,30 +80,42 @@ def adapt_from_medium(model, medium):
                         "compartment")
             continue
         else:
-            exchange_reaction = list(set(metabolite.reactions).intersection(model.exchanges))[0]
+            exchange_reactions = metabolite.reactions.intersection(model.exchanges)
+            if len(exchange_reactions) != 1:
+                errors.append(f"Medium compound metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange "
+                              f"reactions in the model; expected 1")
+                continue
+            exchange_reaction = next(iter(exchange_reactions))
 
             # If someone already figured out the uptake rate for the compound, it's likely more accurate than our
             # assumptions, so keep it
-            if exchange_reaction.lower_bound < 0:
+            if exchange_reaction.id in model.medium:
+                medium_mapping[exchange_reaction.id] = model.medium[exchange_reaction.id]
                 continue
 
             if not metabolite.formula:
                 logger.warning(f"No formula for metabolite '{metabolite.id}', cannot check if it is a carbon source")
                 # If we don't know, it's most likely that the metabolite does not have a higher uptake rate than a
-                # carbon source, so set the bound still to -10
-                exchange_reaction.lower_bound = -10
+                # carbon source, so set the bound still to 10
+                medium_mapping[exchange_reaction.id] = 10
             elif 'C' in metabolite.elements:
-                # Limit the uptake rate for carbon sources to -10
-                exchange_reaction.lower_bound = -10
+                # Limit the uptake rate for carbon sources to 10
+                medium_mapping[exchange_reaction.id] = 10
             else:
-                exchange_reaction.lower_bound = -1000
-            operations.append({
-                'operation': 'modify',
-                'type': 'reaction',
-                'id': exchange_reaction.id,
-                'data': reaction_to_dict(exchange_reaction),
-            })
-            # NOTES(Ali): annotation has been removed here, hope that's okay?
+                medium_mapping[exchange_reaction.id] = 1000
+
+    # Apply the medium to the model, letting cobrapy deal with figuring out the correct bounds to change
+    model.medium = medium_mapping
+
+    # Add all exchange reactions to operations, to make sure any changed bounds is properly updated
+    for reaction in model.exchanges:
+        operations.append({
+            'operation': 'modify',
+            'type': 'reaction',
+            'id': reaction.id,
+            'data': reaction_to_dict(reaction),
+        })
+
     return operations, errors
 
 
