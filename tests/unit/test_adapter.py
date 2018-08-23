@@ -25,8 +25,9 @@ def test_medium_adapter(iJO1366):
         {'id': 'chebi:86244'},
         {'id': 'chebi:131387'},
     ]
-    operations = adapt_from_medium(iJO1366, medium)
+    operations, errors = adapt_from_medium(iJO1366, medium)
     assert len(operations) == 38
+    assert len(errors) == 0
     assert set(iJO1366.medium) == {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e', 'EX_ni2_e', 'EX_mn2_e', 'EX_cl_e'}  # noqa
     assert all(iJO1366.reactions.get_by_id(r).lower_bound == -1000 for r in iJO1366.medium)
 
@@ -36,8 +37,9 @@ def test_genotype_adapter(monkeypatch, iJO1366):
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
     genotype_changes = ['+Aac', '-pta']
-    operations = adapt_from_genotype(iJO1366, genotype_changes)
+    operations, errors = adapt_from_genotype(iJO1366, genotype_changes)
     assert len(operations) == 1
+    assert len(errors) == 0
 
 
 def test_measurements_adapter(iJO1366):
@@ -47,5 +49,6 @@ def test_measurements_adapter(iJO1366):
         {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
         {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
     ]
-    operations = adapt_from_measurements(iJO1366, measurements)
+    operations, errors = adapt_from_measurements(iJO1366, measurements)
     assert len(operations) == 4
+    assert len(errors) == 0
