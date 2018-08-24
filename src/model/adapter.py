@@ -73,7 +73,7 @@ def adapt_from_medium(model, medium):
         try:
             metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
         except NoIDMapping:
-            errors.append(f"Cannot add medium compund '{compound['id']}' - metabolite not found in in extracellular "
+            errors.append(f"Cannot add medium compund '{compound['id']}' - metabolite not found in extracellular "
                           "compartment")
         else:
             exchange_reactions = metabolite.reactions.intersection(model.exchanges)
