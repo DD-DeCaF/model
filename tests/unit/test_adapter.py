@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 from model.ice_client import ICE
 
