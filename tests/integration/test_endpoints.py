@@ -140,6 +140,7 @@ def test_deltas_post(monkeypatch, client):
 
 def test_simulate_custom_model(client, e_coli_core):
     model_serialized = model_to_dict(e_coli_core)
-    response = client.post("/simulate", json={'model': model_serialized})
+    response = client.post("/simulate", json={'model': model_serialized,
+                                              'biomass_reaction': "BIOMASS_Ecoli_core_w_GAM"})
     assert response.status_code == 200
     assert response.json['growth_rate'] == pytest.approx(0.8739215069684307)
