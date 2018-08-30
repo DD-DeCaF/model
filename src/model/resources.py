@@ -14,7 +14,7 @@
 
 import logging
 
-from cobra.io.dict import model_to_dict
+from cobra.io.dict import model_from_dict, model_to_dict
 from flask import Response, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
@@ -142,6 +142,28 @@ def model_medium(model_id):
         return jsonify({'medium': medium})
     except KeyError:
         return f"Unknown model {model_id}", 404
+
+
+def simulate_custom_model():
+    if not request.is_json:
+        return "Non-JSON request content is not supported", 415
+
+    try:
+        model_dict = request.json['model']
+        model = model_from_dict(model_dict)
+    except KeyError:
+        return f"Missing field 'model'", 400
+
+    if 'operations' in request.json:
+        apply_operations(model, request.json['operations'])
+
+    # Parse solver request args and set defaults
+    method = request.json.get('method', 'fba')
+    objective_id = request.json.get('objective')
+    objective_direction = request.json.get('objective_direction')
+
+    flux_distribution, growth_rate = simulate(model, method, objective_id, objective_direction)
+    return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
 def metrics():
