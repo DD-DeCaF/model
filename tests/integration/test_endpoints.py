@@ -131,11 +131,6 @@ def test_deltas_post(monkeypatch, client):
                 {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
             ],
         },
-        'operations': [{
-            'operation': 'remove',
-            'type': 'reaction',
-            'id': 'KARA1',
-        }],
     })
     assert response.status_code == 200
     assert len(response.json['operations']) == 72
