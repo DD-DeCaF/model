@@ -54,6 +54,7 @@ def init_app(application, interface):
     app.add_url_rule('/models/<model_id>/modify', view_func=resources.model_modify, methods=['POST'])
     app.add_url_rule('/models/<model_id>/simulate', view_func=resources.model_simulate, methods=['POST'])
     app.add_url_rule('/models/<model_id>/medium', view_func=resources.model_medium)
+    app.add_url_rule('/simulate', view_func=resources.simulate_custom_model, methods=['POST'])
     app.add_url_rule('/metrics', view_func=resources.metrics)
     app.add_url_rule('/healthz', view_func=resources.healthz)
 

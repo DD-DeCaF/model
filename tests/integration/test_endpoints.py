@@ -16,6 +16,8 @@
 
 import pytest
 
+from cobra.io.dict import model_to_dict
+
 from model.ice_client import ICE
 
 
@@ -134,3 +136,10 @@ def test_deltas_post(monkeypatch, client):
     })
     assert response.status_code == 200
     assert len(response.json['operations']) == 72
+
+
+def test_simulate_custom_model(client, e_coli_core):
+    model_serialized = model_to_dict(e_coli_core)
+    response = client.post("/simulate", json={'model': model_serialized})
+    assert response.status_code == 200
+    assert response.json['growth_rate'] == pytest.approx(0.8739215069684307)
