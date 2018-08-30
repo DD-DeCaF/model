@@ -160,6 +160,9 @@ def simulate_custom_model():
     except KeyError:
         return f"Missing field 'biomass_reaction'", 400
 
+    if not model.reactions.has_id(biomass_reaction_id):
+        return f"There is no biomass reaction with id '{biomass_reaction_id}' in the model", 400
+
     if 'operations' in request.json:
         apply_operations(model, request.json['operations'])
 
