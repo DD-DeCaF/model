@@ -128,7 +128,8 @@ def model_simulate(model_id):
     objective_id = request.json.get('objective')
     objective_direction = request.json.get('objective_direction')
 
-    flux_distribution, growth_rate = simulate(model, method, objective_id, objective_direction, tmy_objectives)
+    flux_distribution, growth_rate = simulate(model, model_meta.growth_rate_reaction, method, objective_id,
+                                              objective_direction, tmy_objectives)
     return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
@@ -154,6 +155,11 @@ def simulate_custom_model():
     except KeyError:
         return f"Missing field 'model'", 400
 
+    try:
+        biomass_reaction_id = request.json['biomass_reaction']
+    except KeyError:
+        return f"Missing field 'biomass_reaction'", 400
+
     if 'operations' in request.json:
         apply_operations(model, request.json['operations'])
 
@@ -162,7 +168,7 @@ def simulate_custom_model():
     objective_id = request.json.get('objective')
     objective_direction = request.json.get('objective_direction')
 
-    flux_distribution, growth_rate = simulate(model, method, objective_id, objective_direction)
+    flux_distribution, growth_rate = simulate(model, biomass_reaction_id, method, objective_id, objective_direction)
     return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
