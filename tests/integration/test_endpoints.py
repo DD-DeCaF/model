@@ -15,7 +15,6 @@
 """Test local HTTP endpoints"""
 
 import pytest
-
 from cobra.io.dict import model_to_dict
 
 from model.ice_client import ICE
