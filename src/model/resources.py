@@ -129,7 +129,7 @@ def model_simulate(model_id):
     objective_direction = request.json.get('objective_direction')
 
     flux_distribution, growth_rate = simulate(model, model_meta.growth_rate_reaction, method, objective_id,
-                                              objective_direction, tmy_objectives)
+                                              objective_direction)
     return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
