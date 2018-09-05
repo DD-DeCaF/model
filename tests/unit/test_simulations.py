@@ -14,6 +14,7 @@
 
 import pytest
 
+from model import storage
 from model.simulations import METHODS, simulate
 
 
@@ -28,7 +29,13 @@ def test_tmy_result(e_coli_core, objective):
 @pytest.mark.parametrize("method", METHODS)
 def test_simulation_methods(e_coli_core, method):
     for method in METHODS:
-        fluxes, growth_rate = simulate(e_coli_core, method, None, None, [])
+        fluxes, growth_rate = simulate(
+            e_coli_core,
+            storage.get(e_coli_core.id).growth_rate_reaction,
+            method,
+            None,
+            None,
+        )
         if method not in {'fva', 'pfba-fva'}:
             reactions_ids = [i.id for i in e_coli_core.reactions]
             assert set(fluxes) == set(reactions_ids)
