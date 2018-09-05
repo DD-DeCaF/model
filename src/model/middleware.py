@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 def init_app(app):
     @app.before_request
     def before_request():
-        logger.debug(f"Handling request: {request.path}")
         g.request_start = time.time()
 
     @app.after_request
