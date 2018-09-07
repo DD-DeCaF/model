@@ -32,7 +32,7 @@ def apply_operations(model, operations):
             _knockout_gene(model, operation['id'])
         else:
             raise ValueError(f"Invalid operation: Cannot perform operation '{operation['operation']}' on type "
-                             f"'{operation['type']}")
+                             f"'{operation['type']}'")
 
 
 def _add_reaction(model, id, data):
