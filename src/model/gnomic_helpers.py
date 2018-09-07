@@ -30,16 +30,6 @@ def full_genotype(genotype_changes):
     return genotype
 
 
-def insert_feature(feature, dict1, dict2):
-    """Helper function for managing two feature storages"""
-    if not feature.name:
-        return
-    if feature.name in dict2:
-        dict2.pop(feature.name)
-    else:
-        dict1[feature.name] = feature
-
-
 def new_features_identifiers(genotype_changes: gnomic.Genotype):
     """
     Extract identifiers for features which addition is defined in gnomic string

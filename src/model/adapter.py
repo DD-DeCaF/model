@@ -22,7 +22,7 @@ from cobra.io.dict import reaction_to_dict
 from model import storage
 from model.driven import minimize_distance
 from model.exceptions import NoIDMapping, PartNotFound
-from model.gnomic_helpers import full_genotype, insert_feature
+from model.gnomic_helpers import full_genotype
 from model.ice_client import ICE
 from model.model_helpers import get_unique_metabolite
 from model.salts import MEDIUM_SALTS
@@ -123,97 +123,90 @@ def adapt_from_genotype(model, genotype_changes):
     :param genotype_changes: list of genotype change strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
     """
     # NOTES(Ali): metabolite mappings are completely removed now, what are the consequences?
-    # NOTES(Ali): review gene duplication logic below (`insert_feature` vs duplication check)
 
     operations = []
     errors = []
 
-    features_to_remove = {}
-    features_to_add = {}
-
+    # Resolve the feature change order from mutations (additions or removals) and plasmids (always added)
+    feature_operations = []
     for change in full_genotype(genotype_changes).changes():
         if isinstance(change, gnomic.Mutation):
-            old = change.old.features() if change.old else []
-            for feature in old:
-                insert_feature(feature, features_to_remove, features_to_add)
-            new = change.new.features() if change.new else []
-            for feature in new:
-                insert_feature(feature, features_to_add, features_to_remove)
+            if change.old:
+                for feature in change.old.features():
+                    feature_operations.append(('knockout', feature))
+            if change.new:
+                for feature in change.new.features():
+                    feature_operations.append(('add', feature))
         if isinstance(change, gnomic.Plasmid):
             for feature in change.features():
-                insert_feature(feature, features_to_add, features_to_remove)
+                feature_operations.append(('add', feature))
 
-    # Check if deletion-addition combination is in fact mutation and should be skipped.
-    for old_feature in features_to_remove:
-        for new_feature in features_to_add:
-            if new_feature.startswith(old_feature):
-                logger.info(f"Dropping new feature '{new_feature}' because it was already removed")
-                del features_to_add[new_feature]
-
-    # Perform gene knockout. Use feature name as gene name
-    for feature in features_to_remove.values():
-        try:
-            gene = model.genes.query(lambda g: feature.name in (g.id, g.name))[0]
-            gene.knock_out()
-            operations.append({
-                'operation': 'knockout',
-                'type': 'gene',
-                'id': gene.id,
-            })
-            # NOTES(Ali): removed `find_gene_knockout_reactions` added to changes - adding the gene removal operation
-            # NOTES(Ali): directly instead
-        except IndexError:
-            logger.warning(f"Cannot knockout gene '{feature.name}', not found in the model")
-
-    # Perform gene insertion.
-    # Find all the reactions associated with this gene using KEGGClient and add them to the model
-    for feature in features_to_add.values():
-        feature_id = feature.name or feature.accession.identifier
-        if model.genes.query(lambda g: feature.name in (g.id, g.name)):
-            # do not add if gene is already in the model
-            logger.info(f"Not adding gene '{feature.name}', it already exists in the model")
-            continue
-
-        try:
-            # :param equation: equation string, where metabolites are defined by kegg ids
-            for reaction_id, equation in ice.get_reaction_equations(genotype=feature_id).items():
-                logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_id}'")
-
-                # Add the reaction
-                try:
-                    reaction = Reaction(reaction_id)
-                    reaction.gene_reaction_rule = feature_id
-                    model.add_reaction(reaction)
-                except ValueError:
-                    # The reaction ID is already in the model
-                    continue
-
-                # Before building the reaction's metabolites, keep track of the existing ones to detect new metabolites
-                # added to the model
-                metabolites_before = set(model.metabolites)
-                reaction.build_reaction_from_string(equation)
-                new_metabolites = set(model.metabolites).difference(metabolites_before)
-
+    # Apply feature operations in order
+    for operation, feature in feature_operations:
+        if operation == 'knockout':
+            # Perform gene knockout. Use feature name as gene name
+            try:
+                gene = model.genes.query(lambda g: feature.name in (g.id, g.name))[0]
+                gene.knock_out()
                 operations.append({
-                    'operation': 'add',
-                    'type': 'reaction',
-                    'id': reaction.id,
-                    'data': reaction_to_dict(reaction),
+                    'operation': 'knockout',
+                    'type': 'gene',
+                    'id': gene.id,
                 })
+                # NOTES(Ali): removed `find_gene_knockout_reactions` added to changes - adding the gene removal
+                # NOTES(Ali): operation directly instead
+            except IndexError:
+                logger.warning(f"Cannot knockout gene '{op['feature'].name}', not found in the model")
 
-                # NOTES(Ali): not mapping equation ids to model namespace now
+        elif operation == 'add':
+            # Perform gene insertion.
+            # Find all the reactions associated with this gene using KEGGClient and add them to the model
+            feature_id = feature.name or feature.accession.identifier
+            if model.genes.query(lambda g: feature.name in (g.id, g.name)):
+                # do not add if gene is already in the model
+                logger.info(f"Not adding gene '{feature.name}', it already exists in the model")
+                continue
 
-                # For all new metabolites, create a demand reaction so that it may leave the system
-                for metabolite in new_metabolites:
-                    demand_reaction = model.add_boundary(metabolite, type='demand')
+            try:
+                # :param equation: equation string, where metabolites are defined by kegg ids
+                for reaction_id, equation in ice.get_reaction_equations(genotype=feature_id).items():
+                    logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_id}'")
+
+                    # Add the reaction
+                    try:
+                        reaction = Reaction(reaction_id)
+                        reaction.gene_reaction_rule = feature_id
+                        model.add_reaction(reaction)
+                    except ValueError:
+                        # The reaction ID is already in the model
+                        continue
+
+                    # Before building the reaction's metabolites, keep track of the existing ones to detect new
+                    # metabolites added to the model
+                    metabolites_before = set(model.metabolites)
+                    reaction.build_reaction_from_string(equation)
+                    new_metabolites = set(model.metabolites).difference(metabolites_before)
+
                     operations.append({
                         'operation': 'add',
                         'type': 'reaction',
-                        'id': demand_reaction.id,
-                        'data': reaction_to_dict(demand_reaction),
+                        'id': reaction.id,
+                        'data': reaction_to_dict(reaction),
                     })
-        except PartNotFound:
-            logger.warning(f"Cannot add gene '{feature_id}', no gene-protein-reaction rules were found in ICE")
+
+                    # NOTES(Ali): not mapping equation ids to model namespace now
+
+                    # For all new metabolites, create a demand reaction so that it may leave the system
+                    for metabolite in new_metabolites:
+                        demand_reaction = model.add_boundary(metabolite, type='demand')
+                        operations.append({
+                            'operation': 'add',
+                            'type': 'reaction',
+                            'id': demand_reaction.id,
+                            'data': reaction_to_dict(demand_reaction),
+                        })
+            except PartNotFound:
+                logger.warning(f"Cannot add gene '{feature_id}', no gene-protein-reaction rules were found in ICE")
 
     return operations, errors
 
