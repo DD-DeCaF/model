@@ -33,34 +33,3 @@ def full_genotype(genotype_changes):
 def feature_id(feature):
     """Return the feature identifier (name or accession id) for the given feature"""
     return feature.name or feature.accession.identifier
-
-
-def feature_additions(genotype_changes):
-    """
-    Resolve features to add from the given genotype changes
-
-    :param genotype_changes: gnomic.Genotype object with genotype changes
-    :return: a generator yielding the names of the features to add
-    """
-    for change in genotype_changes.changes():
-        if isinstance(change, gnomic.Change):
-            if change.new:
-                for feature in change.new.features():
-                    yield feature_id(feature)
-        if isinstance(change, gnomic.Plasmid):
-            for feature in change.features():
-                yield feature_id(feature)
-
-
-def feature_knockouts(genotype_changes):
-    """
-    Resolve features to knockout from the given genotype changes
-
-    :param genotype_changes: gnomic.Genotype object with genotype changes
-    :return: a generator yielding the names of the features to knockout
-    """
-    for change in genotype_changes.changes():
-        if isinstance(change, gnomic.Change):
-            if change.old:
-                for feature in change.old.features():
-                    yield feature_id(feature)

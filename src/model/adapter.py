@@ -22,7 +22,7 @@ from model import storage
 from model.cobra_helpers import get_unique_metabolite
 from model.driven import minimize_distance
 from model.exceptions import NoIDMapping, PartNotFound
-from model.gnomic_helpers import feature_additions, feature_knockouts, full_genotype
+from model.gnomic_helpers import feature_id, full_genotype
 from model.ice_client import ICE
 from model.salts import MEDIUM_SALTS
 
@@ -125,7 +125,8 @@ def adapt_from_genotype(model, genotype_changes):
     genotype_changes = full_genotype(genotype_changes)
 
     # Apply feature operations
-    for feature_name in feature_knockouts(genotype_changes):
+    for feature in genotype_changes.removed_features:
+        feature_name = feature_id(feature)
         # Perform gene knockout. Use feature name as gene name
         try:
             gene = model.genes.query(lambda g: feature_name in (g.id, g.name))[0]
@@ -138,7 +139,8 @@ def adapt_from_genotype(model, genotype_changes):
         except IndexError:
             logger.warning(f"Cannot knockout gene '{feature_name}', not found in the model")
 
-    for feature_name in feature_additions(genotype_changes):
+    for feature in genotype_changes.added_features:
+        feature_name = feature_id(feature)
         # Perform gene insertion.
         # Find all the reactions associated with this gene using KEGGClient and add them to the model
         if model.genes.query(lambda g: feature_name in (g.id, g.name)):
