@@ -34,8 +34,6 @@ _config = os.environ["ENVIRONMENT"]
 bind = "0.0.0.0:8000"
 worker_class = "gevent"
 timeout = 20
-accesslog = "-"
-access_log_format = '''%(t)s "%(r)s" %(s)s %(b)s %(L)s "%(f)s"'''
 
 
 def child_exit(server, worker):
@@ -48,3 +46,5 @@ if _config in ['production', 'staging']:
 elif _config in ['testing', 'development']:
     workers = 1
     reload = True
+    accesslog = "-"
+    access_log_format = '''%(t)s "%(r)s" %(s)s %(b)s %(L)s "%(f)s"'''
