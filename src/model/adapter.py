@@ -24,7 +24,7 @@ from model.driven import minimize_distance
 from model.exceptions import NoIDMapping, PartNotFound
 from model.gnomic_helpers import full_genotype, feature_additions, feature_knockouts
 from model.ice_client import ICE
-from model.model_helpers import get_unique_metabolite
+from model.cobra_helpers import get_unique_metabolite
 from model.salts import MEDIUM_SALTS
 
 

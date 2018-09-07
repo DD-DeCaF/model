@@ -15,7 +15,7 @@
 import pytest
 
 from model.exceptions import NoIDMapping
-from model.model_helpers import get_unique_metabolite
+from model.cobra_helpers import get_unique_metabolite
 
 
 def test_existing_metabolite(iJO1366):
