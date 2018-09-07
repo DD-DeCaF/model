@@ -133,7 +133,7 @@ def test_deltas_post(monkeypatch, client):
         },
     })
     assert response.status_code == 200
-    assert len(response.json['operations']) == 335
+    assert len(response.json['operations']) == 329
 
 
 def test_simulate_custom_model(client, e_coli_core):
