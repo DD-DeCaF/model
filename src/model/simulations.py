@@ -59,7 +59,6 @@ def simulate(model, method, objective_id, objective_direction):
         # For non-fva methods, do return the measured fluxes despite infesability
         if method not in ('fva', 'pfba-fva'):
             # TODO: refactor; changes are not available in model notes anymorer
-            # NOTES(Ali): does it make sense to return flux for the measured reactions when the model is infeasible?
             changes = model.notes['changes']
             if 'measured' in changes:
                 ids_measured_reactions = set(rxn['id'] for rxn in changes['measured']['reactions'])

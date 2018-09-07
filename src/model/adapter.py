@@ -44,7 +44,6 @@ def adapt_from_medium(model, medium):
     errors = []
 
     # Detect salt compounds
-    # NOTES(Ali): could be simplified by generating a different datastructre from `update_salts
     chebi_ids = [c['id'] for c in medium]
     for compound in chebi_ids:
         chebi_id = compound.replace('chebi:', '')
@@ -60,7 +59,6 @@ def adapt_from_medium(model, medium):
                         medium.append({'id': 'chebi:' + compound})
 
     # Add trace metals
-    # NOTES(Ali): why these hardcoded metals?
     medium.extend([
         {'id': 'chebi:25517', 'name': 'nickel'},
         {'id': 'chebi:25368', 'name': 'molybdate'},
@@ -121,8 +119,6 @@ def adapt_from_genotype(model, genotype_changes):
     :param model: cobra.Model
     :param genotype_changes: list of genotype change strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
     """
-    # NOTES(Ali): metabolite mappings are completely removed now, what are the consequences?
-
     operations = []
     errors = []
 
@@ -139,8 +135,6 @@ def adapt_from_genotype(model, genotype_changes):
                 'type': 'gene',
                 'id': gene.id,
             })
-            # NOTES(Ali): removed `find_gene_knockout_reactions` added to changes - adding the gene removal
-            # NOTES(Ali): operation directly instead
         except IndexError:
             logger.warning(f"Cannot knockout gene '{feature_name}', not found in the model")
 
@@ -153,7 +147,6 @@ def adapt_from_genotype(model, genotype_changes):
             continue
 
         try:
-            # :param equation: equation string, where metabolites are defined by kegg ids
             for reaction_id, equation in ice.get_reaction_equations(genotype=feature_name).items():
                 logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_name}'")
 
@@ -178,8 +171,6 @@ def adapt_from_genotype(model, genotype_changes):
                     'id': reaction.id,
                     'data': reaction_to_dict(reaction),
                 })
-
-                # NOTES(Ali): not mapping equation ids to model namespace now
 
                 # For all new metabolites, create a demand reaction so that it may leave the system
                 for metabolite in new_metabolites:
