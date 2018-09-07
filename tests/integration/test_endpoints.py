@@ -88,7 +88,7 @@ def test_simulate_modify(monkeypatch, client):
     assert response.status_code == 200
 
     operations = response.json['operations']
-    assert any([op['operation'] == 'remove' and op['type'] == 'gene' and op['id'] == 'b2297' for op in operations])
+    assert any([op['operation'] == 'knockout' and op['type'] == 'gene' and op['id'] == 'b2297' for op in operations])
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'EX_etoh_e' for op in operations])  # noqa
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'PFK' for op in operations])
 
@@ -131,7 +131,7 @@ def test_deltas_post(monkeypatch, client):
             ],
         },
         'operations': [{
-            'operation': 'remove',
+            'operation': 'knockout',
             'type': 'reaction',
             'id': 'KARA1',
         }],

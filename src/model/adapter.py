@@ -156,7 +156,7 @@ def adapt_from_genotype(model, genotype_changes):
             gene = model.genes.query(lambda g: feature.name in (g.id, g.name))[0]
             gene.knock_out()
             operations.append({
-                'operation': 'remove',
+                'operation': 'knockout',
                 'type': 'gene',
                 'id': gene.id,
             })

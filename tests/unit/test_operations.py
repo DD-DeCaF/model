@@ -55,15 +55,15 @@ def test_modify_reaction(e_coli_core):
     assert e_coli_core.reactions.CS.bounds == (-20.0, 20)
 
 
-def test_remove_reaction(e_coli_core):
+def test_knockout_reaction(e_coli_core):
     assert e_coli_core.reactions.CS.bounds != (0.0, 0.0)
-    apply_operations(e_coli_core, [{'operation': "remove", 'type': "reaction", 'id': "CS"}])
+    apply_operations(e_coli_core, [{'operation': "knockout", 'type': "reaction", 'id': "CS"}])
     assert e_coli_core.reactions.CS.bounds == (0.0, 0.0)
 
 
-def test_remove_gene(e_coli_core):
+def test_knockout_gene(e_coli_core):
     assert e_coli_core.genes.b4025.functional
     assert all([r.bounds != (0.0, 0.0) for r in e_coli_core.genes.b4025.reactions])
-    apply_operations(e_coli_core, [{'operation': "remove", 'type': "gene", 'id': "b4025"}])
+    apply_operations(e_coli_core, [{'operation': "knockout", 'type': "gene", 'id': "b4025"}])
     assert not e_coli_core.genes.b4025.functional
     assert all([r.bounds == (0.0, 0.0) for r in e_coli_core.genes.b4025.reactions])
