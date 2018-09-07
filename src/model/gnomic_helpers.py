@@ -22,42 +22,45 @@ def full_genotype(genotype_changes):
     :param genotype_changes: list of changes, f.e. ['-tyrA::kanMX+', 'kanMX-']
     :return:
     """
-
-    def chain(definitions):
-        if not definitions:
-            return gnomic.Genotype([])
-        genotype = gnomic.Genotype.parse(definitions[0])
-        for definition in definitions[1:]:
-            genotype = gnomic.Genotype.parse(definition, parent=genotype)
-        return genotype
-
-    return chain(genotype_changes)
+    if not genotype_changes:
+        return gnomic.Genotype([])
+    genotype = gnomic.Genotype.parse(genotype_changes[0])
+    for definition in genotype_changes[1:]:
+        genotype = gnomic.Genotype.parse(definition, parent=genotype)
+    return genotype
 
 
-def insert_feature(feature, dict1, dict2):
-    """Helper function for managing two feature storages"""
-    if not feature.name:
-        return
-    if feature.name in dict2:
-        dict2.pop(feature.name)
-    else:
-        dict1[feature.name] = feature
+def feature_id(feature):
+    """Return the feature identifier (name or accession id) for the given feature"""
+    return feature.name or feature.accession.identifier
 
 
-def new_features_identifiers(genotype_changes: gnomic.Genotype):
+def feature_additions(genotype_changes):
     """
-    Extract identifiers for features which addition is defined in gnomic string
+    Resolve features to add from the given genotype changes
 
-    NOTES(Ali): remove? This function is not in use by the adapter.
-
-    :param genotype_changes: gnomic string with genotype changes
-    :return:
+    :param genotype_changes: gnomic.Genotype object with genotype changes
+    :return: a generator yielding the names of the features to add
     """
     for change in genotype_changes.changes():
         if isinstance(change, gnomic.Mutation):
             if change.new:
                 for feature in change.new.features():
-                    yield feature.name or feature.accession.identifier
+                    yield feature_id(feature)
         if isinstance(change, gnomic.Plasmid):
             for feature in change.features():
-                yield feature.name or feature.accession.identifier
+                yield feature_id(feature)
+
+
+def feature_knockouts(genotype_changes):
+    """
+    Resolve features to knockout from the given genotype changes
+
+    :param genotype_changes: gnomic.Genotype object with genotype changes
+    :return: a generator yielding the names of the features to knockout
+    """
+    for change in genotype_changes.changes():
+        if isinstance(change, gnomic.Mutation):
+            if change.old:
+                for feature in change.old.features():
+                    yield feature_id(feature)

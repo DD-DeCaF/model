@@ -24,7 +24,6 @@ MEASUREMENTS = [
     {'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0], 'type': 'compound'},
     {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurements': [5.0, 4.8, 5.2, 4.9], 'type': 'compound'},
     {'id': 'PFK', 'measurements': [5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'},
-    {'id': 'BAD_ID', 'measurements': [5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'},
 ]
 
 
@@ -90,7 +89,7 @@ def test_simulate_modify(monkeypatch, client):
     assert response.status_code == 200
 
     operations = response.json['operations']
-    assert any([op['operation'] == 'remove' and op['type'] == 'gene' and op['id'] == 'b2297' for op in operations])
+    assert any([op['operation'] == 'knockout' and op['type'] == 'gene' and op['id'] == 'b2297' for op in operations])
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'EX_etoh_e' for op in operations])  # noqa
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'PFK' for op in operations])
 
@@ -134,7 +133,7 @@ def test_deltas_post(monkeypatch, client):
         },
     })
     assert response.status_code == 200
-    assert len(response.json['operations']) == 72
+    assert len(response.json['operations']) == 335
 
 
 def test_simulate_custom_model(client, e_coli_core):

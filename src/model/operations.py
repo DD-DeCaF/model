@@ -26,10 +26,10 @@ def apply_operations(model, operations):
             _add_reaction(model, operation['id'], operation['data'])
         elif operation['operation'] == 'modify' and operation['type'] == 'reaction':
             _modify_reaction(model, operation['id'], operation['data'])
-        elif operation['operation'] == 'remove' and operation['type'] == 'reaction':
-            _remove_reaction(model, operation['id'])
-        elif operation['operation'] == 'remove' and operation['type'] == 'gene':
-            _remove_gene(model, operation['id'])
+        elif operation['operation'] == 'knockout' and operation['type'] == 'reaction':
+            _knockout_reaction(model, operation['id'])
+        elif operation['operation'] == 'knockout' and operation['type'] == 'gene':
+            _knockout_gene(model, operation['id'])
         else:
             raise ValueError(f"Invalid operation: Cannot perform operation '{operation['operation']}' on type "
                              f"'{operation['type']}")
@@ -43,19 +43,15 @@ def _add_reaction(model, id, data):
 
 def _modify_reaction(model, id, data):
     logger.debug(f"Modifying reaction '{id}' in model '{model.id}'")
-    # NOTES(Ali): could modifications other than bounds, e.g. metabolites, be relevant?
     model.reactions.get_by_id(id).bounds = data['lower_bound'], data['upper_bound']
 
 
-def _remove_reaction(model, id):
+def _knockout_reaction(model, id):
     logger.debug(f"Removing reaction '{id}' from model '{model.id}'")
     model.reactions.get_by_id(id).knock_out()
 
 
-def _remove_gene(model, id):
+def _knockout_gene(model, id):
     logger.debug(f"Removing gene '{id}' from model '{model.id}'")
-    # NOTES(Ali): always looking for name+id in genes now.
-    # NOTES(Ali): previous code: gene = model.genes.query(gene['name'], attribute="name")[0]
-    # NOTES(Ali): clarify whether that is necessary
     gene = model.genes.query(lambda g: id in (g.id, g.name))[0]
     gene.knock_out()

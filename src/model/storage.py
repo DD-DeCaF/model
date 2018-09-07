@@ -14,7 +14,7 @@
 
 import logging
 
-from cobra.io import load_json_model, read_sbml_model
+from cobra.io import read_sbml_model
 
 from model.app import app
 
@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 class ModelMeta:
     """A metabolic model, with metadata and an internal (lazy-loaded in development) cobrapy model instance."""
 
-    def __init__(self, model_id, species, namespace, growth_rate_reaction):
+    def __init__(self, model_id, species, namespace, biomass_reaction):
         self.model_id = model_id
         self.species = species
         self.namespace = namespace
-        self.growth_rate_reaction = growth_rate_reaction
+        self.biomass_reaction = biomass_reaction
 
         # Preload the model into memory only in the following environments
         if app.config['ENVIRONMENT'] in ('production', 'staging'):
@@ -49,17 +49,6 @@ class ModelMeta:
         self._model.solver = 'cplex'
 
 
-class UniversalModel:
-    def __init__(self, model_id):
-        self.model_id = model_id
-
-    @property
-    def model(self):
-        if not hasattr(self, '_model'):
-            self._model = load_json_model(f"data/models/{self.model_id}.json")
-        return self._model
-
-
 MODELS = [
     ModelMeta('iJO1366', 'ECOLX', 'bigg', 'BIOMASS_Ec_iJO1366_core_53p95M'),
     ModelMeta('iMM904', 'YEAST', 'bigg', 'BIOMASS_SC5_notrace'),
@@ -70,11 +59,6 @@ MODELS = [
     ModelMeta('ecYeast7', 'YEAST', 'yeast7', 'r_2111'),
     ModelMeta('ecYeast7_proteomics', 'YEAST', 'yeast7', 'r_2111'),
 ]
-
-
-UNIVERSAL_MODELS = {
-    'metanetx_universal_model_bigg': UniversalModel('metanetx_universal_model_bigg'),
-}
 
 
 def get(model_id):

@@ -19,7 +19,3 @@ from model import storage
 
 def test_get_model():
     assert type(storage.get('e_coli_core').model) == Model
-
-
-def test_get_universal_model():
-    assert type(storage.UNIVERSAL_MODELS['metanetx_universal_model_bigg'].model) == Model

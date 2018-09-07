@@ -33,7 +33,7 @@ def test_delta_key_from_conditions():
 
 
 def test_save_and_load(client):
-    operations = [{'operation': 'remove', 'type': 'reaction', 'id': 'EX_ca2_e'}]
+    operations = [{'operation': 'knockout', 'type': 'reaction', 'id': 'EX_ca2_e'}]
     conditions = {'medium': [{'id': 'chebi:42758'}]}
     key = deltas.save('model_foo', conditions, operations)
     assert deltas.load('model_foo', conditions) == operations

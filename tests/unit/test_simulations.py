@@ -31,7 +31,7 @@ def test_simulation_methods(e_coli_core, method):
     for method in METHODS:
         fluxes, growth_rate = simulate(
             e_coli_core,
-            storage.get(e_coli_core.id).growth_rate_reaction,
+            storage.get(e_coli_core.id).biomass_reaction,
             method,
             None,
             None,

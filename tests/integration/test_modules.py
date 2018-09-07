@@ -36,7 +36,7 @@ def test_modify_restore(iJO1366):
 
     # Applying the new medium should yield a different composition
     with iJO1366:
-        operations = adapt_from_medium(iJO1366, medium)
+        operations, errors = adapt_from_medium(iJO1366, medium)
         apply_operations(iJO1366, operations)
         modified_medium = iJO1366.medium
         assert original_medium != modified_medium

@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.gnomic_helpers import full_genotype, new_features_identifiers
+from model.gnomic_helpers import feature_additions, feature_knockouts, full_genotype
 
 
-def test_new_features_identifiers():
-    changes = full_genotype(['-A -B +promoter.C:#D:#E:terminator.F', '+G', '+Y -H'])
-    result = new_features_identifiers(changes)
-    assert set(result) == {'C', 'D', 'E', 'F', 'G', 'Y'}
+def test_feature_operations():
+    changes = full_genotype(['-A -B +promoter.C:#D:#E:terminator.F', '+G', '+B +Y -H'])
+    assert set(feature_knockouts(changes)) == {'A', 'H'}
+    assert set(feature_additions(changes)) == {'C', 'D', 'E', 'F', 'G', 'Y'}
