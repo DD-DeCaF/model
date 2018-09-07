@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.gnomic_helpers import full_genotype, feature_additions, feature_knockouts
+from model.gnomic_helpers import feature_additions, feature_knockouts, full_genotype
 
 
 def test_feature_operations():

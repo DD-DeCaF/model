@@ -51,6 +51,7 @@ def feature_additions(genotype_changes):
             for feature in change.features():
                 yield feature_id(feature)
 
+
 def feature_knockouts(genotype_changes):
     """
     Resolve features to knockout from the given genotype changes

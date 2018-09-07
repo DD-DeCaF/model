@@ -14,17 +14,16 @@
 
 import logging
 
-import gnomic
 import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
 from model import storage
+from model.cobra_helpers import get_unique_metabolite
 from model.driven import minimize_distance
 from model.exceptions import NoIDMapping, PartNotFound
-from model.gnomic_helpers import full_genotype, feature_additions, feature_knockouts
+from model.gnomic_helpers import feature_additions, feature_knockouts, full_genotype
 from model.ice_client import ICE
-from model.cobra_helpers import get_unique_metabolite
 from model.salts import MEDIUM_SALTS
 
 
