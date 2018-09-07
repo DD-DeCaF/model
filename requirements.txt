@@ -1,21 +1,14 @@
 Flask
 Flask-Cors
 gevent
-msgpack-python==0.4.8
-cobra==0.8.2
-cameo==0.11.0
-swiglpk==1.4.3
-gnomic==0.7.0
-jsonpatch==1.16
-requests==2.18.4
-redis==2.10.6
-gunicorn==19.7.1
-uvloop==0.8.1
-venom==1.0.0a1
-grpcio==1.7.0
-tqdm==4.19.4
+cobra
+cameo
+gnomic
+requests
+redis
+gunicorn
+tqdm
 raven[flask]
-yarl==1.1.1
 prometheus-client
 
 # Testing and QA
@@ -23,3 +16,6 @@ codecov
 flake8
 isort
 pytest-cov
+
+# Development tools
+ipython
