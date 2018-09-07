@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 class ModelMeta:
     """A metabolic model, with metadata and an internal (lazy-loaded in development) cobrapy model instance."""
 
-    def __init__(self, model_id, species, namespace, growth_rate_reaction):
+    def __init__(self, model_id, species, namespace, biomass_reaction):
         self.model_id = model_id
         self.species = species
         self.namespace = namespace
-        self.growth_rate_reaction = growth_rate_reaction
+        self.biomass_reaction = biomass_reaction
 
         # Preload the model into memory only in the following environments
         if app.config['ENVIRONMENT'] in ('production', 'staging'):

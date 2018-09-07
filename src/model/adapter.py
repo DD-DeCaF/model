@@ -287,7 +287,7 @@ def adapt_from_measurements(model, measurements):
                     'data': reaction_to_dict(reaction),
                 })
         elif scalar['type'] == 'growth-rate':
-            reaction = model.reactions.get_by_id(storage.get(model.id).growth_rate_reaction)
+            reaction = model.reactions.get_by_id(storage.get(model.id).biomass_reaction)
             reaction.bounds = lower_bound, upper_bound
             operations.append({
                 'operation': 'modify',

@@ -71,12 +71,12 @@ def simulate(model, method, objective_id, objective_direction):
         logger.info(f"Simulation completed successfully")
         if method in ('fba', 'pfba'):
             flux_distribution = solution.fluxes.to_dict()
-            growth_rate = flux_distribution[storage.get(model.id).growth_rate_reaction]
+            growth_rate = flux_distribution[storage.get(model.id).biomass_reaction]
         elif method in ('fva', 'pfba-fva'):
             df = solution.rename(index=str, columns={'maximum': 'upper_bound', 'minimum': 'lower_bound'})
             for key in ['lower_bound', 'upper_bound']:
                 df[key] = df[key].astype('float')
             flux_distribution = df.T.to_dict()
-            growth_rate = flux_distribution[storage.get(model.id).growth_rate_reaction]['upper_bound']
+            growth_rate = flux_distribution[storage.get(model.id).biomass_reaction]['upper_bound']
 
     return flux_distribution, growth_rate
