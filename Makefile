@@ -53,10 +53,12 @@ test:
 	docker-compose run --rm web pytest -v --cov=src/model tests
 
 ## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
+shared := /tmp/coverage
 test-travis:
-	$(eval ci_env=$(shell bash <(curl -s https://codecov.io/env)))
-	docker-compose run --rm $(ci_env) web \
-		/bin/sh -c "pytest --cov=src/model tests && codecov"
+	mkdir --parents "$(shared)"
+	docker-compose run --rm -v "$(shared):$(shared)" web pytest \
+		--cov-report "xml:$(shared)/coverage.xml" --cov-report term --cov=src/model
+	bash <(curl -s https://codecov.io/bash) -f "$(shared)/coverage.xml"
 
 ## Verify source code license headers.
 license:
