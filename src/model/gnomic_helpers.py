@@ -43,7 +43,7 @@ def feature_additions(genotype_changes):
     :return: a generator yielding the names of the features to add
     """
     for change in genotype_changes.changes():
-        if isinstance(change, gnomic.Mutation):
+        if isinstance(change, gnomic.Change):
             if change.new:
                 for feature in change.new.features():
                     yield feature_id(feature)
@@ -60,7 +60,7 @@ def feature_knockouts(genotype_changes):
     :return: a generator yielding the names of the features to knockout
     """
     for change in genotype_changes.changes():
-        if isinstance(change, gnomic.Mutation):
+        if isinstance(change, gnomic.Change):
             if change.old:
                 for feature in change.old.features():
                     yield feature_id(feature)
