@@ -157,7 +157,7 @@ def model_medium(model_id):
         return f"Unknown model {model_id}", 404
 
 
-def simulate_custom_model():
+def simulate_provided_model():
     if not request.is_json:
         return "Non-JSON request content is not supported", 415
 
