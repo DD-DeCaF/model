@@ -142,3 +142,8 @@ def test_simulate_custom_model(client, e_coli_core):
                                               'biomass_reaction': "BIOMASS_Ecoli_core_w_GAM"})
     assert response.status_code == 200
     assert response.json['growth_rate'] == pytest.approx(0.8739215069684307)
+
+
+def test_simulate_custom_invalid_model(client):
+    response = client.post("/simulate", json={'model': {'invalid': 42}, 'biomass_reaction': "foo"})
+    assert response.status_code == 400
