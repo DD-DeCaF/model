@@ -48,7 +48,6 @@ def init_app(application, interface):
     # Add routes and resources.
     # TODO: use flask-restplus
     from model import resources
-    app.add_url_rule('/models/<model_id>', view_func=resources.model_get)
     app.add_url_rule('/models/<model_id>', view_func=resources.model_get_modified, methods=['POST'])
     app.add_url_rule('/models/<model_id>/modify', view_func=resources.model_modify, methods=['POST'])
     app.add_url_rule('/models/<model_id>/simulate', view_func=resources.model_simulate, methods=['POST'])

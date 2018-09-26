@@ -28,13 +28,6 @@ from model.simulations import simulate
 logger = logging.getLogger(__name__)
 
 
-def model_get(model_id):
-    try:
-        return jsonify(model_to_dict(storage.get(model_id).model))
-    except KeyError:
-        return f"Unknown model {model_id}", 404
-
-
 def model_get_modified(model_id):
     if not request.is_json:
         return "Non-JSON request content is not supported", 415
