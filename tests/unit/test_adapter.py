@@ -17,6 +17,7 @@ from model.ice_client import ICE
 
 
 def test_medium_adapter(iJO1366):
+    iJO1366, biomass_reaction = iJO1366
     medium = [
         {'id': 'chebi:63041'},
         {'id': 'chebi:91249'},
@@ -30,6 +31,8 @@ def test_medium_adapter(iJO1366):
 
 
 def test_genotype_adapter(monkeypatch, iJO1366):
+    iJO1366, biomass_reaction = iJO1366
+
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
@@ -40,12 +43,13 @@ def test_genotype_adapter(monkeypatch, iJO1366):
 
 
 def test_measurements_adapter(iJO1366):
+    iJO1366, biomass_reaction = iJO1366
     measurements = [
         {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},
         {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},  # noqa
         {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
         {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
     ]
-    operations, errors = adapt_from_measurements(iJO1366, measurements)
+    operations, errors = adapt_from_measurements(iJO1366, biomass_reaction, measurements)
     assert len(operations) == 4
     assert len(errors) == 0

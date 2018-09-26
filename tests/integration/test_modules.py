@@ -26,6 +26,7 @@ def test_modify_restore(iJO1366):
     Modifying a model, saving it, loading the operations, and re-applying them to a wild type model, should yield a
     model with the same modifications.
     """
+    iJO1366, biomass_reaction = iJO1366
     original_medium = iJO1366.medium
     medium = [
         {'id': 'chebi:44080'},

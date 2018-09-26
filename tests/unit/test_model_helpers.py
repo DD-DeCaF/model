@@ -19,6 +19,7 @@ from model.exceptions import NoIDMapping
 
 
 def test_existing_metabolite(iJO1366):
+    iJO1366, biomass_reaction = iJO1366
     assert get_unique_metabolite(iJO1366, 'chebi:17790') == get_unique_metabolite(
         iJO1366, 'meoh', db_name='bigg.metabolite')
     assert get_unique_metabolite(iJO1366, 'succ', db_name='bigg.metabolite').formula == 'C4H4O4'

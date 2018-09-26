@@ -16,6 +16,7 @@ import pytest
 
 from cobra.io import read_sbml_model
 
+from model import storage
 from model.app import app as app_
 from model.app import init_app
 
@@ -37,13 +38,16 @@ def client(app):
 @pytest.fixture(scope="session")
 def models():
     """
-    Provide loaded and instantiated cobrapy models for test usage. This fixture ensures models are loaded only once per
-    test session, but please use the function-scoped fixtures below to be able to make revertable modifications to the
-    models."""
-    return {
-        'e_coli_core': read_sbml_model('tests/data/e_coli_core.sbml.gz'),
-        'iJO1366': read_sbml_model('tests/data/iJO1366.sbml.gz'),
-    }
+    Preloads the storage module with the two test models. This fixture ensures models are loaded locally, and only once
+    per test session. Use the identifiers 'test_e_coli_core' and 'test_iJO1366' for endpoint tests.
+    For unit tests, consider using the function-scoped fixtures below to be able to make revertable modifications to the
+    models.
+    """
+    model = read_sbml_model('tests/data/e_coli_core.sbml.gz')
+    storage._MODELS['test_e_coli_core'] = storage.ModelWrapper(model, "Escherichia coli", 'BIOMASS_Ecoli_core_w_GAM')
+    model = read_sbml_model('tests/data/iJO1366.sbml.gz')
+    storage._MODELS['test_iJO1366'] = storage.ModelWrapper(model, "Escherichia coli", 'BIOMASS_Ec_iJO1366_core_53p95M')
+    return storage._MODELS
 
 
 @pytest.fixture(scope="function")
@@ -52,8 +56,8 @@ def e_coli_core(models):
     Provide the e_coli_core model in a context manager, so that modifications are not persisted beyond the scope of the
     test function. This model is fairly small and should be preferred in test cases where possible.
     """
-    with models['e_coli_core'] as model:
-        yield model
+    with models['test_e_coli_core'].model as model:
+        yield model, models['test_e_coli_core'].biomass_reaction
 
 
 @pytest.fixture(scope="function")
@@ -62,5 +66,5 @@ def iJO1366(models):
     Provide the iJO1366 model in a context manager, so that modifications are not persisted beyond the scope of the
     test function.
     """
-    with models['iJO1366'] as model:
-        yield model
+    with models['test_iJO1366'].model as model:
+        yield model, models['test_iJO1366'].biomass_reaction

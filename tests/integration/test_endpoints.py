@@ -27,8 +27,8 @@ MEASUREMENTS = [
 ]
 
 
-def test_model_info(client):
-    response = client.get('/models/{}/medium'.format('e_coli_core'))
+def test_model_info(client, models):
+    response = client.get('/models/test_e_coli_core/medium')
     assert response.status_code == 200
     assert response.json['medium'] == [
         {'id': 'EX_co2_e', 'name': 'CO2'},
@@ -46,40 +46,40 @@ def test_simulate_wrong_id(client):
     assert response.status_code == 404
 
 
-def test_simulate_no_operations(client):
-    response = client.post("/models/iJO1366/simulate", json={})
+def test_simulate_no_operations(client, models):
+    response = client.post("/models/test_iJO1366/simulate", json={})
     assert response.status_code == 200
 
 
-def test_simulate_infeasible(client):
+def test_simulate_infeasible(client, models):
     measurements = [{'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
-    response = client.post("/models/iJO1366/modify", json={'conditions': {'measurements': measurements}})
+    response = client.post("/models/test_iJO1366/modify", json={'conditions': {'measurements': measurements}})
     assert response.status_code == 200
 
     operations = response.json['operations']
-    response = client.post("/models/iJO1366/simulate", json={'operations': operations})
+    response = client.post("/models/test_iJO1366/simulate", json={'operations': operations})
     assert response.status_code == 200
     assert response.json['flux_distribution']['ATPM'] == pytest.approx(100)
 
 
-def test_simulate_fluxomics(monkeypatch, client):
-    response = client.post("/models/iJO1366/modify", json={'conditions': {'measurements': MEASUREMENTS}})
+def test_simulate_fluxomics(monkeypatch, client, models):
+    response = client.post("/models/test_iJO1366/modify", json={'conditions': {'measurements': MEASUREMENTS}})
     assert response.status_code == 200
 
     operations = response.json['operations']
-    response = client.post("/models/iJO1366/simulate", json={'operations': operations})
+    response = client.post("/models/test_iJO1366/simulate", json={'operations': operations})
     assert response.status_code == 200
     assert response.json['flux_distribution']['EX_glc__D_e'] == -9.0
     assert abs(response.json['flux_distribution']['EX_etoh_e'] - 4.64) < 0.001  # lower bound
     assert response.json['flux_distribution']['PFK'] == pytest.approx(5)
 
 
-def test_simulate_modify(monkeypatch, client):
+def test_simulate_modify(monkeypatch, client, models):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
     conditions = {'measurements': MEASUREMENTS, 'genotype': ['+Aac', '-pta']}
-    response = client.post("/models/iJO1366/modify", json={'conditions': conditions})
+    response = client.post("/models/test_iJO1366/modify", json={'conditions': conditions})
     assert response.status_code == 200
 
     operations = response.json['operations']
@@ -87,7 +87,7 @@ def test_simulate_modify(monkeypatch, client):
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'EX_etoh_e' for op in operations])  # noqa
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'PFK' for op in operations])
 
-    response = client.post("/models/iJO1366/simulate", json={'method': 'pfba', 'operations': operations})
+    response = client.post("/models/test_iJO1366/simulate", json={'method': 'pfba', 'operations': operations})
     assert response.status_code == 200
     fluxes = response.json['flux_distribution']
 
@@ -96,23 +96,23 @@ def test_simulate_modify(monkeypatch, client):
     assert fluxes['PFK'] == pytest.approx(5)
 
 
-def test_simulate_different_objective(client):
-    response = client.post("/models/iJO1366/simulate", json={'objective': 'EX_etoh_e'})
+def test_simulate_different_objective(client, models):
+    response = client.post("/models/test_iJO1366/simulate", json={'objective': 'EX_etoh_e'})
     assert response.status_code == 200
     result = response.json
     assert abs(result['flux_distribution']['EX_etoh_e']) - 20.0 < 0.001
 
-    response = client.post("/models/iJO1366/simulate", json={})
+    response = client.post("/models/test_iJO1366/simulate", json={})
     assert response.status_code == 200
     result = response.json
     assert abs(result['flux_distribution']['EX_etoh_e']) < 0.001
 
 
-def test_deltas_post(monkeypatch, client):
+def test_deltas_post(monkeypatch, client, models):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
-    response = client.post("/models/iJO1366/modify", json={
+    response = client.post("/models/test_iJO1366/modify", json={
         'conditions': {
             'medium': [
                 {'id': 'chebi:44080'}, {'id': 'chebi:15075'}, {'id': 'chebi:15377'}, {'id': 'chebi:15378'}, {'id': 'chebi:15379'}, {'id': 'chebi:15982'}, {'id': 'chebi:16189'}, {'id': 'chebi:16526'}, {'id': 'chebi:16643'}, {'id': 'chebi:17883'}, {'id': 'chebi:18212'}, {'id': 'chebi:18367'}, {'id': 'chebi:18420'}, {'id': 'chebi:25371'}, {'id': 'chebi:27638'}, {'id': 'chebi:28938'}, {'id': 'chebi:29033'}, {'id': 'chebi:29034'}, {'id': 'chebi:29035'}, {'id': 'chebi:29036'}, {'id': 'chebi:29101'}, {'id': 'chebi:29103'}, {'id': 'chebi:29105'}, {'id': 'chebi:29108'}, {'id': 'chebi:36271'}, {'id': 'chebi:42758'}, {'id': 'chebi:49786'}  # noqa
@@ -131,9 +131,9 @@ def test_deltas_post(monkeypatch, client):
 
 
 def test_simulate_provided_model(client, e_coli_core):
+    e_coli_core, biomass_reaction = e_coli_core
     model_serialized = model_to_dict(e_coli_core)
-    response = client.post("/simulate", json={'model': model_serialized,
-                                              'biomass_reaction': "BIOMASS_Ecoli_core_w_GAM"})
+    response = client.post("/simulate", json={'model': model_serialized, 'biomass_reaction': biomass_reaction})
     assert response.status_code == 200
     assert response.json['growth_rate'] == pytest.approx(0.8739215069684307)
 
