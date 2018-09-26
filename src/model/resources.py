@@ -28,10 +28,6 @@ from model.simulations import simulate
 logger = logging.getLogger(__name__)
 
 
-def species(species):
-    return jsonify([model_meta.model_id for model_meta in storage.MODELS if model_meta.species == species])
-
-
 def model_get(model_id):
     try:
         return jsonify(model_to_dict(storage.get(model_id).model))

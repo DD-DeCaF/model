@@ -41,12 +41,6 @@ def test_model_info(client):
     ]
 
 
-def test_species(client):
-    response = client.get("/species/ECOLX")
-    assert response.status_code == 200
-    assert len(response.json) > 0
-
-
 def test_simulate_wrong_id(client):
     response = client.post("/models/wrong_id/simulate", json={'message': {}})
     assert response.status_code == 404
