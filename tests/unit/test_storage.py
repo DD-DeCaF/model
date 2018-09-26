@@ -13,9 +13,35 @@
 # limitations under the License.
 
 from cobra import Model
+import requests
 
 from model import storage
 
 
-def test_get_model():
-    assert type(storage.get('e_coli_core').model) == Model
+def mock_response(self):
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {
+                'model_serialized': {
+                    'version': "1",
+                    'id': "foo",
+                    'genes': [],
+                    'reactions': [],
+                    'metabolites': [],
+                    'compartments': {},
+                },
+                'organism_id': "bar",
+                'default_biomass_reaction': "baz",
+            }
+
+        def raise_for_status(self):
+            pass
+
+    return Response()
+
+
+def test_get_model(monkeypatch):
+    monkeypatch.setattr(requests, 'get', mock_response)
+    assert type(storage.get(10).model) == Model
