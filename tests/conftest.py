@@ -16,7 +16,6 @@ import pytest
 
 from cobra.io import read_sbml_model
 
-from model import storage
 from model.app import app as app_
 from model.app import init_app
 

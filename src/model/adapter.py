@@ -18,7 +18,6 @@ import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
-from model import storage
 from model.cobra_helpers import get_unique_metabolite
 from model.driven import minimize_distance
 from model.exceptions import NoIDMapping, PartNotFound
@@ -189,7 +188,7 @@ def adapt_from_genotype(model, genotype_changes):
     return operations, errors
 
 
-def adapt_from_measurements(model, measurements):
+def adapt_from_measurements(model, biomass_reaction, measurements):
     """
     For each measured flux (production-rate / uptake-rate), constrain the model by forcing their upper and lower bounds
     to the measured values.
@@ -203,7 +202,7 @@ def adapt_from_measurements(model, measurements):
     errors = []
 
     # First, improve the fluxomics dataset by minimizing the distance to a feasible problem
-    measurements = minimize_distance(model, measurements)
+    measurements = minimize_distance(model, biomass_reaction, measurements)
 
     for scalar in measurements:
         # If there are three or more observations, use the 97% normal distribution range, i.e., mean +- 1.96.
@@ -258,7 +257,7 @@ def adapt_from_measurements(model, measurements):
                     'data': reaction_to_dict(reaction),
                 })
         elif scalar['type'] == 'growth-rate':
-            reaction = model.reactions.get_by_id(storage.get(model.id).biomass_reaction)
+            reaction = model.reactions.get_by_id(biomass_reaction)
             reaction.bounds = lower_bound, upper_bound
             operations.append({
                 'operation': 'modify',

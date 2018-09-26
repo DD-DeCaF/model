@@ -18,8 +18,6 @@ import numpy as np
 import pandas as pd
 from optlang.symbolics import Zero
 
-from model import storage
-
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,7 @@ logger = logging.getLogger(__name__)
 """This module may one day be replaced with http://driven.bio/"""
 
 
-def minimize_distance(model, measurements):
+def minimize_distance(model, biomass_reaction, measurements):
     """Replaces fluxomics measurements with the minimized distance"""
     index = []
     observations = []
@@ -44,7 +42,7 @@ def minimize_distance(model, measurements):
     try:
         # Include growth rate measurement
         growth_rate = next(m for m in measurements if m['type'] == 'growth-rate')
-        index.append(storage.get(model.id).biomass_reaction)
+        index.append(biomass_reaction)
         observations.append(np.nanmean(growth_rate['measurements']))
         uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
                              if len(growth_rate['measurements']) >= 3 else 1)
@@ -57,7 +55,7 @@ def minimize_distance(model, measurements):
     solution = adjust_fluxes2model(model, observations, uncertainties)
     for reaction, minimized_distance in solution.fluxes.iteritems():
         for measurement in measurements:
-            if (measurement['type'] == 'growth-rate' and reaction == storage.get(model.id).biomass_reaction
+            if (measurement['type'] == 'growth-rate' and reaction == biomass_reaction
                     or reaction == measurement.get('id')):
                 measurement['measurements'] = [minimized_distance]
     return measurements

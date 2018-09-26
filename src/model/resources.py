@@ -40,14 +40,14 @@ def model_get_modified(model_id):
         return "Non-JSON request content is not supported", 415
 
     try:
-        model_meta = storage.get(model_id)
+        model_wrapper = storage.get(model_id)
     except KeyError:
         return f"Unknown model {model_id}", 404
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
     # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
     # This is an expensive operation, it can take a few seconds for large models.
-    model = model_meta.model.copy()
+    model = model_wrapper.model.copy()
 
     try:
         apply_operations(model, request.json['operations'])
@@ -62,14 +62,14 @@ def model_modify(model_id):
         return "Non-JSON request content is not supported", 415
 
     try:
-        model_meta = storage.get(model_id)
+        model_wrapper = storage.get(model_id)
     except KeyError:
         return f"Unknown model '{model_id}'", 400
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
     # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
     # This is an expensive operation, it can take a few seconds for large models.
-    model = model_meta.model.copy()
+    model = model_wrapper.model.copy()
 
     try:
         conditions = request.json['conditions']
@@ -90,7 +90,8 @@ def model_modify(model_id):
         errors.extend(errors_genotype)
 
     if 'measurements' in conditions:
-        operations_measurements, errors_measurements = adapt_from_measurements(model, conditions['measurements'])
+        operations_measurements, errors_measurements = adapt_from_measurements(model, model_wrapper.biomass_reaction,
+                                                                               conditions['measurements'])
         operations.extend(operations_measurements)
         errors.extend(errors_measurements)
 
@@ -108,14 +109,14 @@ def model_simulate(model_id):
         return "Non-JSON request content is not supported", 415
 
     try:
-        model_meta = storage.get(model_id)
+        model_wrapper = storage.get(model_id)
     except KeyError:
         return f"Unknown model {model_id}", 404
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
     # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
     # This is an expensive operation, it can take a few seconds for large models.
-    model = model_meta.model.copy()
+    model = model_wrapper.model.copy()
 
     operations = []
 
@@ -136,7 +137,7 @@ def model_simulate(model_id):
     objective_id = request.json.get('objective')
     objective_direction = request.json.get('objective_direction')
 
-    flux_distribution, growth_rate = simulate(model, model_meta.biomass_reaction, method, objective_id,
+    flux_distribution, growth_rate = simulate(model, model_wrapper.biomass_reaction, method, objective_id,
                                               objective_direction)
     return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 

@@ -23,14 +23,14 @@ from model.app import app
 logger = logging.getLogger(__name__)
 
 
-class ModelMeta:
+class ModelWrapper:
     """A wrapper for a cobrapy model with some additional metadata."""
 
-    def __init__(self, model, species, biomass_reaction):
-        # Use cplex solver
+    def __init__(self, model, organism_id, biomass_reaction):
         self.model = model
+        # Use the cplex solver for performance
         self.model.solver = 'cplex'
-        self.species = species
+        self.organism_id = organism_id
         self.biomass_reaction = biomass_reaction
 
 
@@ -40,7 +40,7 @@ _MODELS = {}
 
 
 def get(model_id):
-    """Return the meta instance for the given model id"""
+    """Return a ModelWrapper instance for the given model id"""
     if model_id not in _MODELS:
         _load_model(model_id)
     return _MODELS[model_id]
@@ -56,7 +56,7 @@ def _load_model(model_id):
 
     logger.debug(f"Deserializing received model with cobrapy")
     model_data = response.json()
-    _MODELS[model_id] = ModelMeta(
+    _MODELS[model_id] = ModelWrapper(
         model_from_dict(model_data['model_serialized']),
         model_data['organism_id'],
         model_data['default_biomass_reaction'],
