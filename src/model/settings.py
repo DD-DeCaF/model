@@ -23,6 +23,7 @@ class Settings:
     ICE_USERNAME = os.environ['ICE_USERNAME']
     ICE_PASSWORD = os.environ['ICE_PASSWORD']
     ID_MAPPER_API = os.environ['ID_MAPPER_API']
+    MODEL_WAREHOUSE_API = os.environ['MODEL_WAREHOUSE_API']
     SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
     REDIS_ADDR = os.environ['REDIS_ADDR']
     REDIS_PORT = os.environ['REDIS_PORT']

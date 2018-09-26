@@ -23,6 +23,7 @@ services:
       - ICE_USERNAME=${ICE_USERNAME}
       - ICE_PASSWORD=${ICE_PASSWORD}
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
+      - MODEL_WAREHOUSE_API=${MODEL_WAREHOUSE_API:-https://api-staging.dd-decaf.eu/mwarehouse}
       - prometheus_multiproc_dir=/prometheus-client
     volumes:
       - .:/app
