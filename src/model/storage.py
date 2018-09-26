@@ -14,7 +14,8 @@
 
 import logging
 
-from cobra.io import read_sbml_model
+from cobra.io.dict import model_from_dict
+import requests
 
 from model.app import app
 
@@ -23,48 +24,50 @@ logger = logging.getLogger(__name__)
 
 
 class ModelMeta:
-    """A metabolic model, with metadata and an internal (lazy-loaded in development) cobrapy model instance."""
+    """A wrapper for a cobrapy model with some additional metadata."""
 
-    def __init__(self, model_id, species, namespace, biomass_reaction):
-        self.model_id = model_id
+    def __init__(self, model, species, biomass_reaction):
+        # Use cplex solver
+        self.model = model
+        self.model.solver = 'cplex'
         self.species = species
-        self.namespace = namespace
         self.biomass_reaction = biomass_reaction
 
-        # Preload the model into memory only in the following environments
-        if app.config['ENVIRONMENT'] in ('production', 'staging'):
-            self._load()
 
-    @property
-    def model(self):
-        if not hasattr(self, '_model'):
-            self._load()
-        return self._model
-
-    def _load(self):
-        logger.info(f"Loading model {self.model_id} from SBML file")
-        self._model = read_sbml_model(f"data/models/{self.model_id}.sbml.gz")
-
-        # Use cplex solver
-        self._model.solver = 'cplex'
-
-
-MODELS = [
-    ModelMeta('iJO1366', 'ECOLX', 'bigg', 'BIOMASS_Ec_iJO1366_core_53p95M'),
-    ModelMeta('iMM904', 'YEAST', 'bigg', 'BIOMASS_SC5_notrace'),
-    ModelMeta('iMM1415', 'CRIGR', 'bigg', 'BIOMASS_mm_1_no_glygln'),
-    ModelMeta('iNJ661', 'CORGT', 'bigg', 'BIOMASS_Mtb_9_60atp'),
-    ModelMeta('iJN746', 'PSEPU', 'bigg', 'BIOMASS_KT_TEMP'),
-    ModelMeta('e_coli_core', 'ECOLX', 'bigg', 'BIOMASS_Ecoli_core_w_GAM'),
-    ModelMeta('ecYeast7', 'YEAST', 'yeast7', 'r_2111'),
-    ModelMeta('ecYeast7_proteomics', 'YEAST', 'yeast7', 'r_2111'),
-]
+# Keep all loaded models in memory in this dictionary, keyed by our internal
+# model storage primary key id.
+_MODELS = {}
 
 
 def get(model_id):
     """Return the meta instance for the given model id"""
-    for model_meta in MODELS:
-        if model_meta.model_id == model_id:
-            return model_meta
-    else:
-        raise KeyError(f"No model with id '{model_id}'")
+    if model_id not in _MODELS:
+        _load_model(model_id)
+    return _MODELS[model_id]
+
+
+def _load_model(model_id):
+    logger.debug(f"Requesting model {model_id} from the model warehouse")
+    response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models/{model_id}")
+
+    if response.status_code == 404:
+        raise KeyError(f"No model with id {model_id}")
+    response.raise_for_status()
+
+    logger.debug(f"Deserializing received model with cobrapy")
+    model_data = response.json()
+    _MODELS[model_id] = ModelMeta(
+        model_from_dict(model_data['model_serialized']),
+        model_data['organism_id'],
+        model_data['default_biomass_reaction'],
+    )
+
+
+# Preload all models in production/staging environments
+if app.config['ENVIRONMENT'] in ('production', 'staging'):
+    logger.info(f"Preloading all public models (this may take some time)")
+    response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models")
+    response.raise_for_status()
+    for model in response.json():
+        _load_model(model['id'])
+    logger.info(f"Done preloading {len(response.json())} models")
