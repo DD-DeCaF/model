@@ -157,18 +157,6 @@ def model_simulate():
     return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
-def model_medium(model_id):
-    try:
-        model = storage.get(model_id).model
-        medium = [{
-            'id': reaction_id,
-            'name': model.reactions.get_by_id(reaction_id).name.replace('exchange', '').strip()
-        } for reaction_id in model.medium]
-        return jsonify({'medium': medium})
-    except KeyError:
-        return f"Unknown model {model_id}", 404
-
-
 def metrics():
     return Response(generate_latest(MultiProcessCollector(CollectorRegistry())), mimetype=CONTENT_TYPE_LATEST)
 

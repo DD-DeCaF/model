@@ -50,7 +50,6 @@ def init_app(application, interface):
     from model import resources
     app.add_url_rule('/models/<model_id>', view_func=resources.model_get_modified, methods=['POST'])
     app.add_url_rule('/models/<model_id>/modify', view_func=resources.model_modify, methods=['POST'])
-    app.add_url_rule('/models/<model_id>/medium', view_func=resources.model_medium)
     app.add_url_rule('/simulate', view_func=resources.model_simulate, methods=['POST'])
     app.add_url_rule('/metrics', view_func=resources.metrics)
     app.add_url_rule('/healthz', view_func=resources.healthz)
