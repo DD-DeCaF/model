@@ -14,6 +14,8 @@
 
 import pytest
 
+from cobra.io import read_sbml_model
+
 from model import storage
 from model.app import app as app_
 from model.app import init_app
@@ -33,25 +35,33 @@ def client(app):
         yield client
 
 
+@pytest.fixture(scope="session")
+def models():
+    """
+    Provide loaded and instantiated cobrapy models for test usage. This fixture ensures models are loaded only once per
+    test session, but please use the function-scoped fixtures below to be able to make revertable modifications to the
+    models."""
+    return {
+        'e_coli_core': read_sbml_model('tests/data/e_coli_core.sbml.gz'),
+        'iJO1366': read_sbml_model('tests/data/iJO1366.sbml.gz'),
+    }
+
+
 @pytest.fixture(scope="function")
-def e_coli_core():
+def e_coli_core(models):
     """
-    Provide a modifiable copy of the e_coli_core cobrapy model.  This model is fairly small and should be preferred in
-    test cases where possible.
+    Provide the e_coli_core model in a context manager, so that modifications are not persisted beyond the scope of the
+    test function. This model is fairly small and should be preferred in test cases where possible.
     """
-    with storage.get('e_coli_core').model as model:
+    with models['e_coli_core'] as model:
         yield model
 
 
 @pytest.fixture(scope="function")
-def iJO1366():
-    """Provide a modifiable copy of the iJO1366 cobrapy model"""
-    with storage.get('iJO1366').model as model:
-        yield model
-
-
-@pytest.fixture(scope="function")
-def iMM904():
-    """Provide a modifiable copy of the iMM904 cobrapy model"""
-    with storage.get('iMM904').model as model:
+def iJO1366(models):
+    """
+    Provide the iJO1366 model in a context manager, so that modifications are not persisted beyond the scope of the
+    test function.
+    """
+    with models['iJO1366'] as model:
         yield model
