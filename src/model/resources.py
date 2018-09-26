@@ -97,19 +97,42 @@ def model_modify(model_id):
         return jsonify({'id': delta_id, 'operations': operations})
 
 
-def model_simulate(model_id):
+def model_simulate():
     if not request.is_json:
         return "Non-JSON request content is not supported", 415
 
-    try:
-        model_wrapper = storage.get(model_id)
-    except KeyError:
-        return f"Unknown model {model_id}", 404
+    if 'model_id' in request.json:
+        # Client provided an identifier to some model in the model storage service, retrieve it
 
-    # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
-    # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
-    # This is an expensive operation, it can take a few seconds for large models.
-    model = model_wrapper.model.copy()
+        try:
+            model_wrapper = storage.get(request.json['model_id'])
+            biomass_reaction = model_wrapper.biomass_reaction
+        except KeyError:
+            return f"Unknown model {request.json['model_id']}", 404
+
+        # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
+        # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
+        # This is an expensive operation, it can take a few seconds for large models.
+        model = model_wrapper.model.copy()
+    elif 'model' in request.json:
+        # Client provided a full custom model and biomass reaction
+
+        try:
+            model_dict = request.json['model']
+            model = model_from_dict(model_dict)
+        except Exception as e:
+            logger.warning(f"Cobrapy could not serialize provided model: {type(e)}: {e}", exc_info=True)
+            logger.debug(f"Full serialized model: {model_dict}")
+            return f"The provided model is not deserializable by cobrapy", 400
+        try:
+            biomass_reaction = request.json['biomass_reaction']
+        except KeyError:
+            return f"Missing field 'biomass_reaction'", 400
+        else:
+            if not model.reactions.has_id(biomass_reaction):
+                return f"There is no biomass reaction with id '{biomass_reaction}' in the model", 400
+    else:
+        return f"Missing field 'model' or 'model_id'", 400
 
     operations = []
 
@@ -130,8 +153,7 @@ def model_simulate(model_id):
     objective_id = request.json.get('objective')
     objective_direction = request.json.get('objective_direction')
 
-    flux_distribution, growth_rate = simulate(model, model_wrapper.biomass_reaction, method, objective_id,
-                                              objective_direction)
+    flux_distribution, growth_rate = simulate(model, biomass_reaction, method, objective_id, objective_direction)
     return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
@@ -145,42 +167,6 @@ def model_medium(model_id):
         return jsonify({'medium': medium})
     except KeyError:
         return f"Unknown model {model_id}", 404
-
-
-def simulate_provided_model():
-    if not request.is_json:
-        return "Non-JSON request content is not supported", 415
-
-    try:
-        model_dict = request.json['model']
-    except KeyError:
-        return f"Missing field 'model'", 400
-
-    try:
-        model = model_from_dict(model_dict)
-    except Exception as e:
-        logger.warning(f"Cobrapy could not serialize provided model: {type(e)}: {e}", exc_info=True)
-        logger.debug(f"Full serialized model: {model_dict}")
-        return f"The provided model is not deserializable by cobrapy", 400
-
-    try:
-        biomass_reaction_id = request.json['biomass_reaction']
-    except KeyError:
-        return f"Missing field 'biomass_reaction'", 400
-
-    if not model.reactions.has_id(biomass_reaction_id):
-        return f"There is no biomass reaction with id '{biomass_reaction_id}' in the model", 400
-
-    if 'operations' in request.json:
-        apply_operations(model, request.json['operations'])
-
-    # Parse solver request args and set defaults
-    method = request.json.get('method', 'fba')
-    objective_id = request.json.get('objective')
-    objective_direction = request.json.get('objective_direction')
-
-    flux_distribution, growth_rate = simulate(model, biomass_reaction_id, method, objective_id, objective_direction)
-    return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
 def metrics():
