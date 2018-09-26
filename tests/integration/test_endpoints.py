@@ -27,20 +27,6 @@ MEASUREMENTS = [
 ]
 
 
-def test_model_info(client, models):
-    response = client.get('/models/test_e_coli_core/medium')
-    assert response.status_code == 200
-    assert response.json['medium'] == [
-        {'id': 'EX_co2_e', 'name': 'CO2'},
-        {'id': 'EX_glc__D_e', 'name': 'D-Glucose'},
-        {'id': 'EX_h2o_e', 'name': 'H2O'},
-        {'id': 'EX_h_e', 'name': 'H+'},
-        {'id': 'EX_nh4_e', 'name': 'Ammonia'},
-        {'id': 'EX_o2_e', 'name': 'O2'},
-        {'id': 'EX_pi_e', 'name': 'Phosphate'}
-    ]
-
-
 def test_simulate_wrong_id(client):
     response = client.post("/simulate", json={'model_id': 'wrong_id', 'message': {}})
     assert response.status_code == 404
