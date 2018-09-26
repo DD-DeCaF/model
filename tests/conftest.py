@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import pytest
-
 from cobra.io import read_sbml_model
 
 from model import storage

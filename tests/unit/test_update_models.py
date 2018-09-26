@@ -14,8 +14,8 @@
 
 import os
 
-from cobra.io import read_sbml_model
 import pytest
+from cobra.io import read_sbml_model
 
 from model.adapter import get_unique_metabolite
 from tools.update_models import update_local_models

@@ -14,8 +14,8 @@
 
 import logging
 
-from cobra.io.dict import model_from_dict
 import requests
+from cobra.io.dict import model_from_dict
 
 from model.app import app
 

@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cobra import Model
 import requests
+from cobra import Model
 
 from model import storage
 
