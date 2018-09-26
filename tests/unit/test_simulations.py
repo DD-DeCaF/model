@@ -14,7 +14,6 @@
 
 import pytest
 
-from model import storage
 from model.simulations import METHODS, simulate
 
 
@@ -31,7 +30,7 @@ def test_simulation_methods(e_coli_core, method):
     for method in METHODS:
         fluxes, growth_rate = simulate(
             e_coli_core,
-            storage.get(e_coli_core.id).biomass_reaction,
+            'BIOMASS_Ecoli_core_w_GAM',
             method,
             None,
             None,
