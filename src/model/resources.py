@@ -121,7 +121,7 @@ def model_simulate():
             model_dict = request.json['model']
             model = model_from_dict(model_dict)
         except Exception as e:
-            logger.warning(f"Cobrapy could not serialize provided model: {type(e)}: {e}", exc_info=True)
+            logger.warning(f"Cobrapy could not deserialize provided model: {type(e)}: {e}", exc_info=True)
             logger.debug(f"Full serialized model: {model_dict}")
             return f"The provided model is not deserializable by cobrapy", 400
         try:
