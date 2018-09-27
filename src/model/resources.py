@@ -103,6 +103,7 @@ def model_simulate():
 
     if 'model_id' in request.json:
         # Client provided an identifier to some model in the model storage service, retrieve it
+        logger.debug(f"Simulating model by id {request.json['model_id']}")
 
         try:
             model_wrapper = storage.get(request.json['model_id'])
@@ -116,6 +117,7 @@ def model_simulate():
         model = model_wrapper.model.copy()
     elif 'model' in request.json:
         # Client provided a full custom model and biomass reaction
+        logger.debug("Simulating ad-hoc model provided by client")
 
         try:
             model_dict = request.json['model']
