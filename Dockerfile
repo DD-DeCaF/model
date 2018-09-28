@@ -1,4 +1,4 @@
-FROM biosustain/cameo-solvers:e9e330ca3e37
+FROM gcr.io/dd-decaf-cfbf6/modeling-base:master
 
 ENV PYTHONUNBUFFERED=1
 
