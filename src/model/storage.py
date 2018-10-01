@@ -27,6 +27,17 @@ class ModelWrapper:
     """A wrapper for a cobrapy model with some additional metadata."""
 
     def __init__(self, model, organism_id, biomass_reaction):
+        """
+        Parameters
+        ----------
+        model: cobra.Model
+            A cobrapy model instance.
+        organism_id: str
+            A reference to the organism for which the given model belongs. The identifier is internal to the DD-DeCaF
+            platform and references the `id` field in https://api.dd-decaf.eu/warehouse/organisms.
+        biomass_reaction: str
+            A string referencing the default biomass reaction in the given model.
+        """
         self.model = model
         # Use the cplex solver for performance
         self.model.solver = 'cplex'
