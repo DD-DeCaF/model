@@ -18,30 +18,27 @@ from cobra import Model
 from model import storage
 
 
-def mock_response(self):
-    class Response:
-        status_code = 200
+class MockResponse:
+    status_code = 200
 
-        def json(self):
-            return {
-                'model_serialized': {
-                    'version': "1",
-                    'id': "foo",
-                    'genes': [],
-                    'reactions': [],
-                    'metabolites': [],
-                    'compartments': {},
-                },
-                'organism_id': "bar",
-                'default_biomass_reaction': "baz",
-            }
+    def json(self):
+        return {
+            'model_serialized': {
+                'version': "1",
+                'id': "foo",
+                'genes': [],
+                'reactions': [],
+                'metabolites': [],
+                'compartments': {},
+            },
+            'organism_id': "bar",
+            'default_biomass_reaction': "baz",
+        }
 
-        def raise_for_status(self):
-            pass
-
-    return Response()
+    def raise_for_status(self):
+        pass
 
 
 def test_get_model(monkeypatch):
-    monkeypatch.setattr(requests, 'get', mock_response)
+    monkeypatch.setattr(requests, 'get', lambda url: MockResponse())
     assert type(storage.get(10).model) == Model
