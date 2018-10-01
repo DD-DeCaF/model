@@ -13,7 +13,8 @@ env:
     - IMAGE_TAG=${TRAVIS_BRANCH}
 
 before_install:
-  - echo ${DOCKER_PASSWORD} | docker login -u=decaftravis --password-stdin
+  - ./scripts/install_gcloud.sh
+  - ./scripts/install_kubectl.sh
 
 install:
   - docker build -t ${IMAGE_REPO}:${TRAVIS_COMMIT::12} -t ${IMAGE_REPO}:${TRAVIS_BRANCH} .
@@ -26,8 +27,6 @@ script:
   - make test-travis
 
 before_deploy:
-  - ./scripts/install_gcloud.sh
-  - ./scripts/install_kubectl.sh
   - docker push ${IMAGE_REPO}:${TRAVIS_COMMIT::12}
   - docker push ${IMAGE_REPO}:${TRAVIS_BRANCH}
 
