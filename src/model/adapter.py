@@ -194,6 +194,7 @@ def adapt_from_measurements(model, biomass_reaction, measurements):
     to the measured values.
 
     :param model: cobra.Model
+    :param biomass_reaction: a string referencing the id of the biomass reaction in the given model
     :param measurements:
         A list of dictionaries of format
         {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurements': list(<measurement (float)>)}
