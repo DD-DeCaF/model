@@ -56,3 +56,8 @@ def init_app(application, interface):
 
     # Add CORS information for all resources.
     CORS(application)
+
+    # Preload all models in production/staging environments
+    from model import storage
+    if app.config['ENVIRONMENT'] in ('production', 'staging'):
+        storage.preload_public_models()

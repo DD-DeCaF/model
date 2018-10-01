@@ -57,6 +57,16 @@ def get(model_id):
     return _MODELS[model_id]
 
 
+def preload_public_models():
+    """Retrieve all public models from storage and instantiate them in memory."""
+    logger.info(f"Preloading all public models (this may take some time)")
+    response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models")
+    response.raise_for_status()
+    for model in response.json():
+        _load_model(model['id'])
+    logger.info(f"Done preloading {len(response.json())} models")
+
+
 def _load_model(model_id):
     logger.debug(f"Requesting model {model_id} from the model warehouse")
     response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models/{model_id}")
@@ -72,13 +82,3 @@ def _load_model(model_id):
         model_data['organism_id'],
         model_data['default_biomass_reaction'],
     )
-
-
-# Preload all models in production/staging environments
-if app.config['ENVIRONMENT'] in ('production', 'staging'):
-    logger.info(f"Preloading all public models (this may take some time)")
-    response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models")
-    response.raise_for_status()
-    for model in response.json():
-        _load_model(model['id'])
-    logger.info(f"Done preloading {len(response.json())} models")
