@@ -57,7 +57,7 @@ def model_modify(model_id):
     try:
         model_wrapper = storage.get(model_id)
     except KeyError:
-        return f"Unknown model '{model_id}'", 400
+        return f"Unknown model '{model_id}'", 404
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
     # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
