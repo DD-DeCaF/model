@@ -29,6 +29,8 @@ spec:
           value: localhost
         - name: REDIS_PORT
           value: "6379"
+        - name: MODEL_WAREHOUSE_API
+          value: https://api.dd-decaf.eu/mwarehouse
         - name: ICE_API
           value: https://ice.dd-decaf.eu
         - name: ICE_USERNAME
@@ -112,6 +114,8 @@ spec:
           value: localhost
         - name: REDIS_PORT
           value: "6379"
+        - name: MODEL_WAREHOUSE_API
+          value: https://api-staging.dd-decaf.eu/mwarehouse
         - name: ICE_API
           value: https://ice.dd-decaf.eu
         - name: ICE_USERNAME
