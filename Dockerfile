@@ -7,7 +7,8 @@ WORKDIR "${CWD}/"
 
 ENV PYTHONPATH=${CWD}/src
 
-RUN pip install --upgrade pip setuptools wheel
+# pin pip to 18.0 to avoid issue with cobra -> depinfo -> pipdeptree -> pip._internal.get_installed_distributions
+RUN pip install --upgrade pip==18.0 setuptools wheel
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade -r /tmp/requirements.txt
 
