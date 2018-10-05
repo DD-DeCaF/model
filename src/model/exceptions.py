@@ -30,3 +30,8 @@ class PartNotFound(Exception):
 class ModelNotFound(Exception):
     """Thrown when looking up a model by id in the storage which is not found."""
     pass
+
+
+class Forbidden(Exception):
+    """Thrown when accessing a model for which the request does not have sufficient permissions."""
+    pass

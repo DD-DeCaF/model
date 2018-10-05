@@ -18,7 +18,7 @@ import requests
 from cobra.io.dict import model_from_dict
 
 from model.app import app
-from model.exceptions import ModelNotFound
+from model.exceptions import Forbidden, ModelNotFound
 
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,8 @@ def _load_model(model_id):
 
     if response.status_code == 404:
         raise ModelNotFound(f"No model with id {model_id}")
+    elif response.status_code == 403:
+        raise Forbidden(f"Insufficient permissions to access model {model_id}")
     response.raise_for_status()
 
     logger.debug(f"Deserializing received model with cobrapy")
