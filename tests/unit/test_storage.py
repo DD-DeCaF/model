@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 import requests
 from cobra import Model
 
 from model import storage
+from model.exceptions import Forbidden
 
 
-class MockResponse:
+class MockResponseSuccess:
     status_code = 200
 
     def json(self):
@@ -39,6 +41,16 @@ class MockResponse:
         pass
 
 
+class MockResponseForbidden:
+    status_code = 403
+
+
 def test_get_model(monkeypatch):
-    monkeypatch.setattr(requests, 'get', lambda url: MockResponse())
+    monkeypatch.setattr(requests, 'get', lambda url: MockResponseSuccess())
     assert type(storage.get(10).model) == Model
+
+
+def test_get_model_forbidden(monkeypatch):
+    monkeypatch.setattr(requests, 'get', lambda url: MockResponseForbidden())
+    with pytest.raises(Forbidden):
+        storage.get(11)

@@ -74,7 +74,7 @@ def _load_model(model_id):
 
     if response.status_code == 404:
         raise ModelNotFound(f"No model with id {model_id}")
-    elif response.status_code == 403:
+    elif response.status_code in (401, 403):
         raise Forbidden(f"Insufficient permissions to access model {model_id}")
     response.raise_for_status()
 
