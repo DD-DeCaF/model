@@ -21,6 +21,7 @@ from prometheus_client.multiprocess import MultiProcessCollector
 
 from model import deltas, storage
 from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
+from model.exceptions import ModelNotFound
 from model.operations import apply_operations
 from model.simulations import simulate
 
@@ -34,7 +35,7 @@ def model_get_modified(model_id):
 
     try:
         model_wrapper = storage.get(model_id)
-    except KeyError:
+    except ModelNotFound:
         return f"Unknown model {model_id}", 404
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
@@ -56,7 +57,7 @@ def model_modify(model_id):
 
     try:
         model_wrapper = storage.get(model_id)
-    except KeyError:
+    except ModelNotFound:
         return f"Unknown model '{model_id}'", 404
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
@@ -108,7 +109,7 @@ def model_simulate():
         try:
             model_wrapper = storage.get(request.json['model_id'])
             biomass_reaction = model_wrapper.biomass_reaction
-        except KeyError:
+        except ModelNotFound:
             return f"Unknown model {request.json['model_id']}", 404
 
         # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context

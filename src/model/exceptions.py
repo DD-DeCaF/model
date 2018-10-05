@@ -25,3 +25,8 @@ class NoIDMapping(Exception):
 class PartNotFound(Exception):
     """Thrown by the ICE client when a requested genotype part is not found"""
     pass
+
+
+class ModelNotFound(Exception):
+    """Thrown when looking up a model by id in the storage which is not found."""
+    pass

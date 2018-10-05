@@ -18,6 +18,7 @@ import requests
 from cobra.io.dict import model_from_dict
 
 from model.app import app
+from model.exceptions import ModelNotFound
 
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ def _load_model(model_id):
     response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models/{model_id}")
 
     if response.status_code == 404:
-        raise KeyError(f"No model with id {model_id}")
+        raise ModelNotFound(f"No model with id {model_id}")
     response.raise_for_status()
 
     logger.debug(f"Deserializing received model with cobrapy")
