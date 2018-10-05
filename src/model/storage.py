@@ -53,6 +53,7 @@ _MODELS = {}
 
 def get(model_id):
     """Return a ModelWrapper instance for the given model id"""
+    # TODO(Ali): Accept token parameter to be used when querying the model storage with JWT.
     if model_id not in _MODELS:
         _load_model(model_id)
     return _MODELS[model_id]
