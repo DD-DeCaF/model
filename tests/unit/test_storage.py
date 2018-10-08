@@ -17,7 +17,7 @@ import requests
 from cobra import Model
 
 from model import storage
-from model.exceptions import Forbidden
+from model.exceptions import Forbidden, Unauthorized
 
 
 class MockResponseSuccess:
@@ -41,6 +41,10 @@ class MockResponseSuccess:
         pass
 
 
+class MockResponseUnauthorized:
+    status_code = 401
+
+
 class MockResponseForbidden:
     status_code = 403
 
@@ -53,4 +57,10 @@ def test_get_model(monkeypatch):
 def test_get_model_forbidden(monkeypatch):
     monkeypatch.setattr(requests, 'get', lambda url: MockResponseForbidden())
     with pytest.raises(Forbidden):
+        storage.get(11)
+
+
+def test_get_model_unauthorized(monkeypatch):
+    monkeypatch.setattr(requests, 'get', lambda url: MockResponseUnauthorized())
+    with pytest.raises(Unauthorized):
         storage.get(11)
