@@ -35,10 +35,15 @@ class PartNotFound(Exception):
 
 
 class ModelNotFound(ExceptionWithMessage):
-    """Thrown when looking up a model by id in the storage which is not found."""
+    """Thrown when requesting a model which is not found."""
+    pass
+
+
+class Unauthorized(ExceptionWithMessage):
+    """Thrown when requesting a private model with invalid credentials."""
     pass
 
 
 class Forbidden(ExceptionWithMessage):
-    """Thrown when accessing a model for which the request does not have sufficient permissions."""
+    """Thrown when requesting a private model for which the provided credentials are not authorized."""
     pass
