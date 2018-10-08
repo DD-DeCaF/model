@@ -21,7 +21,6 @@ def test_add_reaction(e_coli_core):
     apply_operations(e_coli_core, [{
         'operation': "add",
         'type': "reaction",
-        'id': "FOOBAR",
         'data': {
             'id': 'FOOBAR',
             'name': 'Foo Bar',
