@@ -169,7 +169,6 @@ def adapt_from_genotype(model, genotype_changes):
                 operations.append({
                     'operation': 'add',
                     'type': 'reaction',
-                    'id': reaction.id,
                     'data': reaction_to_dict(reaction),
                 })
 
@@ -179,7 +178,6 @@ def adapt_from_genotype(model, genotype_changes):
                     operations.append({
                         'operation': 'add',
                         'type': 'reaction',
-                        'id': demand_reaction.id,
                         'data': reaction_to_dict(demand_reaction),
                     })
         except PartNotFound:

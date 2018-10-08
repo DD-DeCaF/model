@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def apply_operations(model, operations):
     for operation in operations:
         if operation['operation'] == 'add' and operation['type'] == 'reaction':
-            _add_reaction(model, operation['id'], operation['data'])
+            _add_reaction(model, operation['data'])
         elif operation['operation'] == 'modify' and operation['type'] == 'reaction':
             _modify_reaction(model, operation['id'], operation['data'])
         elif operation['operation'] == 'knockout' and operation['type'] == 'reaction':
@@ -35,8 +35,8 @@ def apply_operations(model, operations):
                              f"'{operation['type']}'")
 
 
-def _add_reaction(model, id, data):
-    logger.debug(f"Adding reaction '{id}' to model '{model.id}'")
+def _add_reaction(model, data):
+    logger.debug(f"Adding reaction to model '{model.id}' from: {data}")
     reaction = reaction_from_dict(data, model)
     model.add_reactions([reaction])
 
