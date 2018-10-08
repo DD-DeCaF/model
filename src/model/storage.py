@@ -74,9 +74,11 @@ def _load_model(model_id):
     response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models/{model_id}")
 
     if response.status_code == 401:
-        raise Unauthorized(f"Invalid credentials")
+        message = response.json().get('message', "No error message")
+        raise Unauthorized(f"Invalid credentials ({message})")
     elif response.status_code == 403:
-        raise Forbidden(f"Insufficient permissions to access model {model_id}")
+        message = response.json().get('message', "No error message")
+        raise Forbidden(f"Insufficient permissions to access model {model_id} ({message})")
     elif response.status_code == 404:
         raise ModelNotFound(f"No model with id {model_id}")
     response.raise_for_status()
