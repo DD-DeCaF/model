@@ -44,9 +44,15 @@ class MockResponseSuccess:
 class MockResponseUnauthorized:
     status_code = 401
 
+    def json(self):
+        return {'message': "Mocked response: Unauthorized"}
+
 
 class MockResponseForbidden:
     status_code = 403
+
+    def json(self):
+        return {'message': "Mocked response: Forbidden"}
 
 
 def test_get_model(monkeypatch):
