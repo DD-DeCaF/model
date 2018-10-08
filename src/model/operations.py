@@ -14,6 +14,7 @@
 
 import logging
 
+from cobra import Metabolite
 from cobra.io.dict import reaction_from_dict
 
 
@@ -37,6 +38,11 @@ def apply_operations(model, operations):
 
 def _add_reaction(model, data):
     logger.debug(f"Adding reaction to model '{model.id}' from: {data}")
+    # Ensure all reaction metabolites exist in the model (adding existing metabolites is silently ignored).
+    # Note: Assuming the reaction occurs in the cytosol compartment, but this might be overridable by the user in the
+    # future.
+    metabolites = [Metabolite(id, compartment='c') for id in data['metabolites'].keys()]
+    model.add_metabolites(metabolites)
     reaction = reaction_from_dict(data, model)
     model.add_reactions([reaction])
 
