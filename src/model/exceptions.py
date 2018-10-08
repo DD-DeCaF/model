@@ -13,6 +13,13 @@
 # limitations under the License.
 
 
+class ExceptionWithMessage(Exception):
+    """Base exception which stores the first argument in a message attribute."""
+    def __init__(self, message, *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
+        self.message = message
+
+
 class NoIDMapping(Exception):
     """Thrown when a search for a given metabolite identifier does not yield any result."""
     def __init__(self, compound_id):
@@ -27,11 +34,11 @@ class PartNotFound(Exception):
     pass
 
 
-class ModelNotFound(Exception):
+class ModelNotFound(ExceptionWithMessage):
     """Thrown when looking up a model by id in the storage which is not found."""
     pass
 
 
-class Forbidden(Exception):
+class Forbidden(ExceptionWithMessage):
     """Thrown when accessing a model for which the request does not have sufficient permissions."""
     pass
