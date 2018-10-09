@@ -18,6 +18,7 @@ import requests
 from cobra.io.dict import model_from_dict
 
 from model.app import app
+from model.exceptions import Forbidden, ModelNotFound, Unauthorized
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ _MODELS = {}
 
 def get(model_id):
     """Return a ModelWrapper instance for the given model id"""
+    # TODO(Ali): Accept token parameter to be used when querying the model storage with JWT.
     if model_id not in _MODELS:
         _load_model(model_id)
     return _MODELS[model_id]
@@ -71,8 +73,14 @@ def _load_model(model_id):
     logger.debug(f"Requesting model {model_id} from the model warehouse")
     response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models/{model_id}")
 
-    if response.status_code == 404:
-        raise KeyError(f"No model with id {model_id}")
+    if response.status_code == 401:
+        message = response.json().get('message', "No error message")
+        raise Unauthorized(f"Invalid credentials ({message})")
+    elif response.status_code == 403:
+        message = response.json().get('message', "No error message")
+        raise Forbidden(f"Insufficient permissions to access model {model_id} ({message})")
+    elif response.status_code == 404:
+        raise ModelNotFound(f"No model with id {model_id}")
     response.raise_for_status()
 
     logger.debug(f"Deserializing received model with cobrapy")
