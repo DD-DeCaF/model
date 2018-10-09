@@ -35,12 +35,12 @@ def model_get_modified(model_id):
 
     try:
         model_wrapper = storage.get(model_id)
-    except Unauthorized as e:
-        return e.message, 401
-    except Forbidden as e:
-        return e.message, 403
-    except ModelNotFound as e:
-        return e.message, 404
+    except Unauthorized as error:
+        return error.message, 401
+    except Forbidden as error:
+        return error.message, 403
+    except ModelNotFound as error:
+        return error.message, 404
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
     # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
@@ -61,12 +61,12 @@ def model_modify(model_id):
 
     try:
         model_wrapper = storage.get(model_id)
-    except Unauthorized as e:
-        return e.message, 401
-    except Forbidden as e:
-        return e.message, 403
-    except ModelNotFound as e:
-        return e.message, 404
+    except Unauthorized as error:
+        return error.message, 401
+    except Forbidden as error:
+        return error.message, 403
+    except ModelNotFound as error:
+        return error.message, 404
 
     # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
     # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
@@ -117,12 +117,12 @@ def model_simulate():
         try:
             model_wrapper = storage.get(request.json['model_id'])
             biomass_reaction = model_wrapper.biomass_reaction
-        except Unauthorized as e:
-            return e.message, 401
-        except Forbidden as e:
-            return e.message, 403
-        except ModelNotFound as e:
-            return e.message, 404
+        except Unauthorized as error:
+            return error.message, 401
+        except Forbidden as error:
+            return error.message, 403
+        except ModelNotFound as error:
+            return error.message, 404
 
         # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
         # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
@@ -135,8 +135,8 @@ def model_simulate():
         try:
             model_dict = request.json['model']
             model = model_from_dict(model_dict)
-        except Exception as e:
-            logger.warning(f"Cobrapy could not deserialize provided model: {type(e)}: {e}", exc_info=True)
+        except Exception as error:
+            logger.warning(f"Cobrapy could not deserialize provided model: {str(error)}", exc_info=True)
             logger.debug(f"Full serialized model: {model_dict}")
             return f"The provided model is not deserializable by cobrapy", 400
         try:
