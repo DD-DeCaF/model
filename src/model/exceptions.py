@@ -27,7 +27,7 @@ class PartNotFound(Exception):
     pass
 
 
-class ModelStorageError(Exception):
+class ModelStorageError(IOError):
     """Base exception thrown when a model can not be retrieved from the storage."""
     def __init__(self, message, *args, **kwargs):
         super().__init__(message, *args, **kwargs)
