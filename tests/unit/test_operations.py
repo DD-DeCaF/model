@@ -40,6 +40,29 @@ def test_add_reaction(e_coli_core):
     assert e_coli_core.reactions.FOOBAR.bounds == (0.0, 1000.0)
 
 
+def test_add_reaction_unknown_metabolites(e_coli_core):
+    e_coli_core, biomass_reaction = e_coli_core
+    assert not e_coli_core.metabolites.has_id('foo_c')
+    assert not e_coli_core.metabolites.has_id('bar_c')
+    apply_operations(e_coli_core, [{
+        'operation': "add",
+        'type': "reaction",
+        'data': {
+            'id': 'FOOBAR',
+            'name': 'Foo Bar',
+            'metabolites': {
+                'foo_c': -1.0,
+                'bar_c': 1.0,
+            },
+            'lower_bound': -1000.0,
+            'upper_bound': 1000.0,
+            'gene_reaction_rule': '',
+        }
+    }])
+    assert e_coli_core.metabolites.has_id('foo_c')
+    assert e_coli_core.metabolites.has_id('bar_c')
+
+
 def test_modify_reaction(e_coli_core):
     e_coli_core, biomass_reaction = e_coli_core
     assert e_coli_core.reactions.CS.bounds == (0.0, 1000.0)
