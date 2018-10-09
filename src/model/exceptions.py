@@ -13,13 +13,6 @@
 # limitations under the License.
 
 
-class ExceptionWithMessage(Exception):
-    """Base exception which stores the first argument in a message attribute."""
-    def __init__(self, message, *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
-        self.message = message
-
-
 class NoIDMapping(Exception):
     """Thrown when a search for a given metabolite identifier does not yield any result."""
     def __init__(self, compound_id):
@@ -34,16 +27,23 @@ class PartNotFound(Exception):
     pass
 
 
-class ModelNotFound(ExceptionWithMessage):
+class ModelStorageError(Exception):
+    """Base exception thrown when a model can not be retrieved from the storage."""
+    def __init__(self, message, *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
+        self.message = message
+
+
+class ModelNotFound(ModelStorageError):
     """Thrown when requesting a model which is not found."""
     pass
 
 
-class Unauthorized(ExceptionWithMessage):
+class Unauthorized(ModelStorageError):
     """Thrown when requesting a private model with invalid credentials."""
     pass
 
 
-class Forbidden(ExceptionWithMessage):
+class Forbidden(ModelStorageError):
     """Thrown when requesting a private model for which the provided credentials are not authorized."""
     pass
