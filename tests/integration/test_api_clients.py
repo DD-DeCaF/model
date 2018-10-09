@@ -23,6 +23,7 @@ from model.ice_client import ICE
 ice = ICE()
 
 
+@pytest.mark.skip(reason="ICE seems to be occasionally unresponsive and halts CI builds")
 @pytest.mark.parametrize("part", ('NP_600058', 'BBa_J23100', 'AB326105'))
 def test_ice_missing_parts(part):
     """
@@ -33,6 +34,7 @@ def test_ice_missing_parts(part):
         ice.get_reaction_equations(part)
 
 
+@pytest.mark.skip(reason="ICE seems to be occasionally unresponsive and halts CI builds")
 def test_ice_existing_part():
     """
     Query ICE for an existing part.
