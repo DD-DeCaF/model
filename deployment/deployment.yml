@@ -48,6 +48,9 @@ spec:
             secretKeyRef:
               name: model-production
               key: SENTRY_DSN
+        # Disabling sympy cache prevents significant memory leaks in the cobrapy stack
+        - name: SYMPY_USE_CACHE
+          value: "no"
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
