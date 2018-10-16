@@ -27,18 +27,8 @@ spec:
           value: localhost
         - name: REDIS_PORT
           value: "6379"
-        - name: ICE_API
-          value: https://ice.dd-decaf.eu
-        - name: ICE_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: model-production
-              key: ICE_USERNAME
-        - name: ICE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: model-production
-              key: ICE_PASSWORD
+        - name: ANNOTATIONS_API
+          value: http://gene-to-reactions-production/annotation/genes
         - name: ID_MAPPER_API
           value: http://id-mapper-production/idmapping/query
         - name: prometheus_multiproc_dir
