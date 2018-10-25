@@ -62,7 +62,7 @@ def get(model_id):
 def preload_public_models():
     """Retrieve all public models from storage and instantiate them in memory."""
     logger.info(f"Preloading all public models (this may take some time)")
-    response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models")
+    response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models")
     response.raise_for_status()
     for model in response.json():
         _load_model(model['id'])
@@ -71,7 +71,7 @@ def preload_public_models():
 
 def _load_model(model_id):
     logger.debug(f"Requesting model {model_id} from the model warehouse")
-    response = requests.get(f"{app.config['MODEL_WAREHOUSE_API']}/models/{model_id}")
+    response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models/{model_id}")
 
     if response.status_code == 401:
         message = response.json().get('message', "No error message")

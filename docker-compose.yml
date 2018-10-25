@@ -23,7 +23,7 @@ services:
       - ICE_USERNAME=${ICE_USERNAME}
       - ICE_PASSWORD=${ICE_PASSWORD}
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
-      - MODEL_WAREHOUSE_API=${MODEL_WAREHOUSE_API:-https://api-staging.dd-decaf.eu/mwarehouse}
+      - MODEL_STORAGE_API=${MODEL_STORAGE_API:-https://api-staging.dd-decaf.eu/mstorage}
       - prometheus_multiproc_dir=/prometheus-client
       # Disabling sympy cache prevents significant memory leaks in the cobrapy stack
       - SYMPY_USE_CACHE=no
