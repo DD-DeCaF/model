@@ -53,17 +53,6 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
         logger.info(f"Optimization Error: {error}")
         flux_distribution = {}
         growth_rate = 0.0
-
-        # For non-fva methods, do return the measured fluxes despite infesability
-        if method not in ('fva', 'pfba-fva'):
-            # TODO: refactor; changes are not available in model notes anymorer
-            changes = model.notes['changes']
-            if 'measured' in changes:
-                ids_measured_reactions = set(rxn['id'] for rxn in changes['measured']['reactions'])
-                flux_distribution = {
-                    rxn.id: (rxn.upper_bound + rxn.lower_bound) / 2
-                    for rxn in model.reactions if rxn.id in ids_measured_reactions
-                }
     else:
         logger.info(f"Simulation completed successfully")
         if method in ('fba', 'pfba'):
