@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Expose the main Flask-RESTPlus application."""
+"""Expose the main Flask application."""
 
 import logging
 import logging.config
@@ -46,7 +46,7 @@ def init_app(application, interface):
         sentry.init_app(application)
 
     # Add routes and resources.
-    # TODO: use flask-restplus
+    # TODO: use flask-apispec
     from model import resources
     app.add_url_rule('/models/<model_id>', view_func=resources.model_get_modified, methods=['POST'])
     app.add_url_rule('/models/<model_id>/modify', view_func=resources.model_modify, methods=['POST'])
