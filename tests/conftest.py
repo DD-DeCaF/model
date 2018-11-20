@@ -24,7 +24,8 @@ from model.app import init_app
 def app():
     """Provide the initialized Flask app"""
     init_app(app_, None)
-    return app_
+    with app_.app_context():
+        yield app_
 
 
 @pytest.fixture(scope="session")
