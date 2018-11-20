@@ -28,12 +28,14 @@ logger = logging.getLogger(__name__)
 class ModelWrapper:
     """A wrapper for a cobrapy model with some additional metadata."""
 
-    def __init__(self, model, organism_id, biomass_reaction):
+    def __init__(self, model, project_id, organism_id, biomass_reaction):
         """
         Parameters
         ----------
         model: cobra.Model
             A cobrapy model instance.
+        project_id: int
+            Reference to the project id to which this model belongs, or None if it is a public model.
         organism_id: str
             A reference to the organism for which the given model belongs. The identifier is internal to the DD-DeCaF
             platform and references the `id` field in https://api.dd-decaf.eu/warehouse/organisms.
@@ -43,6 +45,7 @@ class ModelWrapper:
         self.model = model
         # Use the cplex solver for performance
         self.model.solver = 'cplex'
+        self.project_id = project_id
         self.organism_id = organism_id
         self.biomass_reaction = biomass_reaction
 
@@ -91,6 +94,7 @@ def _load_model(model_id):
     model_data = response.json()
     _MODELS[model_id] = ModelWrapper(
         model_from_dict(model_data['model_serialized']),
+        model_data['project_id'],
         model_data['organism_id'],
         model_data['default_biomass_reaction'],
     )
