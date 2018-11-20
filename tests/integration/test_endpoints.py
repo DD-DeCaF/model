@@ -32,6 +32,11 @@ def test_simulate_wrong_id(client):
     assert response.status_code == 404
 
 
+def test_simulate_unauthorized(client, models):
+    response = client.post("/simulate", json={'model_id': 'test_e_coli_core_proprietary'})
+    assert response.status_code == 403
+
+
 def test_simulate_no_operations(client, models):
     response = client.post("/simulate", json={'model_id': 'test_iJO1366'})
     assert response.status_code == 200
