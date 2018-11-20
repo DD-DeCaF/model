@@ -22,6 +22,7 @@ from flask_cors import CORS
 from raven.contrib.flask import Sentry
 from werkzeug.contrib.fixers import ProxyFix
 
+from model import jwt
 from model.settings import Settings
 
 
@@ -44,6 +45,9 @@ def init_app(application, interface):
         sentry = Sentry(dsn=application.config['SENTRY_DSN'], logging=True,
                         level=logging.WARNING)
         sentry.init_app(application)
+
+    # Add JWT handlers
+    jwt.init_app(application)
 
     # Add routes and resources.
     # TODO: use flask-apispec

@@ -14,6 +14,8 @@
 
 import os
 
+import requests
+
 
 class Settings:
     ENVIRONMENT = os.environ['ENVIRONMENT']
@@ -27,6 +29,7 @@ class Settings:
     SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
     REDIS_ADDR = os.environ['REDIS_ADDR']
     REDIS_PORT = os.environ['REDIS_PORT']
+    JWT_PUBLIC_KEY = requests.get(f"{os.environ['IAM_API']}/keys").json()["keys"][0]
 
     LOGGING = {
         'version': 1,
