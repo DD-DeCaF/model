@@ -15,6 +15,7 @@
 import pytest
 import requests
 from cobra import Model
+from flask import g
 
 from model import storage
 from model.exceptions import Forbidden, Unauthorized
@@ -33,6 +34,7 @@ class MockResponseSuccess:
                 'metabolites': [],
                 'compartments': {},
             },
+            'project_id': None,
             'organism_id': "bar",
             'default_biomass_reaction': "baz",
         }
@@ -55,18 +57,21 @@ class MockResponseForbidden:
         return {'message': "Mocked response: Forbidden"}
 
 
-def test_get_model(monkeypatch):
-    monkeypatch.setattr(requests, 'get', lambda url: MockResponseSuccess())
+def test_get_model(monkeypatch, app):
+    monkeypatch.setattr(requests, 'get', lambda url, headers: MockResponseSuccess())
+    g.jwt_valid = False
     assert type(storage.get(10).model) == Model
 
 
-def test_get_model_forbidden(monkeypatch):
-    monkeypatch.setattr(requests, 'get', lambda url: MockResponseForbidden())
+def test_get_model_forbidden(monkeypatch, app):
+    monkeypatch.setattr(requests, 'get', lambda url, headers: MockResponseForbidden())
+    g.jwt_valid = False
     with pytest.raises(Forbidden):
         storage.get(11)
 
 
-def test_get_model_unauthorized(monkeypatch):
-    monkeypatch.setattr(requests, 'get', lambda url: MockResponseUnauthorized())
+def test_get_model_unauthorized(monkeypatch, app):
+    monkeypatch.setattr(requests, 'get', lambda url, headers: MockResponseUnauthorized())
+    g.jwt_valid = False
     with pytest.raises(Unauthorized):
         storage.get(11)
