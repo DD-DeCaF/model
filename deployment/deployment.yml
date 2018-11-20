@@ -33,6 +33,8 @@ spec:
           value: https://api.dd-decaf.eu/mstorage
         - name: ICE_API
           value: https://ice.dd-decaf.eu
+        - name: IAM_API
+          value: https://api.dd-decaf.eu/iam
         - name: ICE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -118,6 +120,8 @@ spec:
           value: https://api-staging.dd-decaf.eu/mstorage
         - name: ICE_API
           value: https://ice.dd-decaf.eu
+        - name: IAM_API
+          value: https://api-staging.dd-decaf.eu/iam
         - name: ICE_USERNAME
           valueFrom:
             secretKeyRef:
