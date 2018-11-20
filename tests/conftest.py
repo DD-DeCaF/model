@@ -47,7 +47,7 @@ def models():
                                                                'BIOMASS_Ecoli_core_w_GAM')
     model = read_sbml_model('tests/data/e_coli_core.sbml.gz')
     storage._MODELS['test_e_coli_core_proprietary'] = storage.ModelWrapper(model, 1, "Escherichia coli",
-                                                               'BIOMASS_Ecoli_core_w_GAM')
+                                                                           'BIOMASS_Ecoli_core_w_GAM')
     model = read_sbml_model('tests/data/iJO1366.sbml.gz')
     storage._MODELS['test_iJO1366'] = storage.ModelWrapper(model, None, "Escherichia coli",
                                                            'BIOMASS_Ec_iJO1366_core_53p95M')
