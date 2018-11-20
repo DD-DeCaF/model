@@ -20,6 +20,7 @@ from flask import g
 
 from model.app import app
 from model.exceptions import Forbidden, ModelNotFound, Unauthorized
+from model.jwt import jwt_require_claim
 
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,11 @@ def get(model_id):
     """Return a ModelWrapper instance for the given model id"""
     if model_id not in _MODELS:
         _load_model(model_id)
-    return _MODELS[model_id]
+    wrapper = _MODELS[model_id]
+    # Enforce access control for non-public cached models.
+    if wrapper.project_id is not None:
+        jwt_require_claim(wrapper.project_id, 'read')
+    return wrapper
 
 
 def preload_public_models():
