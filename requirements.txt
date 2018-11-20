@@ -10,6 +10,7 @@ gunicorn
 tqdm
 raven[flask]
 prometheus-client
+python-jose
 
 # Testing and QA
 codecov
