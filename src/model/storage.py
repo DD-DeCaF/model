@@ -80,7 +80,9 @@ def preload_public_models():
 def _load_model(model_id):
     logger.debug(f"Requesting model {model_id} from the model warehouse")
     headers = {}
-    if g.jwt_valid:
+    # Check g for truthiness; false means there is no request context. This is necessary in the production environment,
+    # where models are preloaded outside of any request context.
+    if g and g.jwt_valid:
         logger.debug(f"Forwarding provided JWT")
         headers['Authorization'] = f"Bearer {g.jwt_token}"
     response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models/{model_id}", headers=headers)
