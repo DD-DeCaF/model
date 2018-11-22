@@ -19,7 +19,7 @@ spec:
   - host: api-staging.dd-decaf.eu
     http:
       paths:
-      - path: /model
+      - path: /mcaffeine
         backend:
           serviceName: model-staging
           servicePort: 80

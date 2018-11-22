@@ -111,7 +111,7 @@ spec:
         - name: ENVIRONMENT
           value: staging
         - name: SCRIPT_NAME
-          value: /model
+          value: /mcaffeine
         - name: REDIS_ADDR
           value: localhost
         - name: REDIS_PORT
@@ -141,29 +141,32 @@ spec:
             secretKeyRef:
               name: model-staging
               key: SENTRY_DSN
+        # Disabling sympy cache prevents significant memory leaks in the cobrapy stack
+        - name: SYMPY_USE_CACHE
+          value: "no"
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
         command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
         readinessProbe:
           httpGet:
-            path: /model/healthz
+            path: /mcaffeine/healthz
             port: 8000
           initialDelaySeconds: 5
         resources:
           requests:
-            cpu: "100m"
+            cpu: "1000m"
           limits:
-            cpu: "500m"
+            cpu: "6000m"
       - name: redis
         image: redis:latest
         ports:
         - containerPort: 6379
         resources:
           requests:
-            cpu: "10m"
-          limits:
             cpu: "100m"
+          limits:
+            cpu: "2000m"
       volumes:
       - name: prometheus-client
         emptyDir: {}
