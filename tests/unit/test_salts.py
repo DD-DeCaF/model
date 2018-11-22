@@ -12,26 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import time
-
-from flask import g, request
-
-from .metrics import REQUEST_TIME
+from model.salts import MEDIUM_SALTS
 
 
-logger = logging.getLogger(__name__)
-
-
-def init_app(app):
-    @app.before_request
-    def before_request():
-        g.request_start = time.time()
-
-    @app.after_request
-    def after_request(response):
-        request_duration = time.time() - g.request_start
-        REQUEST_TIME.labels('model',
-                            app.config['ENVIRONMENT'],
-                            request.path).observe(request_duration)
-        return response
+def test_medium_salts():
+    assert len(MEDIUM_SALTS) > 2000
+    assert len(MEDIUM_SALTS['75832']) == 2
+    assert len(MEDIUM_SALTS['30808']) == 2
+    assert len(MEDIUM_SALTS['86254']) == 4

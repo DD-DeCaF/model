@@ -12,26 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import time
-
-from flask import g, request
-
-from .metrics import REQUEST_TIME
+from model.gnomic_helpers import feature_id, full_genotype
 
 
-logger = logging.getLogger(__name__)
-
-
-def init_app(app):
-    @app.before_request
-    def before_request():
-        g.request_start = time.time()
-
-    @app.after_request
-    def after_request(response):
-        request_duration = time.time() - g.request_start
-        REQUEST_TIME.labels('model',
-                            app.config['ENVIRONMENT'],
-                            request.path).observe(request_duration)
-        return response
+def test_feature_operations():
+    changes = full_genotype(['-A -B +promoter.C:#D:#E:terminator.F', '+G', '+B +Y -H'])
+    assert {feature_id(f) for f in changes.removed_features} == {'A', 'H'}
+    assert {feature_id(f) for f in changes.added_features} == {'C', 'D', 'E', 'F', 'G', 'Y'}

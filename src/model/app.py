@@ -12,58 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
+"""Expose the main Flask application."""
+
 import logging
+import logging.config
 
-import aiohttp_cors
-import model.handlers as handlers
-from aiohttp import web
+from flask import Flask
+from flask_cors import CORS
+from raven.contrib.flask import Sentry
+from werkzeug.contrib.fixers import ProxyFix
 
-from .middleware import metrics_middleware, raven_middleware
-
-
-logger = logging.getLogger(__name__)
-
-
-def get_app():
-    app = web.Application(middlewares=[metrics_middleware, raven_middleware])
-    app.router.add_route('GET', '/wsmodels/{model_id}', handlers.model_ws_full)
-    app.router.add_route('GET', '/v1/wsmodels/{model_id}', handlers.model_ws_json_diff)
-    app.router.add_route('GET', '/maps', handlers.maps)
-    app.router.add_route('GET', '/map', handlers.map)
-    app.router.add_route('GET', '/model-options/{species}', handlers.model_options)
-    app.router.add_route('POST', '/models/{model_id}', handlers.model)
-    app.router.add_route('GET', '/v1/models/{model_id}', handlers.model_get)
-    app.router.add_route('POST', '/v1/models/{model_id}', handlers.model_diff)
-    app.router.add_route('GET', '/v1/model-info/{model_id}', handlers.model_info)
-    app.router.add_route('GET', '/metrics', handlers.metrics)
-
-    # Configure default CORS settings.
-    cors = aiohttp_cors.setup(app, defaults={
-        "*": aiohttp_cors.ResourceOptions(
-            allow_credentials=True,
-            expose_headers="*",
-            allow_headers="*",
-        )
-    })
-
-    # Configure CORS on all routes.
-    for route in list(app.router.routes()):
-        cors.add(route)
-    return app
+from model import jwt
+from model.settings import Settings
 
 
-async def start(loop):
-    app = get_app()
-    await loop.create_server(app.make_handler(), '0.0.0.0', 8000)
-    logger.info('Web server is up')
-    return app
+app = Flask(__name__)
+app.config.from_object(Settings())
+app.wsgi_app = ProxyFix(app.wsgi_app)
 
 
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start(loop))
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
+def init_app(application, interface):
+    """Initialize the main app with config information and routes."""
+    # Configure logging
+    logging.config.dictConfig(application.config['LOGGING'])
+
+    # Configure middleware
+    from model import middleware
+    middleware.init_app(application)
+
+    # Configure Sentry
+    if application.config['SENTRY_DSN']:
+        sentry = Sentry(dsn=application.config['SENTRY_DSN'], logging=True,
+                        level=logging.WARNING)
+        sentry.init_app(application)
+
+    # Add JWT handlers
+    jwt.init_app(application)
+
+    # Add routes and resources.
+    # TODO: use flask-apispec
+    from model import resources
+    app.add_url_rule('/models/<model_id>', view_func=resources.model_get_modified, methods=['POST'])
+    app.add_url_rule('/models/<model_id>/modify', view_func=resources.model_modify, methods=['POST'])
+    app.add_url_rule('/simulate', view_func=resources.model_simulate, methods=['POST'])
+    app.add_url_rule('/metrics', view_func=resources.metrics)
+    app.add_url_rule('/healthz', view_func=resources.healthz)
+
+    # Add CORS information for all resources.
+    CORS(application)
+
+    # Preload all models in production/staging environments
+    from model import storage
+    if app.config['ENVIRONMENT'] in ('production', 'staging'):
+        storage.preload_public_models()

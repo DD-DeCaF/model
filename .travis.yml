@@ -10,14 +10,14 @@ services:
 env:
   global:
     - IMAGE_REPO=gcr.io/dd-decaf-cfbf6/model
-    - IMAGE_TAG=travis-ci-test
-    - IMAGE=${IMAGE_REPO}:${IMAGE_TAG}
+    - IMAGE_TAG=${TRAVIS_BRANCH}
 
 before_install:
-  - echo ${DOCKER_PASSWORD} | docker login -u=decaftravis --password-stdin
+  - ./scripts/install_gcloud.sh
+  - ./scripts/install_kubectl.sh
 
 install:
-  - docker build -t ${IMAGE} .
+  - docker build -t ${IMAGE_REPO}:${TRAVIS_COMMIT::12} -t ${IMAGE_REPO}:${TRAVIS_BRANCH} .
   - make setup
 
 script:
@@ -27,10 +27,6 @@ script:
   - make test-travis
 
 before_deploy:
-  - ./scripts/install_gcloud.sh
-  - ./scripts/install_kubectl.sh
-  - docker tag ${IMAGE} ${IMAGE_REPO}:${TRAVIS_COMMIT::12}
-  - docker tag ${IMAGE} ${IMAGE_REPO}:${TRAVIS_BRANCH}
   - docker push ${IMAGE_REPO}:${TRAVIS_COMMIT::12}
   - docker push ${IMAGE_REPO}:${TRAVIS_BRANCH}
 

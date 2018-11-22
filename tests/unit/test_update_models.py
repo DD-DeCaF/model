@@ -14,12 +14,14 @@
 
 import os
 
+import pytest
 from cobra.io import read_sbml_model
 
 from model.adapter import get_unique_metabolite
 from tools.update_models import update_local_models
 
 
+@pytest.mark.skip(reason="Local models are no longer stored in this service. Move logic and tests to model-warehouse")
 def test_update_models(tmpdir):
     update_local_models('e_coli_core', tmpdir)
     model = read_sbml_model(os.path.join(tmpdir, 'e_coli_core.sbml.gz'))

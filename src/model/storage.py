@@ -12,142 +12,96 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
-import hashlib
-import json
 import logging
-import os
-from functools import lru_cache
 
-from cobra.io import model_to_dict, read_sbml_model
+import requests
+from cobra.io.dict import model_from_dict
+from flask import g
 
-import aioredis
-from model import constants, settings
-from model.operations import restore_changes
-from model.utils import log_time
+from model.app import app
+from model.exceptions import Forbidden, ModelNotFound, Unauthorized
+from model.jwt import jwt_require_claim
 
 
 logger = logging.getLogger(__name__)
 
 
-def key_from_model_info(wild_type_id, message, version=None):
-    """Generate hash string from model information which will later be used as db key
+class ModelWrapper:
+    """A wrapper for a cobrapy model with some additional metadata."""
 
-    :param wild_type_id: str
-    :param message: dict
-    :return: str
-    """
-    d = {k: message.get(k, []) for k in constants.MESSAGE_HASH_KEYS}
-    d['model_id'] = wild_type_id
-
-    if version:
-        d['version'] = version
-
-    return hashlib.sha224(json.dumps(d, sort_keys=True).encode('utf-8')).hexdigest()
-
-
-async def redis_client():
-    return await aioredis.create_redis((os.environ['REDIS_ADDR'], os.environ['REDIS_PORT']),
-                                       loop=asyncio.get_event_loop())
-
-
-async def save_changes_to_db(model, wild_type_id, message, version=None):
-    """Store model in cache database
-
-    :param model: Cameo model
-    :param wild_type_id: str
-    :param message: dict
-    :return: mutated_model_id (cache database key)
-    """
-    mutated_model_id = key_from_model_info(wild_type_id, message, version)
-
-    value = json.dumps({'model': model.id, 'changes': model.notes.get('changes', constants.get_empty_changes())})
-    redis = await redis_client()
-    with (await redis) as connection:
-        await connection.set(mutated_model_id, value)
-    logger.info(f"Model created on the base of {wild_type_id} with message {message} saved as {mutated_model_id}")
-    return mutated_model_id
+    def __init__(self, model, project_id, organism_id, biomass_reaction):
+        """
+        Parameters
+        ----------
+        model: cobra.Model
+            A cobrapy model instance.
+        project_id: int
+            Reference to the project id to which this model belongs, or None if it is a public model.
+        organism_id: str
+            A reference to the organism for which the given model belongs. The identifier is internal to the DD-DeCaF
+            platform and references the `id` field in https://api.dd-decaf.eu/warehouse/organisms.
+        biomass_reaction: str
+            A string referencing the default biomass reaction in the given model.
+        """
+        self.model = model
+        # Use the cplex solver for performance
+        self.model.solver = 'cplex'
+        self.project_id = project_id
+        self.organism_id = organism_id
+        self.biomass_reaction = biomass_reaction
 
 
-def read_model(model_id):
-    with log_time(operation=f"Read model {model_id} from SBML file"):
-        model = read_sbml_model(os.path.join('data', 'models', model_id + '.sbml.gz'))
-        model.solver = 'cplex'
-        model.notes['namespace'] = constants.MODEL_NAMESPACE[model_id]
-        return model
+# Keep all loaded models in memory in this dictionary, keyed by our internal
+# model storage primary key id.
+_MODELS = {}
 
 
-class Models(object):
-    @classmethod
-    @lru_cache()
-    def get(cls, model_id):
-        try:
-            return read_model(model_id)
-        except FileNotFoundError:
-            return None
-
-    @classmethod
-    @lru_cache()
-    def get_dict(cls, model_id):
-        model = cls.get(model_id)
-        if model is not None:
-            return model_to_dict(model)
-        return None
+def get(model_id):
+    """Return a ModelWrapper instance for the given model id"""
+    if model_id not in _MODELS:
+        _load_model(model_id)
+    wrapper = _MODELS[model_id]
+    # Enforce access control for non-public cached models.
+    if wrapper.project_id is not None:
+        jwt_require_claim(wrapper.project_id, 'read')
+    return wrapper
 
 
-def preload_cache():
-    logger.info("Preloading models")
-    with log_time(operation="Preload models"):
-        for model_id in constants.MODELS:
-            Models.get_dict(model_id)
+def preload_public_models():
+    """Retrieve all public models from storage and instantiate them in memory."""
+    logger.info(f"Preloading all public models (this may take some time)")
+    response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models")
+    response.raise_for_status()
+    for model in response.json():
+        _load_model(model['id'])
+    logger.info(f"Done preloading {len(response.json())} models")
 
 
-if settings.ENVIRONMENT in ['production', 'staging']:
-    preload_cache()
+def _load_model(model_id):
+    logger.debug(f"Requesting model {model_id} from the model warehouse")
+    headers = {}
+    # Check g for truthiness; false means there is no request context. This is necessary in the production environment,
+    # where models are preloaded outside of any request context.
+    if g and g.jwt_valid:
+        logger.debug(f"Forwarding provided JWT")
+        headers['Authorization'] = f"Bearer {g.jwt_token}"
+    response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models/{model_id}", headers=headers)
 
+    if response.status_code == 401:
+        message = response.json().get('message', "No error message")
+        raise Unauthorized(f"Invalid credentials ({message})")
+    elif response.status_code == 403:
+        message = response.json().get('message', "No error message")
+        raise Forbidden(f"Insufficient permissions to access model {model_id} ({message})")
+    elif response.status_code == 404:
+        raise ModelNotFound(f"No model with id {model_id}")
+    response.raise_for_status()
 
-async def find_changes_in_db(model_id):
-    dumped_changes = None
-    redis = await redis_client()
-    with (await redis) as connection:
-        dumped_changes = await connection.get(model_id)
-
-    if dumped_changes is not None:
-        return dumped_changes.decode('utf-8')
-    return None
-
-
-async def restore_from_db(model_id):
-    with log_time(operation=f"Restored model {model_id} from db"):
-        changes = await find_changes_in_db(model_id)
-        if not changes:
-            return None
-        return model_from_changes(changes)
-
-
-@lru_cache(maxsize=2 ** 6)
-def model_from_changes(changes):
-    changes = json.loads(changes)
-    model = Models.get(changes['model']).copy()
-    model = restore_changes(model, changes['changes'])
-    model.notes['changes'] = changes['changes']
-    return model
-
-
-async def restore_model(model_id):
-    """Try to restore model by model id.
-    NOTE: if model is found in memory, the original model is returned - to modify, make a copy
-
-    :param model_id: str
-    :return: Cameo model or None
-    """
-    model = Models.get(model_id)
-    if model:
-        logger.info('Wild type model with id %s is found', model_id)
-        return model
-    model = await restore_from_db(model_id)
-    if model:
-        logger.info('Model with id %s found in database', model_id)
-        return model
-    logger.info('No model with id %s', model_id)
-    return None
+    logger.debug(f"Deserializing received model with cobrapy")
+    model_data = response.json()
+    _MODELS[model_id] = ModelWrapper(
+        model_from_dict(model_data['model_serialized']),
+        model_data['project_id'],
+        model_data['organism_id'],
+        model_data['default_biomass_reaction'],
+    )

@@ -21,9 +21,8 @@ from cameo import load_model
 from cobra.io import read_sbml_model, write_sbml_model
 from tqdm import tqdm
 
-from model.adapter import add_prefix
-from model.constants import MODEL_NAMESPACE, MODELS
-from model.settings import ID_MAPPER_API
+from model import storage
+from model.app import app
 
 
 LOCAL_MODELS = ['ecYeast7', 'ecYeast7_proteomics']
@@ -46,7 +45,7 @@ GLUCOSE = {'s_0563', 's_0565', 'glc__D', 's_0563', 's_0565', 's_0566', 's_0567',
 
 def sync_query_identifiers(object_ids, db_from, db_to):
     query = json.dumps({'ids': object_ids, 'dbFrom': db_from.lower(), 'dbTo': db_to.lower(), 'type': 'Metabolite'})
-    r = requests.post(ID_MAPPER_API, data=query)
+    r = requests.post(app.config['ID_MAPPER_API'], data=query)
     return r.json()['ids']
 
 
@@ -65,7 +64,7 @@ def update_local_models(model_id, model_store=None):
         model = load_model(model_id)
 
     # annotate metabolites
-    namespace = MODEL_NAMESPACE[model_id]
+    namespace = storage.get(model_id).namespace
     metabolite_namespace = MODEL_METABOLITE_NAMESPACE[model_id]
     db_name = 'CHEBI'
     metabolites_missing_annotation = [m.id for m in model.metabolites if len(m.annotation.get(db_name, [])) < 1]
@@ -77,7 +76,10 @@ def update_local_models(model_id, model_store=None):
             metabolite = model.metabolites.get_by_id(metabolite_id)
             if db_name not in metabolite.annotation:
                 metabolite.annotation[db_name] = []
-            metabolite.annotation[db_name].extend(add_prefix(model_xref[compound_id], db_name))
+            metabolite.annotation[db_name].extend([
+                f'{db_name}:{i}' if not i.startswith(f"{db_name}:") else i
+                for i in model_xref[compound_id]
+            ])
             # TODO: For some reason, id-mapper doesn't make this link, add manually for now
             if compound_id in GLUCOSE and db_name == 'CHEBI':
                 metabolite.annotation[db_name].append('CHEBI:42758')
@@ -94,5 +96,5 @@ def update_local_models(model_id, model_store=None):
 
 
 if '__main__' in __name__:
-    for m_id in tqdm(MODELS):
+    for m_id in tqdm([model.model_id for model in storage.MODELS]):
         update_local_models(m_id)

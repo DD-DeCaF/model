@@ -1,29 +1,22 @@
-aiohttp==2.3.10
-aiozmq==0.7.1
-aiohttp_cors==0.5.3
-msgpack-python==0.4.8
-cobra==0.8.2
-cameo==0.11.0
-swiglpk==1.4.3
-gnomic==0.7.0
-jsonpatch==1.16
-requests==2.18.4
-redis==2.10.6
-gunicorn==19.7.1
-uvloop==0.8.1
-venom==1.0.0a1
-grpcio==1.7.0
-aioredis==1.0
-deepdiff==1.0.0
-tqdm==4.19.4
-raven==6.3.0
-yarl==1.1.1
+Flask
+Flask-Cors
+gevent
+cobra
+cameo
+gnomic
+requests
+redis
+gunicorn
+tqdm
+raven[flask]
 prometheus-client
+python-jose
 
 # Testing and QA
 codecov
 flake8
 isort
-pytest-aiohttp
-pytest-asyncio
 pytest-cov
+
+# Development tools
+ipython

@@ -24,6 +24,7 @@ metadata:
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "8000"
+    prometheus.io/path: "/mcaffeine/metrics"
 spec:
   selector:
     app: model

@@ -12,26 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import time
-
-from flask import g, request
-
-from .metrics import REQUEST_TIME
-
-
-logger = logging.getLogger(__name__)
-
-
-def init_app(app):
-    @app.before_request
-    def before_request():
-        g.request_start = time.time()
-
-    @app.after_request
-    def after_request(response):
-        request_duration = time.time() - g.request_start
-        REQUEST_TIME.labels('model',
-                            app.config['ENVIRONMENT'],
-                            request.path).observe(request_duration)
-        return response
+MEDIUM_SALTS = {}
+with open('data/salts.csv') as f:
+    for line in f.read().splitlines():
+        salt, compounds = line.split(':')
+        MEDIUM_SALTS[salt] = [comp.split(',') for comp in compounds.split(';')]

@@ -15,6 +15,15 @@
 
 """Configure the gunicorn server."""
 
+# Ensure gevent is monkeypatched before ssl is imported (gunicorn does this too
+# late). This is only necessary when `preload_app` is True. The gevent warning
+# is still printed, but testing shows that recursion errors do not occur (eg. on
+# use of `requests`) when monkey-patching here.
+# See also https://github.com/gevent/gevent/issues/1016 and
+# https://github.com/benoitc/gunicorn/issues/1566
+import gevent.monkey
+gevent.monkey.patch_all()
+
 import os
 
 from prometheus_client import multiprocess
@@ -23,9 +32,8 @@ from prometheus_client import multiprocess
 _config = os.environ["ENVIRONMENT"]
 
 bind = "0.0.0.0:8000"
-worker_class = "aiohttp.worker.GunicornWebWorker"
+worker_class = "gevent"
 timeout = 20
-accesslog = "-"
 
 
 def child_exit(server, worker):
@@ -35,8 +43,8 @@ def child_exit(server, worker):
 if _config in ['production', 'staging']:
     workers = os.cpu_count() * 2 + 1
     preload_app = True
-    loglevel = "INFO"
 elif _config in ['testing', 'development']:
     workers = 1
     reload = True
-    loglevel = "DEBUG"
+    accesslog = "-"
+    access_log_format = '''%(t)s "%(r)s" %(s)s %(b)s %(L)s "%(f)s"'''

@@ -23,12 +23,30 @@ spec:
         env:
         - name: ENVIRONMENT
           value: production
+        - name: SCRIPT_NAME
+          value: /model
         - name: REDIS_ADDR
           value: localhost
         - name: REDIS_PORT
           value: "6379"
+        - name: MODEL_STORAGE_API
+          value: https://api.dd-decaf.eu/mstorage
         - name: ANNOTATIONS_API
           value: http://gene-to-reactions-production/annotation/genes
+        - name: ICE_API
+          value: https://ice.dd-decaf.eu
+        - name: IAM_API
+          value: https://api.dd-decaf.eu/iam
+        - name: ICE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: model-production
+              key: ICE_USERNAME
+        - name: ICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: model-production
+              key: ICE_PASSWORD
         - name: ID_MAPPER_API
           value: http://id-mapper-production/idmapping/query
         - name: prometheus_multiproc_dir
@@ -44,7 +62,12 @@ spec:
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+        command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
+        readinessProbe:
+          httpGet:
+            path: /model/healthz
+            port: 8000
+          initialDelaySeconds: 5
         resources:
           requests:
             cpu: "750m"
@@ -92,12 +115,18 @@ spec:
         env:
         - name: ENVIRONMENT
           value: staging
+        - name: SCRIPT_NAME
+          value: /mcaffeine
         - name: REDIS_ADDR
           value: localhost
         - name: REDIS_PORT
           value: "6379"
+        - name: MODEL_STORAGE_API
+          value: https://api-staging.dd-decaf.eu/mstorage
         - name: ICE_API
           value: https://ice.dd-decaf.eu
+        - name: IAM_API
+          value: https://api-staging.dd-decaf.eu/iam
         - name: ICE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -117,24 +146,32 @@ spec:
             secretKeyRef:
               name: model-staging
               key: SENTRY_DSN
+        # Disabling sympy cache prevents significant memory leaks in the cobrapy stack
+        - name: SYMPY_USE_CACHE
+          value: "no"
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--preload", "-t", "30", "-k", "aiohttp.worker.GunicornWebWorker", "model.app:get_app()"]
+        command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
+        readinessProbe:
+          httpGet:
+            path: /mcaffeine/healthz
+            port: 8000
+          initialDelaySeconds: 5
         resources:
           requests:
-            cpu: "100m"
+            cpu: "1000m"
           limits:
-            cpu: "500m"
+            cpu: "6000m"
       - name: redis
         image: redis:latest
         ports:
         - containerPort: 6379
         resources:
           requests:
-            cpu: "10m"
-          limits:
             cpu: "100m"
+          limits:
+            cpu: "2000m"
       volumes:
       - name: prometheus-client
         emptyDir: {}

@@ -15,20 +15,24 @@ services:
     depends_on:
       - redis
     environment:
-      - PYTHONASYNCIODEBUG=1
       - ENVIRONMENT=development
+      - SCRIPT_NAME=${SCRIPT_NAME}
       - REDIS_ADDR=${REDIS_ADDR:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - ICE_API=${ICE_API:-https://ice.dd-decaf.eu}
+      - IAM_API=${IAM_API:-https://api-staging.dd-decaf.eu/iam}
       - ICE_USERNAME=${ICE_USERNAME}
       - ICE_PASSWORD=${ICE_PASSWORD}
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
+      - MODEL_STORAGE_API=${MODEL_STORAGE_API:-https://api-staging.dd-decaf.eu/mstorage}
       - prometheus_multiproc_dir=/prometheus-client
+      # Disabling sympy cache prevents significant memory leaks in the cobrapy stack
+      - SYMPY_USE_CACHE=no
     volumes:
       - .:/app
       - type: tmpfs
         target: "/prometheus-client"
-    command: gunicorn -c gunicorn.py model.app:get_app()
+    command: gunicorn -c gunicorn.py model.wsgi:app
 
   redis:
     image: redis

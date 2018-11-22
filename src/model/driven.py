@@ -14,15 +14,51 @@
 
 import logging
 
-from numpy import isinf
+import numpy as np
+import pandas as pd
 from optlang.symbolics import Zero
-from pandas import Series
 
 
 logger = logging.getLogger(__name__)
 
 
 """This module may one day be replaced with http://driven.bio/"""
+
+
+def minimize_distance(model, biomass_reaction, measurements):
+    """Replaces fluxomics measurements with the minimized distance"""
+    index = []
+    observations = []
+    uncertainties = []
+
+    for measure in [m for m in measurements if m['type'] == 'reaction']:
+        index.append(measure['id'])
+        observations.append(np.nanmean(measure['measurements']))
+        if len(measure['measurements']) >= 3:
+            uncertainties.append(np.nanstd(measure['measurements'], ddof=1))
+        else:
+            uncertainties.append(1)
+
+    try:
+        # Include growth rate measurement
+        growth_rate = next(m for m in measurements if m['type'] == 'growth-rate')
+        index.append(biomass_reaction)
+        observations.append(np.nanmean(growth_rate['measurements']))
+        uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
+                             if len(growth_rate['measurements']) >= 3 else 1)
+    except StopIteration:
+        pass
+
+    observations = pd.Series(index=index, data=observations)
+    uncertainties = pd.Series(index=index, data=uncertainties)
+
+    solution = adjust_fluxes2model(model, observations, uncertainties)
+    for reaction, minimized_distance in solution.fluxes.iteritems():
+        for measurement in measurements:
+            if (measurement['type'] == 'growth-rate' and reaction == biomass_reaction
+                    or reaction == measurement.get('id')):
+                measurement['measurements'] = [minimized_distance]
+    return measurements
 
 
 def adjust_fluxes2model(model, observations, uncertainties=None, linear=True,
@@ -58,13 +94,13 @@ def adjust_fluxes2model(model, observations, uncertainties=None, linear=True,
     flux_col = "flux"
     weight_col = "weight"
     if uncertainties is None:
-        data = observations.to_frame().join(Series([], name=weight_col))
+        data = observations.to_frame().join(pd.Series([], name=weight_col))
     else:
         uncertainties.name = weight_col
         data = observations.to_frame().join(uncertainties)
     data.columns = [flux_col, weight_col]
     # replace missing and zero values
-    data.loc[data[weight_col].isnull() | isinf(data[weight_col]) |
+    data.loc[data[weight_col].isnull() | np.isinf(data[weight_col]) |
              (data[weight_col] == 0), weight_col] = 1
     prob = model.problem
     to_add = list()

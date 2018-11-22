@@ -14,12 +14,14 @@
 
 import pytest
 
-from model.response import respond
-from model.storage import Models
+from model.cobra_helpers import get_unique_metabolite
+from model.exceptions import NoIDMapping
 
 
-@pytest.mark.asyncio
-async def test_respond():
-    message = {'to-return': ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions'],
-               'theoretical-objectives': ['bigg:akg']}
-    assert set((await respond(Models.get('iJO1366'), message)).keys()) == set(message['to-return'])
+def test_existing_metabolite(iJO1366):
+    iJO1366, biomass_reaction = iJO1366
+    assert get_unique_metabolite(iJO1366, 'chebi:17790') == get_unique_metabolite(
+        iJO1366, 'meoh', db_name='bigg.metabolite')
+    assert get_unique_metabolite(iJO1366, 'succ', db_name='bigg.metabolite').formula == 'C4H4O4'
+    with pytest.raises(NoIDMapping):
+        get_unique_metabolite(iJO1366, 'wrong_id')

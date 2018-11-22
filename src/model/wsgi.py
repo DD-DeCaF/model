@@ -12,26 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import time
+"""Prepare the application for use by the WSGI server (gunicorn)."""
 
-from flask import g, request
-
-from .metrics import REQUEST_TIME
+from .app import app, init_app
 
 
-logger = logging.getLogger(__name__)
-
-
-def init_app(app):
-    @app.before_request
-    def before_request():
-        g.request_start = time.time()
-
-    @app.after_request
-    def after_request(response):
-        request_duration = time.time() - g.request_start
-        REQUEST_TIME.labels('model',
-                            app.config['ENVIRONMENT'],
-                            request.path).observe(request_duration)
-        return response
+init_app(app, None)
