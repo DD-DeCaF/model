@@ -35,7 +35,7 @@ class MockResponseSuccess:
                 'compartments': {},
             },
             'project_id': None,
-            'organism_id': "bar",
+            'organism_id': 2,
             'default_biomass_reaction': "baz",
         }
 
