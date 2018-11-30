@@ -42,17 +42,14 @@ def model_get_modified(model_id):
     except ModelNotFound as error:
         return error.message, 404
 
-    # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
-    # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
-    # This is an expensive operation, it can take a few seconds for large models.
-    model = model_wrapper.model.copy()
+    # Use the context manager to undo all modifications to the shared model instance on completion.
+    with model_wrapper.model as model:
+        try:
+            apply_operations(model, request.json['operations'])
+        except KeyError:
+            return "Missing field 'operations'", 400
 
-    try:
-        apply_operations(model, request.json['operations'])
-    except KeyError:
-        return "Missing field 'operations'", 400
-
-    return jsonify(model_to_dict(model))
+        return jsonify(model_to_dict(model))
 
 
 def model_modify(model_id):
@@ -68,42 +65,39 @@ def model_modify(model_id):
     except ModelNotFound as error:
         return error.message, 404
 
-    # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
-    # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
-    # This is an expensive operation, it can take a few seconds for large models.
-    model = model_wrapper.model.copy()
+    # Use the context manager to undo all modifications to the shared model instance on completion.
+    with model_wrapper.model as model:
+        try:
+            conditions = request.json['conditions']
+        except KeyError:
+            return "Missing field 'conditions'", 400
 
-    try:
-        conditions = request.json['conditions']
-    except KeyError:
-        return "Missing field 'conditions'", 400
+        # Build list of operations to perform on the model
+        operations = []
+        errors = []
+        if 'medium' in conditions:
+            operations_medium, errors_medium = adapt_from_medium(model, conditions['medium'])
+            operations.extend(operations_medium)
+            errors.extend(errors_medium)
 
-    # Build list of operations to perform on the model
-    operations = []
-    errors = []
-    if 'medium' in conditions:
-        operations_medium, errors_medium = adapt_from_medium(model, conditions['medium'])
-        operations.extend(operations_medium)
-        errors.extend(errors_medium)
+        if 'genotype' in conditions:
+            operations_genotype, errors_genotype = adapt_from_genotype(model, conditions['genotype'])
+            operations.extend(operations_genotype)
+            errors.extend(errors_genotype)
 
-    if 'genotype' in conditions:
-        operations_genotype, errors_genotype = adapt_from_genotype(model, conditions['genotype'])
-        operations.extend(operations_genotype)
-        errors.extend(errors_genotype)
+        if 'measurements' in conditions:
+            operations_measurements, errors_measurements = adapt_from_measurements(model, model_wrapper.biomass_reaction,
+                                                                                conditions['measurements'])
+            operations.extend(operations_measurements)
+            errors.extend(errors_measurements)
 
-    if 'measurements' in conditions:
-        operations_measurements, errors_measurements = adapt_from_measurements(model, model_wrapper.biomass_reaction,
-                                                                               conditions['measurements'])
-        operations.extend(operations_measurements)
-        errors.extend(errors_measurements)
-
-    if errors:
-        # If any errors occured during modifications, discard generated operations and return the error messages to the
-        # client for follow-up
-        return jsonify({'errors': errors})
-    else:
-        delta_id = deltas.save(model.id, conditions, operations)
-        return jsonify({'id': delta_id, 'operations': operations})
+        if errors:
+            # If any errors occured during modifications, discard generated operations and return the error messages to the
+            # client for follow-up
+            return jsonify({'errors': errors})
+        else:
+            delta_id = deltas.save(model.id, conditions, operations)
+            return jsonify({'id': delta_id, 'operations': operations})
 
 
 def model_simulate():
@@ -124,10 +118,7 @@ def model_simulate():
         except ModelNotFound as error:
             return error.message, 404
 
-        # Make a copy of the shared model instance for this request. It is not sufficient to use the cobra model context
-        # manager here, as long as we're using async gunicorn workers and app state can be shared between requests.
-        # This is an expensive operation, it can take a few seconds for large models.
-        model = model_wrapper.model.copy()
+        model = model_wrapper.model
     elif 'model' in request.json:
         # Client provided a full custom model and biomass reaction
         logger.debug("Simulating ad-hoc model provided by client")
@@ -149,27 +140,29 @@ def model_simulate():
     else:
         return f"Missing field 'model' or 'model_id'", 400
 
-    operations = []
+    # Use the context manager to undo all modifications to the shared model instance on completion.
+    with model:
+        operations = []
 
-    if 'delta_id' in request.json:
-        delta_id = request.json['delta_id']
-        try:
-            operations.extend(deltas.load_from_key(delta_id))
-        except KeyError:
-            return f"Cannot find delta id '{delta_id}'", 404
+        if 'delta_id' in request.json:
+            delta_id = request.json['delta_id']
+            try:
+                operations.extend(deltas.load_from_key(delta_id))
+            except KeyError:
+                return f"Cannot find delta id '{delta_id}'", 404
 
-    if 'operations' in request.json:
-        operations.extend(request.json['operations'])
+        if 'operations' in request.json:
+            operations.extend(request.json['operations'])
 
-    apply_operations(model, operations)
+        apply_operations(model, operations)
 
-    # Parse solver request args and set defaults
-    method = request.json.get('method', 'fba')
-    objective_id = request.json.get('objective')
-    objective_direction = request.json.get('objective_direction')
+        # Parse solver request args and set defaults
+        method = request.json.get('method', 'fba')
+        objective_id = request.json.get('objective')
+        objective_direction = request.json.get('objective_direction')
 
-    flux_distribution, growth_rate = simulate(model, biomass_reaction, method, objective_id, objective_direction)
-    return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
+        flux_distribution, growth_rate = simulate(model, biomass_reaction, method, objective_id, objective_direction)
+        return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 
 def metrics():
