@@ -15,15 +15,6 @@
 
 """Configure the gunicorn server."""
 
-# Ensure gevent is monkeypatched before ssl is imported (gunicorn does this too
-# late). This is only necessary when `preload_app` is True. The gevent warning
-# is still printed, but testing shows that recursion errors do not occur (eg. on
-# use of `requests`) when monkey-patching here.
-# See also https://github.com/gevent/gevent/issues/1016 and
-# https://github.com/benoitc/gunicorn/issues/1566
-import gevent.monkey
-gevent.monkey.patch_all()
-
 import os
 
 from prometheus_client import multiprocess
@@ -32,7 +23,11 @@ from prometheus_client import multiprocess
 _config = os.environ["ENVIRONMENT"]
 
 bind = "0.0.0.0:8000"
-worker_class = "gevent"
+# This service, as an exception, uses synchronous workers to avoid having to
+# share model state between workers. This allows us to use cobrapy's context
+# manager while making modifications to the shared model instances, resetting
+# them on completion.
+worker_class = "sync"
 timeout = 20
 
 
@@ -41,11 +36,11 @@ def child_exit(server, worker):
 
 
 if _config in ['production', 'staging']:
-    # Our resource policy is that each web service is granted at least a single
-    # vCPU when available. The number of workers is then a guess that having two
-    # workers I/O bound and a third processing a request will utilize available
-    # resources well, but that guess needs to be tested and benchmarked.
-    workers = 3
+    # Considerations when choosing the number of synchronous workers:
+    # - How many simultaneous requests do we want to be able to handle
+    # - Separate workers will cache non-public models separately, meaning the
+    #   more workers the less likely to get a cache hit.
+    workers = 6
     preload_app = True
 elif _config in ['testing', 'development']:
     workers = 1
