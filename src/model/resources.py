@@ -97,7 +97,7 @@ def model_modify(model_id):
         if errors:
             # If any errors occured during modifications, discard generated operations and return the error messages to
             # the client for follow-up
-            return jsonify({'errors': errors})
+            return jsonify({'errors': errors}), 400
         else:
             delta_id = deltas.save(model.id, conditions, operations)
             return jsonify({'id': delta_id, 'operations': operations})
