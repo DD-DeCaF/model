@@ -28,7 +28,9 @@ bind = "0.0.0.0:8000"
 # manager while making modifications to the shared model instances, resetting
 # them on completion.
 worker_class = "sync"
-timeout = 20
+# The timeout is increased from the default of 20s, to allow time to deserialize
+# proprietary models that are not preloaded on service startup.
+timeout = 120
 
 
 def child_exit(server, worker):
