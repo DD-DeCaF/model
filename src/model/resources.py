@@ -86,14 +86,17 @@ def model_modify(model_id):
             errors.extend(errors_genotype)
 
         if 'measurements' in conditions:
-            operations_measurements, errors_measurements = adapt_from_measurements(model, model_wrapper.biomass_reaction,
-                                                                                conditions['measurements'])
+            operations_measurements, errors_measurements = adapt_from_measurements(
+                model,
+                model_wrapper.biomass_reaction,
+                conditions['measurements'],
+            )
             operations.extend(operations_measurements)
             errors.extend(errors_measurements)
 
         if errors:
-            # If any errors occured during modifications, discard generated operations and return the error messages to the
-            # client for follow-up
+            # If any errors occured during modifications, discard generated operations and return the error messages to
+            # the client for follow-up
             return jsonify({'errors': errors})
         else:
             delta_id = deltas.save(model.id, conditions, operations)
