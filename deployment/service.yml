@@ -1,25 +1,6 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: model-production
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8000"
-spec:
-  selector:
-    app: model
-    env: production
-  ports:
-  - name: web
-    protocol: TCP
-    port: 80
-    targetPort: 8000
-
----
-
-kind: Service
-apiVersion: v1
-metadata:
   name: model-staging
   annotations:
     prometheus.io/scrape: "true"
