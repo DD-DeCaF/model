@@ -68,16 +68,16 @@ spec:
           initialDelaySeconds: 5
         resources:
           requests:
-            cpu: "1000m"
+            cpu: "10m"
           limits:
-            cpu: "6000m"
+            cpu: "4000m"
       - name: redis
         image: redis:latest
         ports:
         - containerPort: 6379
         resources:
           requests:
-            cpu: "100m"
+            cpu: "10m"
           limits:
             cpu: "2000m"
       volumes:
