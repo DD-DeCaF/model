@@ -30,11 +30,11 @@ spec:
         - name: REDIS_PORT
           value: "6379"
         - name: MODEL_STORAGE_API
-          value: http://model-storage-staging
+          value: http://model-storage-staging/mstorage
         - name: ICE_API
           value: http://ice
         - name: IAM_API
-          value: http://iam-staging
+          value: http://iam-staging/iam
         - name: ICE_USERNAME
           valueFrom:
             secretKeyRef:
