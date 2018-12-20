@@ -26,8 +26,6 @@ services:
       - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
       - MODEL_STORAGE_API=${MODEL_STORAGE_API:-https://api-staging.dd-decaf.eu/mstorage}
       - prometheus_multiproc_dir=/prometheus-client
-      # Disabling sympy cache prevents significant memory leaks in the cobrapy stack
-      - SYMPY_USE_CACHE=no
     volumes:
       - .:/app
       - type: tmpfs
