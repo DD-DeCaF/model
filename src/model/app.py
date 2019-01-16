@@ -16,17 +16,18 @@
 
 import logging
 import logging.config
+import os
 
 from flask import Flask
 from flask_cors import CORS
 from raven.contrib.flask import Sentry
 from werkzeug.contrib.fixers import ProxyFix
 
-from model.settings import Settings
+from model.settings import current_config
 
 
 app = Flask(__name__)
-app.config.from_object(Settings())
+app.config.from_object(current_config())
 
 
 def init_app(application, interface):
@@ -53,5 +54,5 @@ def init_app(application, interface):
     resources.init_app(application)
 
     # Preload all models in production/staging environments
-    if app.config['ENVIRONMENT'] in ('production', 'staging'):
+    if os.environ['ENVIRONMENT'] in ('production', 'staging'):
         storage.preload_public_models()

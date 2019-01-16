@@ -14,6 +14,7 @@
 
 import json
 import logging
+import os
 
 import requests
 
@@ -31,7 +32,7 @@ class ICE(metaclass=Singleton):
 
     def __init__(self):
         """On instantiation, request and store a session id for later use."""
-        if app.config['ENVIRONMENT'] in ('production', 'staging', 'testing'):
+        if os.environ['ENVIRONMENT'] in ('production', 'staging', 'testing'):
             self._update_session_id()
         else:
             # To speed up development, don't set a valid session id on init but rely on the re-authentication logic
@@ -41,14 +42,14 @@ class ICE(metaclass=Singleton):
     def get_reaction_equations(self, genotype):
         """Request genotype part info from ICE and return reaction map information from the references field."""
         logger.info(f"Requesting genotype '{genotype}' from ICE")
-        with API_REQUESTS.labels('model', app.config['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
+        with API_REQUESTS.labels('model', os.environ['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
             response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
 
         # In case of authentication failure, get a new session id and re-try the request. The ICE documentation says
         # nothing about access token expiry, so it's not clear whether this can or will ever occur.
         if response.status_code in (401, 403):
             self._update_session_id()
-            with API_REQUESTS.labels('model', app.config['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
+            with API_REQUESTS.labels('model', os.environ['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
                 response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
 
         # If the part is not found, raise the corresponding exception

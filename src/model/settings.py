@@ -12,48 +12,102 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Provide settings for different deployment scenarios."""
+
 import os
 
 import requests
+import werkzeug.exceptions
 
 
-class Settings:
-    ENVIRONMENT = os.environ['ENVIRONMENT']
-    assert ENVIRONMENT in ('production', 'staging', 'testing', 'development')
+__all__ = ("Development", "Testing", "Production")
 
-    APISPEC_TITLE = "Simulations"
-    APISPEC_SWAGGER_UI_URL = "/"
 
-    ICE_API = os.environ['ICE_API']
-    ICE_USERNAME = os.environ['ICE_USERNAME']
-    ICE_PASSWORD = os.environ['ICE_PASSWORD']
-    ID_MAPPER_API = os.environ['ID_MAPPER_API']
-    MODEL_STORAGE_API = os.environ['MODEL_STORAGE_API']
-    SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
-    JWT_PUBLIC_KEY = requests.get(f"{os.environ['IAM_API']}/keys").json()["keys"][0]
+def current_config():
+    """Return the appropriate configuration object based on the environment."""
+    if os.environ['ENVIRONMENT'] in ['production', 'staging']:
+        return Production()
+    elif os.environ['ENVIRONMENT'] == 'testing':
+        return Testing()
+    elif os.environ['ENVIRONMENT'] == 'development':
+        return Development()
+    else:
+        raise KeyError(f"Unknown environment '{os.environ['ENVIRONMENT']}'")
 
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'simple': {
-                'format': "%(asctime)s [%(levelname)s] [%(name)s] %(filename)s:%(funcName)s:%(lineno)d | %(message)s",
+
+class Default:
+    """Set the default configuration for all environments."""
+
+    def __init__(self):
+        """
+        Initialize the default configuration.
+
+        We chose configuration by instances in order to avoid ``KeyError``s
+        from environments that are not active but access
+        ``os.environ.__getitem__``.
+        """
+        self.APISPEC_TITLE = "Simulations"
+        self.APISPEC_SWAGGER_UI_URL = "/"
+
+        self.ICE_API = os.environ['ICE_API']
+        self.ICE_USERNAME = os.environ['ICE_USERNAME']
+        self.ICE_PASSWORD = os.environ['ICE_PASSWORD']
+        self.ID_MAPPER_API = os.environ['ID_MAPPER_API']
+        self.MODEL_STORAGE_API = os.environ['MODEL_STORAGE_API']
+        self.SENTRY_DSN = os.environ.get('SENTRY_DSN')
+        self.SENTRY_CONFIG = {
+            'ignore_exceptions': [
+                werkzeug.exceptions.BadRequest,
+                werkzeug.exceptions.Unauthorized,
+                werkzeug.exceptions.Forbidden,
+                werkzeug.exceptions.NotFound,
+                werkzeug.exceptions.MethodNotAllowed,
+            ]
+        }
+        self.JWT_PUBLIC_KEY = requests.get(f"{os.environ['IAM_API']}/keys").json()["keys"][0]
+
+        self.LOGGING = {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'formatters': {
+                'simple': {
+                    'format': (
+                        "%(asctime)s [%(levelname)s] [%(name)s] %(filename)s:%(funcName)s:%(lineno)d | %(message)s"
+                    ),
+                },
             },
-        },
-        'handlers': {
-            'console': {
+            'handlers': {
+                'console': {
+                    'level': 'DEBUG',
+                    'class': 'logging.StreamHandler',
+                    'formatter': 'simple',
+                },
+            },
+            'loggers': {
+                # All loggers will by default use the root logger below (and
+                # hence be very verbose). To silence spammy/uninteresting log
+                # output, add the loggers here and increase the loglevel.
+            },
+            'root': {
                 'level': 'DEBUG',
-                'class': 'logging.StreamHandler',
-                'formatter': 'simple',
+                'handlers': ['console'],
             },
-        },
-        'loggers': {
-            # All loggers will by default use the root logger below (and
-            # hence be very verbose). To silence spammy/uninteresting log
-            # output, add the loggers here and increase the loglevel.
-        },
-        'root': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-        },
-    }
+        }
+
+
+class Development(Default):
+    def __init__(self):
+        super().__init__()
+        self.DEBUG = True
+
+
+class Testing(Default):
+    def __init__(self):
+        super().__init__()
+        self.TESTING = True
+
+
+class Production(Default):
+    def __init__(self):
+        super().__init__()
+        self.DEBUG = False

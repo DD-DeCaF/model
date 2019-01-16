@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 import time
 
 from flask import g, request
@@ -32,6 +33,6 @@ def init_app(app):
     def after_request(response):
         request_duration = time.time() - g.request_start
         REQUEST_TIME.labels('model',
-                            app.config['ENVIRONMENT'],
+                            os.environ['ENVIRONMENT'],
                             request.path).observe(request_duration)
         return response
