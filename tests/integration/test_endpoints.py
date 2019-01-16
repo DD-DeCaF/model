@@ -99,7 +99,7 @@ def test_simulate_different_objective(client, models):
     assert abs(result['flux_distribution']['EX_etoh_e']) < 0.001
 
 
-def test_deltas_post(monkeypatch, client, models):
+def test_modify(monkeypatch, client, models):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
