@@ -16,6 +16,7 @@ import logging
 
 from cobra.io.dict import model_from_dict, model_to_dict
 from flask import Response, abort, jsonify, request
+from flask_apispec.extension import FlaskApiSpec
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
@@ -31,12 +32,17 @@ logger = logging.getLogger(__name__)
 
 def init_app(app):
     """Register API resources on the provided Flask application."""
-    # TODO: use flask-apispec
+    app.add_url_rule('/healthz', view_func=healthz)
+    app.add_url_rule('/metrics', view_func=metrics)
+
     app.add_url_rule('/models/<model_id>', view_func=model_get_modified, methods=['POST'])
     app.add_url_rule('/models/<model_id>/modify', view_func=model_modify, methods=['POST'])
     app.add_url_rule('/simulate', view_func=model_simulate, methods=['POST'])
-    app.add_url_rule('/metrics', view_func=metrics)
-    app.add_url_rule('/healthz', view_func=healthz)
+
+    docs = FlaskApiSpec(app)
+    docs.register(model_get_modified, endpoint=model_get_modified.__name__)
+    docs.register(model_modify, endpoint=model_modify.__name__)
+    docs.register(model_simulate, endpoint=model_simulate.__name__)
 
 
 def model_get_modified(model_id):

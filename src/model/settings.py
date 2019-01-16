@@ -21,6 +21,9 @@ class Settings:
     ENVIRONMENT = os.environ['ENVIRONMENT']
     assert ENVIRONMENT in ('production', 'staging', 'testing', 'development')
 
+    APISPEC_TITLE = "Simulations"
+    APISPEC_SWAGGER_UI_URL = "/"
+
     ICE_API = os.environ['ICE_API']
     ICE_USERNAME = os.environ['ICE_USERNAME']
     ICE_PASSWORD = os.environ['ICE_PASSWORD']
