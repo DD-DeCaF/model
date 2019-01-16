@@ -33,7 +33,7 @@ def init_app(application, interface):
     """Initialize the main app with config information and routes."""
     # Note that local modules are imported here to avoid circular imports in
     # modules that need to import the app.
-    from model import jwt, middleware, resources, storage
+    from model import errorhandlers, jwt, middleware, resources, storage
 
     # Configuration
     app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -47,6 +47,7 @@ def init_app(application, interface):
     middleware.init_app(application)
     jwt.init_app(application)
     CORS(application)
+    errorhandlers.init_app(application)
 
     # Routes and resources
     resources.init_app(application)
