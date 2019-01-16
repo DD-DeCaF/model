@@ -29,6 +29,16 @@ from model.simulations import simulate
 logger = logging.getLogger(__name__)
 
 
+def init_app(app):
+    """Register API resources on the provided Flask application."""
+    # TODO: use flask-apispec
+    app.add_url_rule('/models/<model_id>', view_func=model_get_modified, methods=['POST'])
+    app.add_url_rule('/models/<model_id>/modify', view_func=model_modify, methods=['POST'])
+    app.add_url_rule('/simulate', view_func=model_simulate, methods=['POST'])
+    app.add_url_rule('/metrics', view_func=metrics)
+    app.add_url_rule('/healthz', view_func=healthz)
+
+
 def model_get_modified(model_id):
     if not request.is_json:
         return "Non-JSON request content is not supported", 415

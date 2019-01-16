@@ -49,12 +49,7 @@ def init_app(application, interface):
     CORS(application)
 
     # Routes and resources
-    # TODO: use flask-apispec
-    app.add_url_rule('/models/<model_id>', view_func=resources.model_get_modified, methods=['POST'])
-    app.add_url_rule('/models/<model_id>/modify', view_func=resources.model_modify, methods=['POST'])
-    app.add_url_rule('/simulate', view_func=resources.model_simulate, methods=['POST'])
-    app.add_url_rule('/metrics', view_func=resources.metrics)
-    app.add_url_rule('/healthz', view_func=resources.healthz)
+    resources.init_app(application)
 
     # Preload all models in production/staging environments
     if app.config['ENVIRONMENT'] in ('production', 'staging'):
