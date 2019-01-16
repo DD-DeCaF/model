@@ -16,6 +16,7 @@ import logging
 
 from cobra.io.dict import model_from_dict, model_to_dict
 from flask import Response, abort, jsonify, request
+from flask_apispec import use_kwargs
 from flask_apispec.extension import FlaskApiSpec
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
@@ -24,6 +25,7 @@ from model import storage
 from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 from model.exceptions import Forbidden, ModelNotFound, Unauthorized
 from model.operations import apply_operations
+from model.schemas import ModificationRequest, Operation, SimulationRequest
 from model.simulations import simulate
 
 
@@ -45,10 +47,8 @@ def init_app(app):
     docs.register(model_simulate, endpoint=model_simulate.__name__)
 
 
-def model_get_modified(model_id):
-    if not request.is_json:
-        abort(415, "Non-JSON request content is not supported")
-
+@use_kwargs(Operation(many=True))
+def model_get_modified(model_id, operations):
     try:
         model_wrapper = storage.get(model_id)
     except Unauthorized as error:
@@ -60,15 +60,12 @@ def model_get_modified(model_id):
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model_wrapper.model as model:
-        try:
-            apply_operations(model, request.json['operations'])
-        except KeyError:
-            abort(400, "Missing field 'operations'")
-
+        apply_operations(model, operations)
         return jsonify(model_to_dict(model))
 
 
-def model_modify(model_id):
+@use_kwargs(ModificationRequest)
+def model_modify(model_id, medium, genotype, measurements):
     if not request.is_json:
         abort(415, "Non-JSON request content is not supported")
 
@@ -83,29 +80,24 @@ def model_modify(model_id):
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model_wrapper.model as model:
-        try:
-            conditions = request.json['conditions']
-        except KeyError:
-            abort(400, "Missing field 'conditions'")
-
         # Build list of operations to perform on the model
         operations = []
         errors = []
-        if 'medium' in conditions:
-            operations_medium, errors_medium = adapt_from_medium(model, conditions['medium'])
+        if medium:
+            operations_medium, errors_medium = adapt_from_medium(model, medium)
             operations.extend(operations_medium)
             errors.extend(errors_medium)
 
-        if 'genotype' in conditions:
-            operations_genotype, errors_genotype = adapt_from_genotype(model, conditions['genotype'])
+        if genotype:
+            operations_genotype, errors_genotype = adapt_from_genotype(model, genotype)
             operations.extend(operations_genotype)
             errors.extend(errors_genotype)
 
-        if 'measurements' in conditions:
+        if measurements:
             operations_measurements, errors_measurements = adapt_from_measurements(
                 model,
                 model_wrapper.biomass_reaction,
-                conditions['measurements'],
+                measurements,
             )
             operations.extend(operations_measurements)
             errors.extend(errors_measurements)
@@ -118,11 +110,9 @@ def model_modify(model_id):
             return jsonify({'operations': operations})
 
 
-def model_simulate():
-    if not request.is_json:
-        abort(415, "Non-JSON request content is not supported")
-
-    if 'model_id' in request.json:
+@use_kwargs(SimulationRequest)
+def model_simulate(model_id, model, biomass_reaction, method, objective_id, objective_direction, operations):
+    if model_id:
         # Client provided an identifier to some model in the model storage service, retrieve it
         logger.debug(f"Simulating model by id {request.json['model_id']}")
 
@@ -137,7 +127,7 @@ def model_simulate():
             abort(404, error.message)
 
         model = model_wrapper.model
-    elif 'model' in request.json:
+    elif model:
         # Client provided a full custom model and biomass reaction
         logger.debug("Simulating ad-hoc model provided by client")
 
@@ -148,26 +138,16 @@ def model_simulate():
             logger.warning(f"Cobrapy could not deserialize provided model: {str(error)}", exc_info=True)
             logger.debug(f"Full serialized model: {model_dict}")
             abort(400, f"The provided model is not deserializable by cobrapy")
-        try:
-            biomass_reaction = request.json['biomass_reaction']
-        except KeyError:
+        if not biomass_reaction:
             abort(400, f"Missing field 'biomass_reaction'")
-        else:
-            if not model.reactions.has_id(biomass_reaction):
-                abort(400, f"There is no biomass reaction with id '{biomass_reaction}' in the model")
+        if not model.reactions.has_id(biomass_reaction):
+            abort(400, f"There is no biomass reaction with id '{biomass_reaction}' in the model")
     else:
         abort(400, f"Missing field 'model' or 'model_id'")
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model:
-        if 'operations' in request.json:
-            apply_operations(model, request.json['operations'])
-
-        # Parse solver request args and set defaults
-        method = request.json.get('method', 'fba')
-        objective_id = request.json.get('objective')
-        objective_direction = request.json.get('objective_direction')
-
+        apply_operations(model, operations)
         flux_distribution, growth_rate = simulate(model, biomass_reaction, method, objective_id, objective_direction)
         return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
