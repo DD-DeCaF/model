@@ -22,11 +22,11 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_l
 from prometheus_client.multiprocess import MultiProcessCollector
 
 from model import storage
-from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 from model.exceptions import Forbidden, ModelNotFound, Unauthorized
-from model.operations import apply_operations
+from model.modeling.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
+from model.modeling.operations import apply_operations
+from model.modeling.simulations import simulate
 from model.schemas import ModificationRequest, Operation, SimulationRequest
-from model.simulations import simulate
 
 
 logger = logging.getLogger(__name__)

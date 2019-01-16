@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from model.driven import adjust_fluxes2model, minimize_distance
+from model.modeling.driven import adjust_fluxes2model, minimize_distance
 
 
 def test_minimize_distance(iJO1366):

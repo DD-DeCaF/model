@@ -18,12 +18,12 @@ import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
-from model.cobra_helpers import get_unique_metabolite
-from model.driven import minimize_distance
 from model.exceptions import NoIDMapping, PartNotFound
-from model.gnomic_helpers import feature_id, full_genotype
 from model.ice_client import ICE
-from model.salts import MEDIUM_SALTS
+from model.modeling.cobra_helpers import get_unique_metabolite
+from model.modeling.driven import minimize_distance
+from model.modeling.gnomic_helpers import feature_id, full_genotype
+from model.modeling.salts import MEDIUM_SALTS
 
 
 logger = logging.getLogger(__name__)

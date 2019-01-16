@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 from model.ice_client import ICE
+from model.modeling.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 
 
 def test_medium_adapter(iJO1366):

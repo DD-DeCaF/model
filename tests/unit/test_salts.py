@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.salts import MEDIUM_SALTS
+from model.modeling.salts import MEDIUM_SALTS
 
 
 def test_medium_salts():
