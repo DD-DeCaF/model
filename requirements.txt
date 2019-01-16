@@ -5,7 +5,6 @@ cobra
 cameo
 gnomic
 requests
-redis
 gunicorn
 tqdm
 raven[flask]

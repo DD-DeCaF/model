@@ -27,8 +27,6 @@ class Settings:
     ID_MAPPER_API = os.environ['ID_MAPPER_API']
     MODEL_STORAGE_API = os.environ['MODEL_STORAGE_API']
     SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
-    REDIS_ADDR = os.environ['REDIS_ADDR']
-    REDIS_PORT = os.environ['REDIS_PORT']
     JWT_PUBLIC_KEY = requests.get(f"{os.environ['IAM_API']}/keys").json()["keys"][0]
 
     LOGGING = {

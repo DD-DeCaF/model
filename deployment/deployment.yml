@@ -25,10 +25,6 @@ spec:
           value: staging
         - name: SCRIPT_NAME
           value: /mcaffeine
-        - name: REDIS_ADDR
-          value: localhost
-        - name: REDIS_PORT
-          value: "6379"
         - name: MODEL_STORAGE_API
           value: http://model-storage-staging/mstorage
         - name: ICE_API
@@ -68,15 +64,6 @@ spec:
             cpu: "10m"
           limits:
             cpu: "4000m"
-      - name: redis
-        image: redis:latest
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: "10m"
-          limits:
-            cpu: "2000m"
       volumes:
       - name: prometheus-client
         emptyDir: {}
