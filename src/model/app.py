@@ -22,46 +22,40 @@ from flask_cors import CORS
 from raven.contrib.flask import Sentry
 from werkzeug.contrib.fixers import ProxyFix
 
-from model import jwt
 from model.settings import Settings
 
 
 app = Flask(__name__)
 app.config.from_object(Settings())
-app.wsgi_app = ProxyFix(app.wsgi_app)
 
 
 def init_app(application, interface):
     """Initialize the main app with config information and routes."""
-    # Configure logging
+    # Note that local modules are imported here to avoid circular imports in
+    # modules that need to import the app.
+    from model import jwt, middleware, resources, storage
+
+    # Configuration
+    app.wsgi_app = ProxyFix(app.wsgi_app)
     logging.config.dictConfig(application.config['LOGGING'])
-
-    # Configure middleware
-    from model import middleware
-    middleware.init_app(application)
-
-    # Configure Sentry
     if application.config['SENTRY_DSN']:
         sentry = Sentry(dsn=application.config['SENTRY_DSN'], logging=True,
                         level=logging.WARNING)
         sentry.init_app(application)
 
-    # Add JWT handlers
+    # Middleware and global handlers
+    middleware.init_app(application)
     jwt.init_app(application)
+    CORS(application)
 
-    # Add routes and resources.
+    # Routes and resources
     # TODO: use flask-apispec
-    from model import resources
     app.add_url_rule('/models/<model_id>', view_func=resources.model_get_modified, methods=['POST'])
     app.add_url_rule('/models/<model_id>/modify', view_func=resources.model_modify, methods=['POST'])
     app.add_url_rule('/simulate', view_func=resources.model_simulate, methods=['POST'])
     app.add_url_rule('/metrics', view_func=resources.metrics)
     app.add_url_rule('/healthz', view_func=resources.healthz)
 
-    # Add CORS information for all resources.
-    CORS(application)
-
     # Preload all models in production/staging environments
-    from model import storage
     if app.config['ENVIRONMENT'] in ('production', 'staging'):
         storage.preload_public_models()
