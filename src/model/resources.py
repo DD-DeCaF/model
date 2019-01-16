@@ -19,7 +19,7 @@ from flask import Response, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
-from model import deltas, storage
+from model import storage
 from model.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
 from model.exceptions import Forbidden, ModelNotFound, Unauthorized
 from model.operations import apply_operations
@@ -99,8 +99,7 @@ def model_modify(model_id):
             # the client for follow-up
             return jsonify({'errors': errors}), 400
         else:
-            delta_id = deltas.save(model.id, conditions, operations)
-            return jsonify({'id': delta_id, 'operations': operations})
+            return jsonify({'operations': operations})
 
 
 def model_simulate():
@@ -145,19 +144,8 @@ def model_simulate():
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model:
-        operations = []
-
-        if 'delta_id' in request.json:
-            delta_id = request.json['delta_id']
-            try:
-                operations.extend(deltas.load_from_key(delta_id))
-            except KeyError:
-                return f"Cannot find delta id '{delta_id}'", 404
-
         if 'operations' in request.json:
-            operations.extend(request.json['operations'])
-
-        apply_operations(model, operations)
+            apply_operations(model, request.json['operations'])
 
         # Parse solver request args and set defaults
         method = request.json.get('method', 'fba')
