@@ -16,41 +16,6 @@
 
 import pytest
 
-from model import deltas
-from model.adapter import adapt_from_medium
-from model.operations import apply_operations
-
-
-def test_modify_restore(iJO1366):
-    """
-    Modifying a model, saving it, loading the operations, and re-applying them to a wild type model, should yield a
-    model with the same modifications.
-    """
-    iJO1366, biomass_reaction = iJO1366
-    original_medium = iJO1366.medium
-    medium = [
-        {'id': 'chebi:44080'},
-        {'id': 'chebi:15075'},
-        {'id': 'chebi:15377'},
-        {'id': 'chebi:15378'},
-    ]
-
-    # Applying the new medium should yield a different composition
-    with iJO1366:
-        operations, errors = adapt_from_medium(iJO1366, medium)
-        apply_operations(iJO1366, operations)
-        modified_medium = iJO1366.medium
-        assert original_medium != modified_medium
-
-    # Cache and reload the operations
-    deltas.save(iJO1366.id, {'medium': medium}, operations)
-    loaded_operations = deltas.load(iJO1366.id, {'medium': medium})
-
-    # Reapplying the loaded operations to a clean model should result in the exact same medium composition again
-    with iJO1366:
-        apply_operations(iJO1366, loaded_operations)
-        assert iJO1366.medium == modified_medium
-
 
 @pytest.mark.skip(reason="Namespaces are not currently mapped. Large test; unclear what exactly is tested for.")
 def test_reactions_additions(monkeypatch, iJO1366):
