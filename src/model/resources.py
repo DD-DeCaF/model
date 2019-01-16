@@ -15,7 +15,7 @@
 import logging
 
 from cobra.io.dict import model_from_dict, model_to_dict
-from flask import Response, jsonify, request
+from flask import Response, abort, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
@@ -41,46 +41,46 @@ def init_app(app):
 
 def model_get_modified(model_id):
     if not request.is_json:
-        return "Non-JSON request content is not supported", 415
+        abort(415, "Non-JSON request content is not supported")
 
     try:
         model_wrapper = storage.get(model_id)
     except Unauthorized as error:
-        return error.message, 401
+        abort(401, error.message)
     except Forbidden as error:
-        return error.message, 403
+        abort(403, error.message)
     except ModelNotFound as error:
-        return error.message, 404
+        abort(404, error.message)
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model_wrapper.model as model:
         try:
             apply_operations(model, request.json['operations'])
         except KeyError:
-            return "Missing field 'operations'", 400
+            abort(400, "Missing field 'operations'")
 
         return jsonify(model_to_dict(model))
 
 
 def model_modify(model_id):
     if not request.is_json:
-        return "Non-JSON request content is not supported", 415
+        abort(415, "Non-JSON request content is not supported")
 
     try:
         model_wrapper = storage.get(model_id)
     except Unauthorized as error:
-        return error.message, 401
+        abort(401, error.message)
     except Forbidden as error:
-        return error.message, 403
+        abort(403, error.message)
     except ModelNotFound as error:
-        return error.message, 404
+        abort(404, error.message)
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model_wrapper.model as model:
         try:
             conditions = request.json['conditions']
         except KeyError:
-            return "Missing field 'conditions'", 400
+            abort(400, "Missing field 'conditions'")
 
         # Build list of operations to perform on the model
         operations = []
@@ -114,7 +114,7 @@ def model_modify(model_id):
 
 def model_simulate():
     if not request.is_json:
-        return "Non-JSON request content is not supported", 415
+        abort(415, "Non-JSON request content is not supported")
 
     if 'model_id' in request.json:
         # Client provided an identifier to some model in the model storage service, retrieve it
@@ -124,11 +124,11 @@ def model_simulate():
             model_wrapper = storage.get(request.json['model_id'])
             biomass_reaction = model_wrapper.biomass_reaction
         except Unauthorized as error:
-            return error.message, 401
+            abort(401, error.message)
         except Forbidden as error:
-            return error.message, 403
+            abort(403, error.message)
         except ModelNotFound as error:
-            return error.message, 404
+            abort(404, error.message)
 
         model = model_wrapper.model
     elif 'model' in request.json:
@@ -141,16 +141,16 @@ def model_simulate():
         except Exception as error:
             logger.warning(f"Cobrapy could not deserialize provided model: {str(error)}", exc_info=True)
             logger.debug(f"Full serialized model: {model_dict}")
-            return f"The provided model is not deserializable by cobrapy", 400
+            abort(400, f"The provided model is not deserializable by cobrapy")
         try:
             biomass_reaction = request.json['biomass_reaction']
         except KeyError:
-            return f"Missing field 'biomass_reaction'", 400
+            abort(400, f"Missing field 'biomass_reaction'")
         else:
             if not model.reactions.has_id(biomass_reaction):
-                return f"There is no biomass reaction with id '{biomass_reaction}' in the model", 400
+                abort(400, f"There is no biomass reaction with id '{biomass_reaction}' in the model")
     else:
-        return f"Missing field 'model' or 'model_id'", 400
+        abort(400, f"Missing field 'model' or 'model_id'")
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model:
