@@ -13,13 +13,9 @@
 # limitations under the License.
 
 
-class NoIDMapping(Exception):
+class MetaboliteNotFound(Exception):
     """Thrown when a search for a given metabolite identifier does not yield any result."""
-    def __init__(self, compound_id):
-        self.value = compound_id
-
-    def __str__(self):
-        return f"No metabolite associated with {self.value}"
+    pass
 
 
 class PartNotFound(Exception):

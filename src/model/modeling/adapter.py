@@ -18,9 +18,9 @@ import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
-from model.exceptions import NoIDMapping, PartNotFound
+from model.exceptions import MetaboliteNotFound, PartNotFound
 from model.ice_client import ICE
-from model.modeling.cobra_helpers import get_unique_metabolite
+from model.modeling.cobra_helpers import find_metabolite
 from model.modeling.driven import minimize_distance
 from model.modeling.gnomic_helpers import feature_id, full_genotype
 from model.modeling.salts import MEDIUM_SALTS
@@ -60,7 +60,7 @@ def apply_medium(model, medium):
     # Detect salt compounds
     chebi_ids = [c['id'] for c in medium]
     for compound in chebi_ids:
-        chebi_id = compound.replace('chebi:', '')
+        chebi_id = compound.replace('CHEBI:', '')
         if chebi_id in MEDIUM_SALTS:
             compounds = MEDIUM_SALTS[chebi_id]
             n_not_found = len([i for i in compounds if not i])
@@ -70,12 +70,12 @@ def apply_medium(model, medium):
             for array in compounds:
                 for compound in array:
                     if compound:
-                        medium.append({'id': 'chebi:' + compound})
+                        medium.append({'id': f"CHEBI:{compound}", 'namespace': 'chebi'})
 
     # Add trace metals
     medium.extend([
-        {'id': 'chebi:25517', 'name': 'nickel'},
-        {'id': 'chebi:25368', 'name': 'molybdate'},
+        {'id': 'CHEBI:25517', 'namespace': 'chebi'},
+        {'id': 'CHEBI:25368', 'namespace': 'chebi'},
     ])
 
     # Create a map of exchange reactions and corresponding fluxes to apply to
@@ -83,8 +83,8 @@ def apply_medium(model, medium):
     medium_mapping = {}
     for compound in medium:
         try:
-            metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
-        except NoIDMapping:
+            metabolite = find_metabolite(model, compound['id'], compound['namespace'], 'e')
+        except MetaboliteNotFound:
             errors.append(f"Cannot add medium compund '{compound['id']}' - metabolite not found in extracellular "
                           "compartment")
         else:
@@ -266,9 +266,9 @@ def apply_measurements(model, biomass_reaction, measurements):
         if scalar['type'] == 'compound':
             try:
                 compound = scalar['id']
-                metabolite = get_unique_metabolite(model, compound, 'e', 'CHEBI')
-            except NoIDMapping:
-                errors.append(f"Cannot find compound '{compound}' in the model")
+                metabolite = find_metabolite(model, scalar['id'], scalar['namespace'], 'e')
+            except MetaboliteNotFound as error:
+                errors.append(str(error))
             else:
                 exchange_reactions = metabolite.reactions.intersection(model.exchanges)
                 if len(exchange_reactions) != 1:
@@ -311,10 +311,10 @@ def apply_measurements(model, biomass_reaction, measurements):
                 'id': reaction.id,
                 'data': reaction_to_dict(reaction),
             })
-        elif scalar['type'] == 'protein' and scalar['mode'] == 'quantitative':
+        elif scalar['type'] == 'protein':
             try:
                 def query_fun(rxn):
-                    xrefs = rxn.annotation.get(scalar['db_name'], [])
+                    xrefs = rxn.annotation.get(scalar['namespace'], [])
                     xrefs = xrefs if isinstance(xrefs, list) else [xrefs]
                     return scalar['id'] in xrefs
 
