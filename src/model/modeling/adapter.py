@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 ice = ICE()
 
 
-def adapt_from_medium(model, medium):
+def apply_medium(model, medium):
     """
     Apply a medium to a metabolic model.
 
@@ -127,7 +127,7 @@ def adapt_from_medium(model, medium):
     return operations, errors
 
 
-def adapt_from_genotype(model, genotype_changes):
+def apply_genotype(model, genotype_changes):
     """
     Apply genotype changes to a metabolic model.
 
@@ -219,7 +219,7 @@ def adapt_from_genotype(model, genotype_changes):
     return operations, errors
 
 
-def adapt_from_measurements(model, biomass_reaction, measurements):
+def apply_measurements(model, biomass_reaction, measurements):
     """
     Apply omics measurements to a metabolic model.
 

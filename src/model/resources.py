@@ -23,7 +23,7 @@ from prometheus_client.multiprocess import MultiProcessCollector
 
 from model import storage
 from model.exceptions import Forbidden, ModelNotFound, Unauthorized
-from model.modeling.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
+from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium
 from model.modeling.operations import apply_operations
 from model.modeling.simulations import simulate
 from model.schemas import ModificationRequest, Operation, SimulationRequest
@@ -84,17 +84,17 @@ def model_modify(model_id, medium, genotype, measurements):
         operations = []
         errors = []
         if medium:
-            operations_medium, errors_medium = adapt_from_medium(model, medium)
+            operations_medium, errors_medium = apply_medium(model, medium)
             operations.extend(operations_medium)
             errors.extend(errors_medium)
 
         if genotype:
-            operations_genotype, errors_genotype = adapt_from_genotype(model, genotype)
+            operations_genotype, errors_genotype = apply_genotype(model, genotype)
             operations.extend(operations_genotype)
             errors.extend(errors_genotype)
 
         if measurements:
-            operations_measurements, errors_measurements = adapt_from_measurements(
+            operations_measurements, errors_measurements = apply_measurements(
                 model,
                 model_wrapper.biomass_reaction,
                 measurements,
