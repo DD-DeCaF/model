@@ -32,13 +32,28 @@ ice = ICE()
 
 def adapt_from_medium(model, medium):
     """
-    Returns a list of operations to apply the given medium to the given model
+    Apply a medium to a metabolic model.
 
-    :param model: cobra.Model
-    :param medium: list of dictionaries of format
-        {'id': <compound id (<database>:<id>, f.e. chebi:12345)>, 'concentration': <compound concentration (float)>}
+    The medium is applied by adding salt mappings, resolving the corresponding
+    exchange reaction for the resulting medium compounds, setting their uptake
+    rate, and then applying that to the model.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    medium: list(dict)
+        The medium definition, a list of dicts matching the `MediumCompound`
+        schema.
+
+    Returns
+    -------
+    tuple (operations, errors)
+        Operations is a list of model operations necessary to apply the medium
+        to the model. See also the `Operations` schema.
+        If errors is not an empty list, it was not possible to apply the medium.
+        Errors then contains a list of string messages describing the
+        problem(s).
     """
-
     operations = []
     errors = []
 
@@ -63,7 +78,8 @@ def adapt_from_medium(model, medium):
         {'id': 'chebi:25368', 'name': 'molybdate'},
     ])
 
-    # Make all metabolites in the medium consumable by setting the exchange reactions lower bound to a negative number
+    # Create a map of exchange reactions and corresponding fluxes to apply to
+    # the medium.
     medium_mapping = {}
     for compound in medium:
         try:
@@ -113,10 +129,27 @@ def adapt_from_medium(model, medium):
 
 def adapt_from_genotype(model, genotype_changes):
     """
-    Return a list of operations to apply to a model based on the given genotype changes.
+    Apply genotype changes to a metabolic model.
 
-    :param model: cobra.Model
-    :param genotype_changes: list of genotype change strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
+    The genotype is first parsed by gnomic. Removed features (genes) are knocked
+    out, while added features are added by looking up reaction definitions in
+    ICE and adding those to the model.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    genotype_changes: list(str)
+        A list of genotype change strings parseable by gnomic. For example:
+        ["-tyrA::kanMX+", "kanMX-"].
+
+    Returns
+    -------
+    tuple (operations, errors)
+        Operations is a list of model operations necessary to apply the medium
+        to the model. See also the `Operations` schema.
+        If errors is not an empty list, it was not possible to apply the medium.
+        Errors then contains a list of string messages describing the
+        problem(s).
     """
     operations = []
     errors = []
@@ -188,14 +221,28 @@ def adapt_from_genotype(model, genotype_changes):
 
 def adapt_from_measurements(model, biomass_reaction, measurements):
     """
-    For each measured flux (production-rate / uptake-rate), constrain the model by forcing their upper and lower bounds
-    to the measured values.
+    Apply omics measurements to a metabolic model.
 
-    :param model: cobra.Model
-    :param biomass_reaction: a string referencing the id of the biomass reaction in the given model
-    :param measurements:
-        A list of dictionaries of format
-        {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurements': list(<measurement (float)>)}
+    For each measured flux (production-rate / uptake-rate), constrain the model
+    by forcing their upper and lower bounds to the measured values.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    biomass_reaction: str
+        The id of the biomass reaction in the given model.
+    measurements: list(dict)
+        The measurements, a list of dicts matching the `Measurement` schema.
+
+    Returns
+    -------
+    tuple (operations, errors)
+        Operations is a list of model operations necessary to apply the
+        measurements to the model. See also the `Operations` schema.
+        If errors is not an empty list, it was not possible to apply the
+        measurements.
+        Errors then contains a list of string messages describing the
+        problem(s).
     """
     operations = []
     errors = []
