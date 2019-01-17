@@ -17,7 +17,7 @@ import os
 import pytest
 from cobra.io import read_sbml_model
 
-from model.modeling.adapter import get_unique_metabolite
+from model.modeling.cobra_helpers import find_metabolite
 from tools.update_models import update_local_models
 
 
@@ -25,6 +25,6 @@ from tools.update_models import update_local_models
 def test_update_models(tmpdir):
     update_local_models('e_coli_core', tmpdir)
     model = read_sbml_model(os.path.join(tmpdir, 'e_coli_core.sbml.gz'))
-    glucose = get_unique_metabolite(model, 'CHEBI:42758')
+    glucose = find_metabolite(model, 'CHEBI:42758', "CHEBI")
     assert glucose.id == 'glc__D_e'
     assert glucose.annotation['bigg.metabolite'] == 'glc__D'
