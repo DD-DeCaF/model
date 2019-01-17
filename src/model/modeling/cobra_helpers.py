@@ -46,7 +46,3 @@ def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
     if len(metabolites) < 1:
         raise NoIDMapping(compound_id)
     return metabolites[0]
-
-
-def strip_compartment(x):
-    return x[:-2] if re.match('.*_[cepm]$', x) else x
