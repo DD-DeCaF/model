@@ -14,7 +14,54 @@
 
 import re
 
-from model.exceptions import MetaboliteNotFound
+from model.exceptions import MetaboliteNotFound, ReactionNotFound
+
+
+def find_reaction(model, id, namespace):
+    """
+    Search for a given reaction in the model, also searching in annotations.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    id: str
+        The identifier of the reaction to find.
+    namespace: str
+        The miriam namespace identifier in which the given metabolite is
+        registered. See https://www.ebi.ac.uk/miriam/main/collections
+
+    Returns
+    -------
+    cobra.Reaction
+        Returns the reaction object.
+
+    Raises
+    ------
+    IndexError
+        If multiple reaction are found for the given search query.
+    ReactionNotFound
+        If no reactions are found for the given parameters.
+    """
+    def query_fun(reaction):
+        # Match namespace and identifiers case-insensitively
+        for model_namespace, model_ids in reaction.annotation.items():
+            if namespace.lower() != model_namespace.lower():
+                return False
+            if isinstance(model_ids, list):
+                return id.lower() in [i.lower() for i in model_ids]
+            else:
+                return id.lower() == model_ids.lower()
+
+    reactions = model.reactions.query(query_fun)
+    if len(reactions) == 0:
+        raise ReactionNotFound(
+            f"Could not find reaction {id} in namespace {namespace} for "
+            f"model {model.id}"
+        )
+    elif len(reactions) > 1:
+        raise IndexError(f"Expected single reaction, found {reactions}")
+    else:
+        return reactions[0]
 
 
 def find_metabolite(model, id, namespace, compartment='e'):

@@ -18,6 +18,11 @@ class MetaboliteNotFound(Exception):
     pass
 
 
+class ReactionNotFound(Exception):
+    """Thrown when a search for a given reaction identifier does not yield any result."""
+    pass
+
+
 class PartNotFound(Exception):
     """Thrown by the ICE client when a requested genotype part is not found"""
     pass

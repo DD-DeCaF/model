@@ -18,9 +18,9 @@ import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
-from model.exceptions import MetaboliteNotFound, PartNotFound
+from model.exceptions import MetaboliteNotFound, ReactionNotFound, PartNotFound
 from model.ice_client import ICE
-from model.modeling.cobra_helpers import find_metabolite
+from model.modeling.cobra_helpers import find_metabolite, find_reaction
 from model.modeling.driven import minimize_distance
 from model.modeling.gnomic_helpers import feature_id, full_genotype
 from model.modeling.salts import MEDIUM_SALTS
@@ -313,14 +313,9 @@ def apply_measurements(model, biomass_reaction, measurements):
             })
         elif scalar['type'] == 'protein':
             try:
-                def query_fun(rxn):
-                    xrefs = rxn.annotation.get(scalar['namespace'], [])
-                    xrefs = xrefs if isinstance(xrefs, list) else [xrefs]
-                    return scalar['id'] in xrefs
-
-                reaction = model.reactions.query(query_fun)[0]
-            except (IndexError, KeyError):
-                errors.append(f"Cannot find reaction '{scalar['id']}' in the model")
+                reaction = find_reaction(model, scalar['id'], scalar['namespace'])
+            except ReactionNotFound as error:
+                errors.append(str(error))
             else:
                 reaction.bounds = 0, upper_bound
                 operations.append({
