@@ -265,7 +265,6 @@ def apply_measurements(model, biomass_reaction, measurements):
 
         if scalar['type'] == 'compound':
             try:
-                compound = scalar['id']
                 metabolite = find_metabolite(model, scalar['id'], scalar['namespace'], 'e')
             except MetaboliteNotFound as error:
                 errors.append(str(error))
