@@ -120,3 +120,25 @@ def test_modify(monkeypatch, client, models):
     })
     assert response.status_code == 200
     assert len(response.json['operations']) == 329
+
+
+def test_prokaryomics_md120_bw25113(monkeypatch, client, models):
+    """Test constraining and simulating a model with a real data set"""
+    # Disable GPR queries for efficiency
+    monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
+
+    data = {
+        'medium': [{'id': 'CHEBI:131527', 'namespace': 'CHEBI'}, {'id': 'CHEBI:3312', 'namespace': 'CHEBI'}, {'id': 'CHEBI:16015', 'namespace': 'CHEBI'}, {'id': 'CHEBI:26710', 'namespace': 'CHEBI'}, {'id': 'CHEBI:30808', 'namespace': 'CHEBI'}, {'id': 'CHEBI:32599', 'namespace': 'CHEBI'}, {'id': 'CHEBI:34683', 'namespace': 'CHEBI'}, {'id': 'CHEBI:35696', 'namespace': 'CHEBI'}, {'id': 'CHEBI:42758', 'namespace': 'CHEBI'}, {'id': 'CHEBI:49553', 'namespace': 'CHEBI'}, {'id': 'CHEBI:49976', 'namespace': 'CHEBI'}, {'id': 'CHEBI:62946', 'namespace': 'CHEBI'}, {'id': 'CHEBI:63041', 'namespace': 'CHEBI'}, {'id': 'CHEBI:63043', 'namespace': 'CHEBI'}, {'id': 'CHEBI:75215', 'namespace': 'CHEBI'}],  # noqa
+        'measurements': [{'id': 'CS', 'namespace': 'bigg.reaction', 'measurements': [7.2], 'type': 'reaction'}, {'id': 'FBA', 'namespace': 'bigg.reaction', 'measurements': [7.9], 'type': 'reaction'}, {'id': 'PFK', 'namespace': 'bigg.reaction', 'measurements': [7.9], 'type': 'reaction'}, {'id': 'FUM', 'namespace': 'bigg.reaction', 'measurements': [6.7], 'type': 'reaction'}, {'id': 'GAPD', 'namespace': 'bigg.reaction', 'measurements': [16.8], 'type': 'reaction'}, {'id': 'G6PDH2r', 'namespace': 'bigg.reaction', 'measurements': [4.6], 'type': 'reaction'}, {'id': 'PGI', 'namespace': 'bigg.reaction', 'measurements': [5.3], 'type': 'reaction'}, {'id': 'GLCptspp', 'namespace': 'bigg.reaction', 'measurements': [10.0], 'type': 'reaction'}, {'id': 'ME1', 'namespace': 'bigg.reaction', 'measurements': [0.3], 'type': 'reaction'}, {'id': 'ME2', 'namespace': 'bigg.reaction', 'measurements': [0.3], 'type': 'reaction'}, {'id': 'MDH', 'namespace': 'bigg.reaction', 'measurements': [6.5], 'type': 'reaction'}, {'id': 'PYK', 'namespace': 'bigg.reaction', 'measurements': [12.0], 'type': 'reaction'}, {'id': 'PPC', 'namespace': 'bigg.reaction', 'measurements': [3.0], 'type': 'reaction'}, {'id': 'PPCK', 'namespace': 'bigg.reaction', 'measurements': [3.0], 'type': 'reaction'}, {'id': 'PDH', 'namespace': 'bigg.reaction', 'measurements': [9.4], 'type': 'reaction'}, {'id': 'TKT1', 'namespace': 'bigg.reaction', 'measurements': [1.5], 'type': 'reaction'}, {'id': 'TALA', 'namespace': 'bigg.reaction', 'measurements': [1.5], 'type': 'reaction'}, {'id': 'TKT2', 'namespace': 'bigg.reaction', 'measurements': [1.1], 'type': 'reaction'}],  # noqa
+        'genotype': ['-b3643,-b0062,-b0063,-b0061,-b4350,-b3902,-b3903'],
+    }
+
+    response = client.post("/models/test_iJO1366/modify", json=data)
+    assert response.status_code == 200
+
+    response = client.post("/simulate", json={
+        'model_id': 'test_iJO1366',
+        'operations': response.json['operations'],
+    })
+    assert response.status_code == 200
+    assert response.json['growth_rate'] == pytest.approx(0.5134445454218568)
