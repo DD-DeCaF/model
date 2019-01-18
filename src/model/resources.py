@@ -105,9 +105,9 @@ def model_modify(model_id, medium, genotype, measurements):
         if errors:
             # If any errors occured during modifications, discard generated operations and return the error messages to
             # the client for follow-up
-            return jsonify({'errors': errors}), 400
+            return {'errors': errors}, 400
         else:
-            return jsonify({'operations': operations})
+            return {'operations': operations}
 
 
 @use_kwargs(SimulationRequest)
