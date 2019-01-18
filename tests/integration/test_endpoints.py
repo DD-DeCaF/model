@@ -117,16 +117,3 @@ def test_modify(monkeypatch, client, models):
     })
     assert response.status_code == 200
     assert len(response.json['operations']) == 329
-
-
-def test_simulate_provided_model(client, e_coli_core):
-    e_coli_core, biomass_reaction = e_coli_core
-    model_serialized = model_to_dict(e_coli_core)
-    response = client.post("/simulate", json={'model': model_serialized, 'biomass_reaction': biomass_reaction})
-    assert response.status_code == 200
-    assert response.json['growth_rate'] == pytest.approx(0.8739215069684307)
-
-
-def test_simulate_provided_invalid_model(client):
-    response = client.post("/simulate", json={'model': {'invalid': 42}, 'biomass_reaction': "foo"})
-    assert response.status_code == 400
