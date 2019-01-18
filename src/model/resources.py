@@ -14,7 +14,7 @@
 
 import logging
 
-from cobra.io.dict import model_from_dict, model_to_dict
+from cobra.io.dict import model_to_dict
 from flask import Response, abort, jsonify, request
 from flask_apispec import use_kwargs
 from flask_apispec.extension import FlaskApiSpec
