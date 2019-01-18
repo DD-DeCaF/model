@@ -18,7 +18,7 @@ import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
-from model.exceptions import MetaboliteNotFound, ReactionNotFound, PartNotFound
+from model.exceptions import MetaboliteNotFound, PartNotFound, ReactionNotFound
 from model.ice_client import ICE
 from model.modeling.cobra_helpers import find_metabolite, find_reaction
 from model.modeling.driven import minimize_distance
