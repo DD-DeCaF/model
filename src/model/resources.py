@@ -37,8 +37,8 @@ def init_app(app):
     app.add_url_rule('/healthz', view_func=healthz)
     app.add_url_rule('/metrics', view_func=metrics)
 
-    app.add_url_rule('/models/<model_id>', view_func=model_get_modified, methods=['POST'])
-    app.add_url_rule('/models/<model_id>/modify', view_func=model_modify, methods=['POST'])
+    app.add_url_rule('/models/<int:model_id>', view_func=model_get_modified, methods=['POST'])
+    app.add_url_rule('/models/<int:model_id>/modify', view_func=model_modify, methods=['POST'])
     app.add_url_rule('/simulate', view_func=model_simulate, methods=['POST'])
 
     docs = FlaskApiSpec(app)
