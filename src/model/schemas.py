@@ -20,8 +20,8 @@ from marshmallow import Schema, fields
 class Operation(Schema):
     operation = fields.String(required=True)
     type = fields.String(required=True)
-    id = fields.String()
-    data = fields.Raw()
+    id = fields.String(missing=None)
+    data = fields.Raw(missing=None)
 
     class Meta:
         strict = True
