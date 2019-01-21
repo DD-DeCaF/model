@@ -38,7 +38,7 @@ class ModificationRequest(Schema):
 
 
 class SimulationRequest(Schema):
-    model_id = fields.String(missing=None)
+    model_id = fields.Integer(missing=None)
     model = fields.Raw(missing=None)
     biomass_reaction = fields.String(missing=None)
     method = fields.String(missing='fba')
