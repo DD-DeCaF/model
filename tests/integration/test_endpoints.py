@@ -78,7 +78,11 @@ def test_simulate_modify(monkeypatch, client, models):
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'EX_etoh_e' for op in operations])  # noqa
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'PFK' for op in operations])
 
-    response = client.post("/simulate", json={'model_id': models['iJO1366'], 'method': 'pfba', 'operations': operations})
+    response = client.post("/simulate", json={
+        'model_id': models['iJO1366'],
+        'method': 'pfba',
+        'operations': operations,
+    })
     assert response.status_code == 200
     fluxes = response.json['flux_distribution']
 
