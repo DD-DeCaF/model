@@ -28,37 +28,37 @@ MEASUREMENTS = [
 
 
 def test_simulate_wrong_id(client):
-    response = client.post("/simulate", json={'model_id': 'wrong_id', 'message': {}})
+    response = client.post("/simulate", json={'model_id': 404, 'message': {}})
     assert response.status_code == 404
 
 
 def test_simulate_unauthorized(client, models):
-    response = client.post("/simulate", json={'model_id': 'test_e_coli_core_proprietary'})
+    response = client.post("/simulate", json={'model_id': models['e_coli_core_proprietary']})
     assert response.status_code == 403
 
 
 def test_simulate_no_operations(client, models):
-    response = client.post("/simulate", json={'model_id': 'test_iJO1366'})
+    response = client.post("/simulate", json={'model_id': models['iJO1366']})
     assert response.status_code == 200
 
 
 def test_simulate_infeasible(client, models):
     measurements = [{'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
-    response = client.post("/models/test_iJO1366/modify", json={'measurements': measurements})
+    response = client.post(f"/models/{models['iJO1366']}/modify", json={'measurements': measurements})
     assert response.status_code == 200
 
     operations = response.json['operations']
-    response = client.post("/simulate", json={'model_id': 'test_iJO1366', 'operations': operations})
+    response = client.post("/simulate", json={'model_id': models['iJO1366'], 'operations': operations})
     assert response.status_code == 200
     assert response.json['flux_distribution']['ATPM'] == pytest.approx(100)
 
 
 def test_simulate_fluxomics(monkeypatch, client, models):
-    response = client.post("/models/test_iJO1366/modify", json={'measurements': MEASUREMENTS})
+    response = client.post(f"/models/{models['iJO1366']}/modify", json={'measurements': MEASUREMENTS})
     assert response.status_code == 200
 
     operations = response.json['operations']
-    response = client.post("/simulate", json={'model_id': 'test_iJO1366', 'operations': operations})
+    response = client.post("/simulate", json={'model_id': models['iJO1366'], 'operations': operations})
     assert response.status_code == 200
     assert response.json['flux_distribution']['EX_glc__D_e'] == -9.0
     assert abs(response.json['flux_distribution']['EX_etoh_e'] - 4.64) < 0.001  # lower bound
@@ -70,7 +70,7 @@ def test_simulate_modify(monkeypatch, client, models):
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
     conditions = {'measurements': MEASUREMENTS, 'genotype': ['+Aac', '-pta']}
-    response = client.post("/models/test_iJO1366/modify", json=conditions)
+    response = client.post(f"/models/{models['iJO1366']}/modify", json=conditions)
     assert response.status_code == 200
 
     operations = response.json['operations']
@@ -78,7 +78,7 @@ def test_simulate_modify(monkeypatch, client, models):
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'EX_etoh_e' for op in operations])  # noqa
     assert any([op['operation'] == 'modify' and op['type'] == 'reaction' and op['id'] == 'PFK' for op in operations])
 
-    response = client.post("/simulate", json={'model_id': 'test_iJO1366', 'method': 'pfba', 'operations': operations})
+    response = client.post("/simulate", json={'model_id': models['iJO1366'], 'method': 'pfba', 'operations': operations})
     assert response.status_code == 200
     fluxes = response.json['flux_distribution']
 
@@ -88,12 +88,12 @@ def test_simulate_modify(monkeypatch, client, models):
 
 
 def test_simulate_different_objective(client, models):
-    response = client.post("/simulate", json={'model_id': 'test_iJO1366', 'objective': 'EX_etoh_e'})
+    response = client.post("/simulate", json={'model_id': models['iJO1366'], 'objective': 'EX_etoh_e'})
     assert response.status_code == 200
     result = response.json
     assert abs(result['flux_distribution']['EX_etoh_e']) - 20.0 < 0.001
 
-    response = client.post("/simulate", json={'model_id': 'test_iJO1366'})
+    response = client.post("/simulate", json={'model_id': models['iJO1366']})
     assert response.status_code == 200
     result = response.json
     assert abs(result['flux_distribution']['EX_etoh_e']) < 0.001
@@ -103,7 +103,7 @@ def test_modify(monkeypatch, client, models):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
-    response = client.post("/models/test_iJO1366/modify", json={
+    response = client.post(f"/models/{models['iJO1366']}/modify", json={
         'medium': [
             {'id': 'chebi:44080'}, {'id': 'chebi:15075'}, {'id': 'chebi:15377'}, {'id': 'chebi:15378'}, {'id': 'chebi:15379'}, {'id': 'chebi:15982'}, {'id': 'chebi:16189'}, {'id': 'chebi:16526'}, {'id': 'chebi:16643'}, {'id': 'chebi:17883'}, {'id': 'chebi:18212'}, {'id': 'chebi:18367'}, {'id': 'chebi:18420'}, {'id': 'chebi:25371'}, {'id': 'chebi:27638'}, {'id': 'chebi:28938'}, {'id': 'chebi:29033'}, {'id': 'chebi:29034'}, {'id': 'chebi:29035'}, {'id': 'chebi:29036'}, {'id': 'chebi:29101'}, {'id': 'chebi:29103'}, {'id': 'chebi:29105'}, {'id': 'chebi:29108'}, {'id': 'chebi:36271'}, {'id': 'chebi:42758'}, {'id': 'chebi:49786'}  # noqa
         ],
