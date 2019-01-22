@@ -12,20 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-There could be potential problems with BIGG metabolites that differ in charge
-but have the same formula. Keep an eye on:
-fe2 and fe3
-mn2 and mn4
-cu2 and cu
-Both from the couple are added to the model, even if only one is the part
-of the medium chemical.
-"""
 import json
-import os
-import re
 import xml.etree.ElementTree as ET
-from collections import defaultdict
 from functools import partial
 from multiprocessing import Pool
 from urllib import request
@@ -33,214 +21,186 @@ from urllib import request
 import requests
 
 
-FILE_PATH = 'ftp://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.obo'
-N_PROCESSES = 20
+class Chemical:
+    """
+    chebi: The chebi id, e.g. "CHEBI:12345"
+    ions: A list of ions this chemical can be split up to
+    ions_missing_smiles: A list of smiles ids that could not be mapped to ions
+    metals: A list of metals this chemical can be split up to
+    metals_missing_inchi: A list of inchi strings that could not be mapped to metals
+    """
+    def __init__(self, chebi):
+        self.chebi = chebi
+        self.ions = set()
+        self.ions_missing_smiles = []
+        self.metals = set()
+        self.metals_missing_inchi = []
 
-ID_MAPPER_API = os.environ['ID_MAPPER_API']
-
-
-def bigg_ids_items(items):
-    print("Start querying {} chemicals".format(len(items)))
-    return {k: bigg_ids(list(map(str, v))) for k, v in items}
-
-
-def bigg_ids(object_ids):
-    print("Call for {} chemical ids from id mapper".format(len(object_ids)))
-    query = json.dumps(
-        {'ids': object_ids, 'dbFrom': 'chebi', 'dbTo': 'bigg',
-         'type': 'Metabolite'})
-    r = requests.post(ID_MAPPER_API, data=query)
-    return r.json()['ids']
-
-
-def create_salts_mapping():
-    with request.urlopen(FILE_PATH) as f:
-        print('Retrieving the CHEBI file...')
-        all_chemicals = [i for i in f.read().decode("iso-8859-1").split('\n\n') if i[:5] == '[Term']
-        print('File is ready')
-        chebi_to_smiles = identifier_mapping(all_chemicals, 'smiles')
-        chebi_to_inchi = identifier_mapping(all_chemicals, 'inchi')
-        smiles_to_chebi = revert_mapping(chebi_to_smiles)
-        # NH4+ is a part of many media but is not found automatically
-        smiles_to_chebi['[NH4+]'] = [28938]
-        #
-        inchi_to_chebi = revert_mapping(chebi_to_inchi)
-        salts = [k for k in smiles_to_chebi if '.' in k]
-        compounds_not_found = missing_compounds(salts, smiles_to_chebi)
-        with Pool(processes=N_PROCESSES) as pool:
-            for result in pool.imap_unordered(
-                    partial(smiles_through_inchi, inchi_to_chebi),
-                    [compounds_not_found[i::N_PROCESSES] for i in range(N_PROCESSES)]
-            ):
-                smiles_to_chebi.update(result)
-        missing_compounds(salts, smiles_to_chebi)
-        salts = map_salts(smiles_to_chebi)
-        print(f'{len(salts)} salts is mapped, '
-              f'but one or more compounds are not present for '
-              f'{len({k for k, v in salts.items() if [] in v})}')
-
-        chebi_to_formula = generate_chebi_to_formula(chebi_to_inchi)
-        formula_to_chebi = {}
-        for k, v in chebi_to_formula.items():
-            formula_to_chebi[v] = formula_to_chebi.get(v, [])
-            formula_to_chebi[v].append(k)
-
-        chebi_to_formula_new_salts = {k: v for k, v in chebi_to_formula.items() if '.' in v and k not in salts}
-
-        metal_to_all_chebi = generate_metal_to_chebi(chebi_to_formula_new_salts, formula_to_chebi)
-        metal_to_chebi = metal_to_chebi_found_in_bigg(metal_to_all_chebi)
-
-        organometallic_compounds = get_organometallic_compounds(chebi_to_formula_new_salts, metal_to_chebi)
-
-        to_add = defaultdict(list)
-        for k, v in salts.items():
-            for array in v:
-                for element in array:
-                    if element in organometallic_compounds:
-                        to_add[k].extend(organometallic_compounds[element])
-        for k, v in to_add.items():
-            salts[k].extend(v)
-        salts.update(organometallic_compounds)
-        print(f'With {len(organometallic_compounds)} organometallic compounds '
-              f'the number of salts is {len(salts)}')
-
-        save_salts(salts)
+    def to_json(self):
+        return {
+            "ions": list(self.ions),
+            "ions_missing_smiles": self.ions_missing_smiles,
+            "metals": list(self.metals),
+            "metals_missing_inchi": self.metals_missing_inchi,
+        }
 
 
-def get_organometallic_compounds(chebi_to_formula_new_salts,
-                                 metal_to_chebi):
-    organometallic_compounds = {}
-    for k, v in chebi_to_formula_new_salts.items():
-        result = []
-        for element in v.split('.'):
-            element = element.lstrip('0123456789')
-            result.append(metal_to_chebi.get(element, []))
-        if any(result):
-            organometallic_compounds[k] = result
-    return organometallic_compounds
+def main():
+    print("Downloading chebi ontology (~125MB)...")
+    with request.urlopen("ftp://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.obo") as file_:
+        sections = file_.read().decode("iso-8859-1").split("\n\n")
+        print("Done, parsing and creating internal datastructures...")
+
+        # The following will be a complete list of all chemical instances parsed
+        # from the chebi ontology
+        all_chemicals = []
+
+        # Additionally, create maps for the various identifiers to their
+        # corresponding chemical instances
+        chebi = {}
+        smiles = {}
+        inchi = {}
+        inchi_formula = {}
+
+        # Parse each "Term" section of the obo file and generate the data
+        # structure described above.
+        for section in [s for s in sections if s.startswith("[Term]")]:
+            parse_obo_term_section(section, all_chemicals, chebi, smiles, inchi, inchi_formula)
+
+    map_ions(all_chemicals, smiles, inchi)
+    print(f"  {sum([len(c.ions) for c in all_chemicals])} ions successfully mapped")
+    print(f"  {sum([len(c.ions_missing_smiles) for c in all_chemicals])} ions are still unknown")
+
+    resolve_organometallic_metals(all_chemicals, inchi_formula)
+    print(f"  {sum([len(c.metals) for c in all_chemicals])} metals mapped")
+    print(f"  {sum([len(c.metals_missing_inchi) for c in all_chemicals])} metals are still unknown")
+
+    # Create a suitable json format and persist it to a file. We're adding indentation and sorting keys
+    # for readable diffs at later updates, at a small cost of file size.
+    salts = {c.chebi: c.to_json() for c in all_chemicals if c.ions or c.metals}
+    with open("data/salts.json", "w") as file_:
+        file_.write(json.dumps(salts, indent=2, sort_keys=True))
+
+    print(f"Wrote {len(salts)} salt mappings to 'data/salts.json'")
 
 
-def metal_to_chebi_found_in_bigg(metal_to_all_chebi):
-    metal_to_bigg = {}
-    with Pool(processes=N_PROCESSES) as pool:
-        for result in pool.imap_unordered(
-                bigg_ids_items,
-                [list(metal_to_all_chebi.items())[i::N_PROCESSES] for i
-                 in range(N_PROCESSES)]
-        ):
-            metal_to_bigg.update(result)
-    metal_to_chebi = {k: list(map(int, v.keys())) for k, v in
-                      metal_to_bigg.items() if v}
-    return metal_to_chebi
+def parse_obo_term_section(section, all_chemicals, chebi, smiles, inchi, inchi_formula):
+    for line in section.split("\n"):
+        if line.startswith("id: "):
+            # The first line is the identifier; initialize a new chemical instance
+            id = line.split()[1]
+            chemical = Chemical(id)
+            all_chemicals.append(chemical)
+            chebi[id] = chemical
+        elif line.startswith("property_value"):
+            if "smiles" in line:
+                # Set the smiles id on the chemical
+                id = line.split()[2].strip('"')
+                chemical.smiles = id
+
+                # Add the chemical to the smiles map
+                if id in smiles:
+                    smiles[id].append(chemical)
+                else:
+                    smiles[id] = [chemical]
+            elif "inchi " in line:  # The trailing space separates the inchi string from inchikey
+                # Set the inchi values on the chemical
+                id = line.split()[2].strip('"')
+                chemical.inchi = id
+                chemical.inchi_formula = id.split('/', 2)[1]
+
+                # Add the chemical to the inchi formula map
+                if chemical.inchi_formula in inchi_formula:
+                    inchi_formula[chemical.inchi_formula].append(chemical)
+                else:
+                    inchi_formula[chemical.inchi_formula] = [chemical]
+
+                # Add the chemical to the inchi map
+                if id in inchi:
+                    inchi[id].append(chemical)
+                else:
+                    inchi[id] = [chemical]
 
 
-def generate_metal_to_chebi(chebi_to_formula_new_salts, formula_to_chebi):
-    chebi_to_shortest_splits = {}
-    all_shortest = []
-    for k, v in chebi_to_formula_new_salts.items():
-        shortests = [i.lstrip('0123456789') for i in v.split('.') if
-                     len(i.lstrip('0123456789')) <= 3]
-        all_shortest.extend(shortests)
-        chebi_to_shortest_splits[k] = shortests
-    all_shortest = set(all_shortest)
-    metal_to_all_chebi = {i: formula_to_chebi[i] for i in all_shortest
-                          if i in formula_to_chebi}
-    return metal_to_all_chebi
+def map_ions(all_chemicals, smiles, inchi):
+    # Salts are recognized by a period in the smiles id, splitting up the chemicals.
+    smiles_salts = [c for c in all_chemicals if hasattr(c, "smiles") and "." in c.smiles]
+
+    # Create a separate map of unique ions, to avoid doing duplicate lookups.
+    # Later, we'll map these back to the chemical objects.
+    all_ions = {}
+    for chemical in smiles_salts:
+        for ion in chemical.smiles.split("."):
+            all_ions[ion] = None
+    print(f"{len(all_ions)} unique ions to map")
+
+    # Map ions using the smiles id
+    print("Looking up local smiles maps...")
+    for ion in all_ions:
+        if ion in smiles:
+            all_ions[ion] = smiles[ion]
+    print(f"  {len([c for c in all_ions.values() if c is not None])} ions mapped through smiles")
+
+    # Map the remaining ions using inchi keys
+    print(f"Mapping chemicals through inchi...")
+    print(f"  Looking up {len([i for i, c in all_ions.items() if c is None])} inchi maps in chemspider API (may take a few minutes)...")
+    with Pool(processes=20) as pool:
+        func = partial(map_inchi, inchi)
+        missing_ions = [smiles_ion for smiles_ion, chebi_ids in all_ions.items() if chebi_ids is None]
+        for smiles_ion, chemicals in pool.imap_unordered(func, missing_ions, chunksize=100):
+            if chemicals is not None:
+                all_ions[smiles_ion] = chemicals
+    print()
+
+    # Now assign the mapped ions back to the chemical objects
+    for chemical in smiles_salts:
+        for ion in chemical.smiles.split("."):
+            if all_ions[ion] is None:
+                chemical.ions_missing_smiles.append(ion)
+            else:
+                chemical.ions.update([c.chebi for c in all_ions[ion]])
 
 
-def generate_chebi_to_formula(chebi_to_inchi):
-    chebi_to_formula = {k: re.match(r'InChI=1S\/([^/]+)\/', v) for k, v in
-                        chebi_to_inchi.items()}
-    chebi_to_formula = {k: v.group(1) for k, v in chebi_to_formula.items()
-                        if v}
-    return chebi_to_formula
+def map_inchi(inchi, smiles_ion):
+    """
+    Map the given smiles ion to the corresponding inchi string
+
+    Note: The chemspider API lookup should in the future be replaced with local
+    conversion using openbabel. See https://pypi.org/project/openbabel/
+    """
+    print(".", end="", flush=True)
+    response = requests.get(f"https://www.chemspider.com/InChI.asmx/SMILESToInChI", params={'smiles': smiles_ion})
+    if response.status_code == 500:
+        print(f" warning: Could not parse smiles ion: {smiles_ion} ", end="", flush=True)
+        return (smiles_ion, None)
+    response.raise_for_status()
+    inchi_string = ET.fromstring(response.text).text
+    try:
+        return (smiles_ion, inchi[inchi_string])
+    except KeyError:
+        return (smiles_ion, None)
 
 
-def save_salts(salts_mapping):
-    with open('data/salts.csv', 'w') as f:
-        for k, v in salts_mapping.items():
-            f.write('{}:{}\n'.format(k, ';'.join(
-                [','.join(map(str, i)) for i in v])))
+def resolve_organometallic_metals(all_chemicals, inchi_formula):
+    print("Resolving metals from organometallic compounds...")
+    inchi_metals = [c for c in all_chemicals if hasattr(c, "inchi_formula") and "." in c.inchi_formula]
+    for chemical in inchi_metals:
+        for metal in chemical.inchi_formula.split("."):
+            # Check the compound length, stripping the number of elements.
+            # We are only looking for metals, so knowing that acid + metal = salt + water,
+            # the short compound must be the metal, so we'll look for compounds of 3 chars or
+            # less, which might seem a tad arbitrary, but seems to give good results.
+            # TODO: The acid should also be added! For example, L-histidine in
+            # https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:32603
+            metal_element = metal.lstrip("0123456789")
+            if len(metal_element) > 3:
+                continue
 
-
-def missing_compounds(salts, smiles_to_chebi):
-    print(f'{len(salts)} salts in total')
-    compounds_not_found = set()
-    compounds_all = set()
-    for smiles_string in salts:
-        compounds = smiles_string.split('.')
-        for comp in compounds:
-            compounds_all.add(comp)
-            if comp not in smiles_to_chebi:
-                compounds_not_found.add(comp)
-    print(f'{len(compounds_all)} compounds in total, '
-          f'{len(compounds_not_found)} is not found')
-    return list(compounds_not_found)
-
-
-def identifier_mapping(all_chemicals, term):
-    mapping = {}
-    for row in all_chemicals:
-        array = row.split('\n')
-        chebi_id = array[1].split(':')[-1]
-        entry = [i for i in array if term + ' ' in i]
-        if not entry:
-            continue
-        try:
-            key = entry[0].split()[2].strip('"')
-        except IndexError:
-            print(array)
-            raise
-        mapping[int(chebi_id)] = key
-    return mapping
-
-
-def revert_mapping(mapping):
-    reverse_mapping = {}
-    for k, v in mapping.items():
-        synonyms = [v, v.replace('+2]', '++]')]
-        for syn in synonyms:
-            reverse_mapping[syn] = reverse_mapping.get(syn, [])
-            if k not in reverse_mapping[syn]:
-                reverse_mapping[syn].append(k)
-    return reverse_mapping
-
-
-def smiles_through_inchi(inchi_to_chebi, smiles_strings):
-    print(f'Retrieving {len(smiles_strings)} smiles to inchi mappings '
-          f'from chemspider')
-    smiles_to_chebi = {}
-    i = j = 0
-    for string in smiles_strings:
-        r = requests.get(
-            'https://www.chemspider.com/InChI.asmx/SMILESToInChI?smiles={}'.format(string)
-        )
-        if r.status_code != 500:
-            inchi_string = ET.fromstring(r.text).text
-            if inchi_string in inchi_to_chebi:
-                j += 1
-                smiles_to_chebi[string] = inchi_to_chebi[inchi_string]
-        i += 1
-        if i % 50 == 0:
-            print(f'{i} entries queried, {j} found')
-    return smiles_to_chebi
-
-
-def map_salts(smiles_to_chebi):
-    salts_mapping = {}
-    for smiles_string, chebi_ids in smiles_to_chebi.items():
-        if '.' in smiles_string:
-            smiles_list = smiles_string.split('.')
-            result = []
-            for u in smiles_list:
-                if u in smiles_to_chebi and smiles_to_chebi[u] not in result:
-                    result.append(smiles_to_chebi[u])
-                elif u not in smiles_to_chebi:
-                    result.append([])
-            for ch_id in chebi_ids:
-                salts_mapping[ch_id] = result
-    return salts_mapping
+            if metal_element in inchi_formula:
+                chemical.metals.update([c.chebi for c in inchi_formula[metal_element]])
+            else:
+                chemical.metals_missing_inchi.append(metal_element)
 
 
 if __name__ == '__main__':
-    create_salts_mapping()
+    main()
