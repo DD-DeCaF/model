@@ -46,6 +46,7 @@ class Measurement(Schema):
     measurements = fields.List(fields.Float())
     type = fields.String(required=True, validate=OneOf([
         'compound',
+        'reaction',
         'growth-rate',
         'protein',
     ]))
