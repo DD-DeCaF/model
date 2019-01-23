@@ -27,20 +27,40 @@ class Operation(Schema):
         strict = True
 
 
+class MediumCompound(Schema):
+    id = fields.String(required=True)
+    # Note: namespace should match a namespace identifier from miriam.
+    # See https://www.ebi.ac.uk/miriam/main/collections
+    namespace = fields.String(required=True)
+
+    class Meta:
+        strict = True
+
+
+class Measurement(Schema):
+    id = fields.String(required=True)
+    # Note: namespace should match a namespace identifier from miriam.
+    # See https://www.ebi.ac.uk/miriam/main/collections
+    namespace = fields.String(required=True)
+    measurements = fields.List(fields.Float())
+    # Type should be one of 'compound', 'growth-rate' or 'protein'
+    type = fields.String(required=True)
+
+    class Meta:
+        strict = True
+
+
 class ModificationRequest(Schema):
-    # TODO (Ali Kaafarani): Specify full schema for below fields
-    medium = fields.Raw(missing=None)
-    genotype = fields.Raw(missing=None)
-    measurements = fields.Raw(missing=None)
+    medium = fields.Nested(MediumCompound, many=True, missing=None)
+    genotype = fields.List(fields.String(), missing=None)
+    measurements = fields.Nested(Measurement, many=True, missing=None)
 
     class Meta:
         strict = True
 
 
 class SimulationRequest(Schema):
-    model_id = fields.Integer(missing=None)
-    model = fields.Raw(missing=None)
-    biomass_reaction = fields.String(missing=None)
+    model_id = fields.Integer(required=True)
     method = fields.String(missing='fba')
     objective_id = fields.String(missing=None)
     objective_direction = fields.String(missing=None)

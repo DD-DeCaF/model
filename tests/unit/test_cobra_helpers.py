@@ -14,14 +14,13 @@
 
 import pytest
 
-from model.exceptions import NoIDMapping
-from model.modeling.cobra_helpers import get_unique_metabolite
+from model.exceptions import MetaboliteNotFound
+from model.modeling.cobra_helpers import find_metabolite
 
 
 def test_existing_metabolite(iJO1366):
     iJO1366, biomass_reaction = iJO1366
-    assert get_unique_metabolite(iJO1366, 'chebi:17790') == get_unique_metabolite(
-        iJO1366, 'meoh', db_name='bigg.metabolite')
-    assert get_unique_metabolite(iJO1366, 'succ', db_name='bigg.metabolite').formula == 'C4H4O4'
-    with pytest.raises(NoIDMapping):
-        get_unique_metabolite(iJO1366, 'wrong_id')
+    assert find_metabolite(iJO1366, 'CHEBI:17790', 'chebi') == find_metabolite(iJO1366, 'meoh', 'bigg.metabolite')
+    assert find_metabolite(iJO1366, 'succ', 'bigg.metabolite').formula == 'C4H4O4'
+    with pytest.raises(MetaboliteNotFound):
+        find_metabolite(iJO1366, 'wrong_id', 'wrong_namespace')

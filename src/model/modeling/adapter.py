@@ -18,9 +18,9 @@ import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 
-from model.exceptions import NoIDMapping, PartNotFound
+from model.exceptions import MetaboliteNotFound, PartNotFound, ReactionNotFound
 from model.ice_client import ICE
-from model.modeling.cobra_helpers import get_unique_metabolite
+from model.modeling.cobra_helpers import find_metabolite, find_reaction
 from model.modeling.driven import minimize_distance
 from model.modeling.gnomic_helpers import feature_id, full_genotype
 from model.modeling.salts import MEDIUM_SALTS
@@ -30,22 +30,37 @@ logger = logging.getLogger(__name__)
 ice = ICE()
 
 
-def adapt_from_medium(model, medium):
+def apply_medium(model, medium):
     """
-    Returns a list of operations to apply the given medium to the given model
+    Apply a medium to a metabolic model.
 
-    :param model: cobra.Model
-    :param medium: list of dictionaries of format
-        {'id': <compound id (<database>:<id>, f.e. chebi:12345)>, 'concentration': <compound concentration (float)>}
+    The medium is applied by adding salt mappings, resolving the corresponding
+    exchange reaction for the resulting medium compounds, setting their uptake
+    rate, and then applying that to the model.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    medium: list(dict)
+        The medium definition, a list of dicts matching the `MediumCompound`
+        schema.
+
+    Returns
+    -------
+    tuple (operations, errors)
+        Operations is a list of model operations necessary to apply the medium
+        to the model. See also the `Operations` schema.
+        If errors is not an empty list, it was not possible to apply the medium.
+        Errors then contains a list of string messages describing the
+        problem(s).
     """
-
     operations = []
     errors = []
 
     # Detect salt compounds
     chebi_ids = [c['id'] for c in medium]
     for compound in chebi_ids:
-        chebi_id = compound.replace('chebi:', '')
+        chebi_id = compound.replace('CHEBI:', '')
         if chebi_id in MEDIUM_SALTS:
             compounds = MEDIUM_SALTS[chebi_id]
             n_not_found = len([i for i in compounds if not i])
@@ -55,20 +70,21 @@ def adapt_from_medium(model, medium):
             for array in compounds:
                 for compound in array:
                     if compound:
-                        medium.append({'id': 'chebi:' + compound})
+                        medium.append({'id': f"CHEBI:{compound}", 'namespace': 'chebi'})
 
     # Add trace metals
     medium.extend([
-        {'id': 'chebi:25517', 'name': 'nickel'},
-        {'id': 'chebi:25368', 'name': 'molybdate'},
+        {'id': 'CHEBI:25517', 'namespace': 'chebi'},
+        {'id': 'CHEBI:25368', 'namespace': 'chebi'},
     ])
 
-    # Make all metabolites in the medium consumable by setting the exchange reactions lower bound to a negative number
+    # Create a map of exchange reactions and corresponding fluxes to apply to
+    # the medium.
     medium_mapping = {}
     for compound in medium:
         try:
-            metabolite = get_unique_metabolite(model, compound['id'], 'e', 'CHEBI')
-        except NoIDMapping:
+            metabolite = find_metabolite(model, compound['id'], compound['namespace'], 'e')
+        except MetaboliteNotFound:
             errors.append(f"Cannot add medium compund '{compound['id']}' - metabolite not found in extracellular "
                           "compartment")
         else:
@@ -111,12 +127,29 @@ def adapt_from_medium(model, medium):
     return operations, errors
 
 
-def adapt_from_genotype(model, genotype_changes):
+def apply_genotype(model, genotype_changes):
     """
-    Return a list of operations to apply to a model based on the given genotype changes.
+    Apply genotype changes to a metabolic model.
 
-    :param model: cobra.Model
-    :param genotype_changes: list of genotype change strings, f.e. ['-tyrA::kanMX+', 'kanMX-']
+    The genotype is first parsed by gnomic. Removed features (genes) are knocked
+    out, while added features are added by looking up reaction definitions in
+    ICE and adding those to the model.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    genotype_changes: list(str)
+        A list of genotype change strings parseable by gnomic. For example:
+        ["-tyrA::kanMX+", "kanMX-"].
+
+    Returns
+    -------
+    tuple (operations, errors)
+        Operations is a list of model operations necessary to apply the medium
+        to the model. See also the `Operations` schema.
+        If errors is not an empty list, it was not possible to apply the medium.
+        Errors then contains a list of string messages describing the
+        problem(s).
     """
     operations = []
     errors = []
@@ -186,16 +219,30 @@ def adapt_from_genotype(model, genotype_changes):
     return operations, errors
 
 
-def adapt_from_measurements(model, biomass_reaction, measurements):
+def apply_measurements(model, biomass_reaction, measurements):
     """
-    For each measured flux (production-rate / uptake-rate), constrain the model by forcing their upper and lower bounds
-    to the measured values.
+    Apply omics measurements to a metabolic model.
 
-    :param model: cobra.Model
-    :param biomass_reaction: a string referencing the id of the biomass reaction in the given model
-    :param measurements:
-        A list of dictionaries of format
-        {'id': <metabolite id (<database>:<id>, f.e. chebi:12345)>, 'measurements': list(<measurement (float)>)}
+    For each measured flux (production-rate / uptake-rate), constrain the model
+    by forcing their upper and lower bounds to the measured values.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    biomass_reaction: str
+        The id of the biomass reaction in the given model.
+    measurements: list(dict)
+        The measurements, a list of dicts matching the `Measurement` schema.
+
+    Returns
+    -------
+    tuple (operations, errors)
+        Operations is a list of model operations necessary to apply the
+        measurements to the model. See also the `Operations` schema.
+        If errors is not an empty list, it was not possible to apply the
+        measurements.
+        Errors then contains a list of string messages describing the
+        problem(s).
     """
     operations = []
     errors = []
@@ -218,10 +265,9 @@ def adapt_from_measurements(model, biomass_reaction, measurements):
 
         if scalar['type'] == 'compound':
             try:
-                compound = scalar['id']
-                metabolite = get_unique_metabolite(model, compound, 'e', 'CHEBI')
-            except NoIDMapping:
-                errors.append(f"Cannot find compound '{compound}' in the model")
+                metabolite = find_metabolite(model, scalar['id'], scalar['namespace'], 'e')
+            except MetaboliteNotFound as error:
+                errors.append(str(error))
             else:
                 exchange_reactions = metabolite.reactions.intersection(model.exchanges)
                 if len(exchange_reactions) != 1:
@@ -264,16 +310,11 @@ def adapt_from_measurements(model, biomass_reaction, measurements):
                 'id': reaction.id,
                 'data': reaction_to_dict(reaction),
             })
-        elif scalar['type'] == 'protein' and scalar['mode'] == 'quantitative':
+        elif scalar['type'] == 'protein':
             try:
-                def query_fun(rxn):
-                    xrefs = rxn.annotation.get(scalar['db_name'], [])
-                    xrefs = xrefs if isinstance(xrefs, list) else [xrefs]
-                    return scalar['id'] in xrefs
-
-                reaction = model.reactions.query(query_fun)[0]
-            except (IndexError, KeyError):
-                errors.append(f"Cannot find reaction '{scalar['id']}' in the model")
+                reaction = find_reaction(model, scalar['id'], scalar['namespace'])
+            except ReactionNotFound as error:
+                errors.append(str(error))
             else:
                 reaction.bounds = 0, upper_bound
                 operations.append({

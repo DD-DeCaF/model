@@ -12,41 +12,107 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-
-from model.exceptions import NoIDMapping
+from model.exceptions import MetaboliteNotFound, ReactionNotFound
 
 
-def get_unique_metabolite(model, compound_id, compartment='e', db_name='CHEBI'):
-    """Get the only metabolite for given compound / compartment.
-
-    :param model: cobra.Model
-    :param compound_id: string, compound identifier, e.g. CHEBI:12965
-    :param compartment: string, compartment identifier
-    :param db_name: string, the database name, e.g. 'CHEBI'
+def find_reaction(model, id, namespace):
     """
-    # TODO: change id-mapper to use miriam db_names
-    key_to_db_name = {'bigg': 'bigg.metabolite', 'chebi': 'CHEBI', 'mnx': 'metanetx.chemical'}
-    db_name = key_to_db_name.get(db_name, db_name)
-    # TODO: change to only use upper-case chebi everywhere, and always prefix id's with db_name thereby removing the
-    # need for the db_name parameter
-    if db_name == 'CHEBI':
-        compound_id = compound_id.replace('chebi:', 'CHEBI:')
-        if re.match('^[0-9]+$', compound_id):
-            compound_id = 'CHEBI:' + compound_id
+    Search for a given reaction in the model, also searching in annotations.
 
-    def query_fun(m):
-        xrefs = m.annotation.get(db_name, [])
-        xrefs = xrefs if isinstance(xrefs, list) else [xrefs]
-        return compound_id in xrefs and m.compartment == compartment
+    Parameters
+    ----------
+    model: cobra.Model
+    id: str
+        The identifier of the reaction to find.
+    namespace: str
+        The miriam namespace identifier in which the given metabolite is
+        registered. See https://www.ebi.ac.uk/miriam/main/collections
+
+    Returns
+    -------
+    cobra.Reaction
+        Returns the reaction object.
+
+    Raises
+    ------
+    IndexError
+        If multiple reaction are found for the given search query.
+    ReactionNotFound
+        If no reactions are found for the given parameters.
+    """
+    def query_fun(reaction):
+        # Match namespace and identifiers case-insensitively
+        for model_namespace, model_ids in reaction.annotation.items():
+            if namespace.lower() != model_namespace.lower():
+                return False
+            if isinstance(model_ids, list):
+                return id.lower() in [i.lower() for i in model_ids]
+            else:
+                return id.lower() == model_ids.lower()
+
+    reactions = model.reactions.query(query_fun)
+    if len(reactions) == 0:
+        raise ReactionNotFound(
+            f"Could not find reaction {id} in namespace {namespace} for "
+            f"model {model.id}"
+        )
+    elif len(reactions) > 1:
+        raise IndexError(f"Expected single reaction, found {reactions}")
+    else:
+        return reactions[0]
+
+
+def find_metabolite(model, id, namespace, compartment='e'):
+    """
+    Search for a given metabolite in the model, also searching in annotations.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    id: str
+        The identifier of the metabolite to find, e.g. "CHEBI:12965".
+    namespace: str
+        The miriam namespace identifier in which the given metabolite is
+        registered. See https://www.ebi.ac.uk/miriam/main/collections
+    compartment: str
+        The compartment in which to look for the metabolite. Defaults to the
+        extracellular compartment.
+
+    Returns
+    -------
+    cobra.Metabolite
+        Returns the metabolite object.
+
+    Raises
+    ------
+    IndexError
+        If multiple metabolites are found for the given search query.
+    MetaboliteNotFound
+        If no metabolites are found for the given parameters.
+    """
+    def query_fun(metabolite):
+        if metabolite.compartment != compartment:
+            return False
+
+        # Try to find a case insensitive match for the namespace key
+        for met_namespace in metabolite.annotation:
+            if namespace.lower() == met_namespace.lower():
+                identifier = metabolite.annotation[met_namespace]
+                # Compare the identifier case insensitively as well
+                # Annotations may contain a single id or a list of ids
+                if isinstance(identifier, list):
+                    return id.lower() in [i.lower() for i in identifier]
+                else:
+                    return id.lower() == identifier.lower()
+        return False
 
     metabolites = model.metabolites.query(query_fun)
-    if len(metabolites) > 1:
-        raise IndexError('expected single metabolite, found {}'.format(metabolites))
-    if len(metabolites) < 1:
-        raise NoIDMapping(compound_id)
-    return metabolites[0]
-
-
-def strip_compartment(x):
-    return x[:-2] if re.match('.*_[cepm]$', x) else x
+    if len(metabolites) == 0:
+        raise MetaboliteNotFound(
+            f"Could not find metabolite {id} in namespace {namespace} and "
+            f"compartment {compartment} for model {model.id}"
+        )
+    elif len(metabolites) > 1:
+        raise IndexError(f"Expected single metabolite, found {metabolites}")
+    else:
+        return metabolites[0]

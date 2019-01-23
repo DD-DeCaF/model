@@ -14,7 +14,7 @@
 
 import logging
 
-from cobra.io.dict import model_from_dict, model_to_dict
+from cobra.io.dict import model_to_dict
 from flask import Response, abort, jsonify, request
 from flask_apispec import use_kwargs
 from flask_apispec.extension import FlaskApiSpec
@@ -23,7 +23,7 @@ from prometheus_client.multiprocess import MultiProcessCollector
 
 from model import storage
 from model.exceptions import Forbidden, ModelNotFound, Unauthorized
-from model.modeling.adapter import adapt_from_genotype, adapt_from_measurements, adapt_from_medium
+from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium
 from model.modeling.operations import apply_operations
 from model.modeling.simulations import simulate
 from model.schemas import ModificationRequest, Operation, SimulationRequest
@@ -84,17 +84,17 @@ def model_modify(model_id, medium, genotype, measurements):
         operations = []
         errors = []
         if medium:
-            operations_medium, errors_medium = adapt_from_medium(model, medium)
+            operations_medium, errors_medium = apply_medium(model, medium)
             operations.extend(operations_medium)
             errors.extend(errors_medium)
 
         if genotype:
-            operations_genotype, errors_genotype = adapt_from_genotype(model, genotype)
+            operations_genotype, errors_genotype = apply_genotype(model, genotype)
             operations.extend(operations_genotype)
             errors.extend(errors_genotype)
 
         if measurements:
-            operations_measurements, errors_measurements = adapt_from_measurements(
+            operations_measurements, errors_measurements = apply_measurements(
                 model,
                 model_wrapper.biomass_reaction,
                 measurements,
@@ -105,50 +105,29 @@ def model_modify(model_id, medium, genotype, measurements):
         if errors:
             # If any errors occured during modifications, discard generated operations and return the error messages to
             # the client for follow-up
-            return jsonify({'errors': errors}), 400
+            return {'errors': errors}, 400
         else:
-            return jsonify({'operations': operations})
+            return {'operations': operations}
 
 
 @use_kwargs(SimulationRequest)
-def model_simulate(model_id, model, biomass_reaction, method, objective_id, objective_direction, operations):
-    if model_id:
-        # Client provided an identifier to some model in the model storage service, retrieve it
-        logger.debug(f"Simulating model by id {request.json['model_id']}")
+def model_simulate(model_id, method, objective_id, objective_direction, operations):
+    try:
+        model_wrapper = storage.get(model_id)
+    except Unauthorized as error:
+        abort(401, error.message)
+    except Forbidden as error:
+        abort(403, error.message)
+    except ModelNotFound as error:
+        abort(404, error.message)
 
-        try:
-            model_wrapper = storage.get(request.json['model_id'])
-            biomass_reaction = model_wrapper.biomass_reaction
-        except Unauthorized as error:
-            abort(401, error.message)
-        except Forbidden as error:
-            abort(403, error.message)
-        except ModelNotFound as error:
-            abort(404, error.message)
-
-        model = model_wrapper.model
-    elif model:
-        # Client provided a full custom model and biomass reaction
-        logger.debug("Simulating ad-hoc model provided by client")
-
-        try:
-            model_dict = request.json['model']
-            model = model_from_dict(model_dict)
-        except Exception as error:
-            logger.warning(f"Cobrapy could not deserialize provided model: {str(error)}", exc_info=True)
-            logger.debug(f"Full serialized model: {model_dict}")
-            abort(400, f"The provided model is not deserializable by cobrapy")
-        if not biomass_reaction:
-            abort(400, f"Missing field 'biomass_reaction'")
-        if not model.reactions.has_id(biomass_reaction):
-            abort(400, f"There is no biomass reaction with id '{biomass_reaction}' in the model")
-    else:
-        abort(400, f"Missing field 'model' or 'model_id'")
+    model = model_wrapper.model
 
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model:
         apply_operations(model, operations)
-        flux_distribution, growth_rate = simulate(model, biomass_reaction, method, objective_id, objective_direction)
+        flux_distribution, growth_rate = simulate(model, model_wrapper.biomass_reaction, method, objective_id,
+                                                  objective_direction)
         return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
 
 

@@ -15,15 +15,14 @@
 """Test local HTTP endpoints"""
 
 import pytest
-from cobra.io.dict import model_to_dict
 
 from model.ice_client import ICE
 
 
 MEASUREMENTS = [
-    {'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'id': 'chebi:42758', 'measurements': [-9.0], 'type': 'compound'},
-    {'unit': 'mmol', 'name': 'ethanol', 'id': 'chebi:16236', 'measurements': [5.0, 4.8, 5.2, 4.9], 'type': 'compound'},
-    {'id': 'PFK', 'measurements': [5, 5], 'type': 'reaction', 'db_name': 'bigg.reaction'},
+    {'id': 'CHEBI:42758', 'namespace': 'chebi', 'measurements': [-9.0], 'type': 'compound'},
+    {'id': 'CHEBI:16236', 'namespace': 'chebi', 'measurements': [5.0, 4.8, 5.2, 4.9], 'type': 'compound'},
+    {'id': 'PFK', 'namespace': 'bigg.reaction', 'measurements': [5, 5], 'type': 'reaction'},
 ]
 
 
@@ -43,7 +42,7 @@ def test_simulate_no_operations(client, models):
 
 
 def test_simulate_infeasible(client, models):
-    measurements = [{'id': 'ATPM', 'measurements': [100, 100], 'type': 'reaction', 'db_name': 'bigg.reaction'}]
+    measurements = [{'id': 'ATPM', 'namespace': 'bigg.reaction', 'measurements': [100, 100], 'type': 'reaction'}]
     response = client.post(f"/models/{models['iJO1366']}/modify", json={'measurements': measurements})
     assert response.status_code == 200
 
@@ -109,28 +108,15 @@ def test_modify(monkeypatch, client, models):
 
     response = client.post(f"/models/{models['iJO1366']}/modify", json={
         'medium': [
-            {'id': 'chebi:44080'}, {'id': 'chebi:15075'}, {'id': 'chebi:15377'}, {'id': 'chebi:15378'}, {'id': 'chebi:15379'}, {'id': 'chebi:15982'}, {'id': 'chebi:16189'}, {'id': 'chebi:16526'}, {'id': 'chebi:16643'}, {'id': 'chebi:17883'}, {'id': 'chebi:18212'}, {'id': 'chebi:18367'}, {'id': 'chebi:18420'}, {'id': 'chebi:25371'}, {'id': 'chebi:27638'}, {'id': 'chebi:28938'}, {'id': 'chebi:29033'}, {'id': 'chebi:29034'}, {'id': 'chebi:29035'}, {'id': 'chebi:29036'}, {'id': 'chebi:29101'}, {'id': 'chebi:29103'}, {'id': 'chebi:29105'}, {'id': 'chebi:29108'}, {'id': 'chebi:36271'}, {'id': 'chebi:42758'}, {'id': 'chebi:49786'}  # noqa
+            {'id': 'CHEBI:44080', 'namespace': 'chebi'}, {'id': 'CHEBI:15075', 'namespace': 'chebi'}, {'id': 'CHEBI:15377', 'namespace': 'chebi'}, {'id': 'CHEBI:15378', 'namespace': 'chebi'}, {'id': 'CHEBI:15379', 'namespace': 'chebi'}, {'id': 'CHEBI:15982', 'namespace': 'chebi'}, {'id': 'CHEBI:16189', 'namespace': 'chebi'}, {'id': 'CHEBI:16526', 'namespace': 'chebi'}, {'id': 'CHEBI:16643', 'namespace': 'chebi'}, {'id': 'CHEBI:17883', 'namespace': 'chebi'}, {'id': 'CHEBI:18212', 'namespace': 'chebi'}, {'id': 'CHEBI:18367', 'namespace': 'chebi'}, {'id': 'CHEBI:18420', 'namespace': 'chebi'}, {'id': 'CHEBI:25371', 'namespace': 'chebi'}, {'id': 'CHEBI:27638', 'namespace': 'chebi'}, {'id': 'CHEBI:28938', 'namespace': 'chebi'}, {'id': 'CHEBI:29033', 'namespace': 'chebi'}, {'id': 'CHEBI:29034', 'namespace': 'chebi'}, {'id': 'CHEBI:29035', 'namespace': 'chebi'}, {'id': 'CHEBI:29036', 'namespace': 'chebi'}, {'id': 'CHEBI:29101', 'namespace': 'chebi'}, {'id': 'CHEBI:29103', 'namespace': 'chebi'}, {'id': 'CHEBI:29105', 'namespace': 'chebi'}, {'id': 'CHEBI:29108', 'namespace': 'chebi'}, {'id': 'CHEBI:36271', 'namespace': 'chebi'}, {'id': 'CHEBI:42758', 'namespace': 'chebi'}, {'id': 'CHEBI:49786', 'namespace': 'chebi'}  # noqa
         ],
         'genotype': ['+Aac', '-pta'],
         'measurements': [
-            {'type': 'compound', 'id': 'chebi:42758', 'unit': 'mmol', 'name': 'aldehydo-D-glucose', 'measurements': [-9.0]},  # noqa
-            {'type': 'compound', 'id': 'chebi:16236', 'unit': 'mmol', 'name': 'ethanol', 'measurements': [5.0, 4.8, 5.2, 4.9]},  # noqa
-            {'type': 'reaction', 'id': 'PFK', 'measurements': [5, 4.8, 7]},
-            {'type': 'reaction', 'id': 'PGK', 'measurements': [5, 5]},
+            {'type': 'compound', 'id': 'CHEBI:42758', 'namespace': 'chebi', 'measurements': [-9.0]},  # noqa
+            {'type': 'compound', 'id': 'CHEBI:16236', 'namespace': 'chebi', 'measurements': [5.0, 4.8, 5.2, 4.9]},  # noqa
+            {'type': 'reaction', 'id': 'PFK', 'namespace': 'bigg.reaction', 'measurements': [5, 4.8, 7]},
+            {'type': 'reaction', 'id': 'PGK', 'namespace': 'bigg.reaction', 'measurements': [5, 5]},
         ],
     })
     assert response.status_code == 200
     assert len(response.json['operations']) == 329
-
-
-def test_simulate_provided_model(client, e_coli_core):
-    e_coli_core, biomass_reaction = e_coli_core
-    model_serialized = model_to_dict(e_coli_core)
-    response = client.post("/simulate", json={'model': model_serialized, 'biomass_reaction': biomass_reaction})
-    assert response.status_code == 200
-    assert response.json['growth_rate'] == pytest.approx(0.8739215069684307)
-
-
-def test_simulate_provided_invalid_model(client):
-    response = client.post("/simulate", json={'model': {'invalid': 42}, 'biomass_reaction': "foo"})
-    assert response.status_code == 400
