@@ -52,6 +52,13 @@ def find_reaction(model, id, namespace):
 
     reactions = model.reactions.query(query_fun)
     if len(reactions) == 0:
+        # No annotated result, try the default namespace (without confirming the
+        # namespace id).
+        try:
+            return model.reactions.get_by_id(id)
+        except KeyError:
+            pass
+
         raise ReactionNotFound(
             f"Could not find reaction {id} in namespace {namespace} for "
             f"model {model.id}"
@@ -108,6 +115,15 @@ def find_metabolite(model, id, namespace, compartment='e'):
 
     metabolites = model.metabolites.query(query_fun)
     if len(metabolites) == 0:
+        # No annotated result, try the default namespace (without confirming the
+        # namespace id).
+        try:
+            metabolite = model.metabolites.get_by_id(id)
+            if metabolite.compartment == compartment:
+                return metabolite
+        except KeyError:
+            pass
+
         raise MetaboliteNotFound(
             f"Could not find metabolite {id} in namespace {namespace} and "
             f"compartment {compartment} for model {model.id}"
