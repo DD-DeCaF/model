@@ -50,14 +50,16 @@ def apply_medium(model, medium):
 
     Returns
     -------
-    tuple (operations, errors)
+    tuple (operations, warnings, errors)
         Operations is a list of model operations necessary to apply the medium
         to the model. See also the `Operations` schema.
+        Warnings is a list of human-readable strings of potential issues.
         If errors is not an empty list, it was not possible to apply the medium.
         Errors then contains a list of string messages describing the
         problem(s).
     """
     operations = []
+    warnings = []
     errors = []
 
     # Detect salt compounds
@@ -70,10 +72,13 @@ def apply_medium(model, medium):
             medium.extend([{'id': metal, 'namespace': 'chebi'} for metal in salt['metals']])
 
             if salt['ions_missing_smiles']:
-                logger.warning(f"Unable to add ions, smiles id could not be mapped: {salt['ions_missing_smiles']}")
+                warning = f"Unable to add ions, smiles id could not be mapped: {salt['ions_missing_smiles']}"
+                warnings.append(warning)
+                logger.warning(warning)
             if salt['metals_missing_inchi']:
-                logger.warning(f"Unable to add metals; inchi string could not be mapped: "
-                    f"{salt['metals_missing_inchi']}")
+                warning = f"Unable to add metals; inchi string could not be mapped: {salt['metals_missing_inchi']}"
+                warnings.append(warning)
+                logger.warning(warning)
 
     # Add trace metals
     medium.extend([
@@ -88,8 +93,11 @@ def apply_medium(model, medium):
         try:
             metabolite = find_metabolite(model, compound['id'], compound['namespace'], 'e')
         except MetaboliteNotFound:
-            errors.append(f"Cannot add medium compund '{compound['id']}' - metabolite not found in extracellular "
-                          "compartment")
+            warning = (
+                f"Cannot add medium compund '{compound['id']}' - metabolite not found in extracellular compartment"
+            )
+            warnings.append(warning)
+            logger.warning(warning)
         else:
             exchange_reactions = metabolite.reactions.intersection(model.exchanges)
             if len(exchange_reactions) != 1:
@@ -105,7 +113,9 @@ def apply_medium(model, medium):
                 continue
 
             if not metabolite.formula:
-                logger.warning(f"No formula for metabolite '{metabolite.id}', cannot check if it is a carbon source")
+                warning = f"No formula for metabolite '{metabolite.id}', cannot check if it is a carbon source"
+                warnings.append(warning)
+                logger.warning(warning)
                 # If we don't know, it's most likely that the metabolite does not have a higher uptake rate than a
                 # carbon source, so set the bound still to 10
                 medium_mapping[exchange_reaction.id] = 10
@@ -127,7 +137,7 @@ def apply_medium(model, medium):
             'data': reaction_to_dict(reaction),
         })
 
-    return operations, errors
+    return operations, warnings, errors
 
 
 def apply_genotype(model, genotype_changes):
@@ -147,14 +157,16 @@ def apply_genotype(model, genotype_changes):
 
     Returns
     -------
-    tuple (operations, errors)
+    tuple (operations, warnings, errors)
         Operations is a list of model operations necessary to apply the medium
         to the model. See also the `Operations` schema.
-        If errors is not an empty list, it was not possible to apply the medium.
-        Errors then contains a list of string messages describing the
+        Warnings is a list of human-readable strings of potential issues.
+        If errors is not an empty list, it was not possible to apply the
+        genotype. Errors then contains a list of string messages describing the
         problem(s).
     """
     operations = []
+    warnings = []
     errors = []
 
     genotype_changes = full_genotype(genotype_changes)
@@ -172,7 +184,9 @@ def apply_genotype(model, genotype_changes):
                 'id': gene.id,
             })
         except IndexError:
-            logger.warning(f"Cannot knockout gene '{feature_name}', not found in the model")
+            warning = f"Cannot knockout gene '{feature_name}', not found in the model"
+            warnings.append(warning)
+            logger.warning(warning)
 
     for feature in genotype_changes.added_features:
         feature_name = feature_id(feature)
@@ -217,9 +231,11 @@ def apply_genotype(model, genotype_changes):
                         'data': reaction_to_dict(demand_reaction),
                     })
         except PartNotFound:
-            logger.warning(f"Cannot add gene '{feature_name}', no gene-protein-reaction rules were found in ICE")
+            warning = f"Cannot add gene '{feature_name}', no gene-protein-reaction rules were found in ICE"
+            warnings.append(warning)
+            logger.warning(warning)
 
-    return operations, errors
+    return operations, warnings, errors
 
 
 def apply_measurements(model, biomass_reaction, measurements):
@@ -239,15 +255,17 @@ def apply_measurements(model, biomass_reaction, measurements):
 
     Returns
     -------
-    tuple (operations, errors)
+    tuple (operations, warnings, errors)
         Operations is a list of model operations necessary to apply the
         measurements to the model. See also the `Operations` schema.
+        Warnings is a list of human-readable strings of potential issues.
         If errors is not an empty list, it was not possible to apply the
         measurements.
         Errors then contains a list of string messages describing the
         problem(s).
     """
     operations = []
+    warnings = []
     errors = []
 
     # First, improve the fluxomics dataset by minimizing the distance to a feasible problem
@@ -328,4 +346,4 @@ def apply_measurements(model, biomass_reaction, measurements):
                 })
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
-    return operations, errors
+    return operations, warnings, errors

@@ -82,32 +82,32 @@ def model_modify(model_id, medium, genotype, measurements):
     with model_wrapper.model as model:
         # Build list of operations to perform on the model
         operations = []
+        warnings = []
         errors = []
         if medium:
-            operations_medium, errors_medium = apply_medium(model, medium)
-            operations.extend(operations_medium)
-            errors.extend(errors_medium)
+            results = apply_medium(model, medium)
+            operations.extend(results[0])
+            warnings.extend(results[1])
+            errors.extend(results[2])
 
         if genotype:
-            operations_genotype, errors_genotype = apply_genotype(model, genotype)
-            operations.extend(operations_genotype)
-            errors.extend(errors_genotype)
+            results = apply_genotype(model, genotype)
+            operations.extend(results[0])
+            warnings.extend(results[1])
+            errors.extend(results[2])
 
         if measurements:
-            operations_measurements, errors_measurements = apply_measurements(
-                model,
-                model_wrapper.biomass_reaction,
-                measurements,
-            )
-            operations.extend(operations_measurements)
-            errors.extend(errors_measurements)
+            results = apply_measurements(model, model_wrapper.biomass_reaction, measurements)
+            operations.extend(results[0])
+            warnings.extend(results[1])
+            errors.extend(results[2])
 
         if errors:
             # If any errors occured during modifications, discard generated operations and return the error messages to
             # the client for follow-up
             return {'errors': errors}, 400
         else:
-            return {'operations': operations}
+            return {'operations': operations, 'warnings': warnings}
 
 
 @use_kwargs(SimulationRequest)
