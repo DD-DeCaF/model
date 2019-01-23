@@ -15,6 +15,7 @@
 """Marshmallow schemas for marshalling the API endpoints."""
 
 from marshmallow import Schema, fields
+from marshmallow.validate import OneOf
 
 
 class Operation(Schema):
@@ -43,8 +44,11 @@ class Measurement(Schema):
     # See https://www.ebi.ac.uk/miriam/main/collections
     namespace = fields.String(required=True)
     measurements = fields.List(fields.Float())
-    # Type should be one of 'compound', 'growth-rate' or 'protein'
-    type = fields.String(required=True)
+    type = fields.String(required=True, validate=OneOf([
+        'compound',
+        'growth-rate',
+        'protein',
+    ]))
 
     class Meta:
         strict = True
