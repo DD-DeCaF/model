@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 
 import numpy as np
@@ -23,11 +24,13 @@ from model.ice_client import ICE
 from model.modeling.cobra_helpers import find_metabolite, find_reaction
 from model.modeling.driven import minimize_distance
 from model.modeling.gnomic_helpers import feature_id, full_genotype
-from model.modeling.salts import MEDIUM_SALTS
 
 
 logger = logging.getLogger(__name__)
 ice = ICE()
+
+with open("data/salts.json") as file_:
+    SALTS = json.load(file_)
 
 
 def apply_medium(model, medium):
@@ -58,19 +61,19 @@ def apply_medium(model, medium):
     errors = []
 
     # Detect salt compounds
-    chebi_ids = [c['id'] for c in medium]
-    for compound in chebi_ids:
-        chebi_id = compound.replace('CHEBI:', '')
-        if chebi_id in MEDIUM_SALTS:
-            compounds = MEDIUM_SALTS[chebi_id]
-            n_not_found = len([i for i in compounds if not i])
-            logger.info('Metabolite %s can be splitted up to %s', chebi_id, str(compounds))
-            if n_not_found:
-                logger.info('For %s %d mappings of %d is not found', chebi_id, n_not_found, len(compounds))
-            for array in compounds:
-                for compound in array:
-                    if compound:
-                        medium.append({'id': f"CHEBI:{compound}", 'namespace': 'chebi'})
+    for compound in medium.copy():  # Make a copy to be able to mutate the original list
+        if compound['id'] in SALTS:
+            salt = SALTS[compound['id']]
+            logger.info(f"Replacing {compound['id']} with ions: {salt['ions']} and metals: {salt['metals']}")
+            medium.remove(compound)
+            medium.extend([{'id': ion, 'namespace': 'chebi'} for ion in salt['ions']])
+            medium.extend([{'id': metal, 'namespace': 'chebi'} for metal in salt['metals']])
+
+            if salt['ions_missing_smiles']:
+                logger.warning(f"Unable to add ions, smiles id could not be mapped: {salt['ions_missing_smiles']}")
+            if salt['metals_missing_inchi']:
+                logger.warning(f"Unable to add metals; inchi string could not be mapped: "
+                    f"{salt['metals_missing_inchi']}")
 
     # Add trace metals
     medium.extend([
