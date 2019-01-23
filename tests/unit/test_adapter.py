@@ -13,7 +13,14 @@
 # limitations under the License.
 
 from model.ice_client import ICE
-from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium
+from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium, SALTS
+
+
+def test_medium_salts():
+    assert len(SALTS) > 2000
+    assert len(SALTS['CHEBI:75832']['ions']) == 2
+    assert len(SALTS['CHEBI:30808']['metals']) == 7
+    assert len(SALTS['CHEBI:86254']['ions']) == 2
 
 
 def test_medium_adapter(iJO1366):
