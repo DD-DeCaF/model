@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from model.ice_client import ICE
-from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium, SALTS
+from model.modeling.adapter import SALTS, apply_genotype, apply_measurements, apply_medium
 
 
 def test_medium_salts():
