@@ -133,11 +133,11 @@ def test_prokaryomics_md120_bw25113(monkeypatch, client, models):
         'genotype': ['-b3643,-b0062,-b0063,-b0061,-b4350,-b3902,-b3903'],
     }
 
-    response = client.post("/models/test_iJO1366/modify", json=data)
+    response = client.post(f"/models/{models['iJO1366']}/modify", json=data)
     assert response.status_code == 200
 
     response = client.post("/simulate", json={
-        'model_id': 'test_iJO1366',
+        'model_id': models['iJO1366'],
         'operations': response.json['operations'],
     })
     assert response.status_code == 200
