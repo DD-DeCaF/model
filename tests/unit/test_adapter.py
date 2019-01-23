@@ -31,9 +31,11 @@ def test_medium_adapter(iJO1366):
         {'id': 'CHEBI:86244', 'namespace': 'chebi'},
         {'id': 'CHEBI:131387', 'namespace': 'chebi'},
     ]
-    operations, errors = apply_medium(iJO1366, medium)
-    assert len(errors) == 5
-    assert set(iJO1366.medium) == {'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e', 'EX_ni2_e', 'EX_mn2_e', 'EX_cl_e'}  # noqa
+    operations, warnings, errors = apply_medium(iJO1366, medium)
+    # 51 warnings are expected; 50 compounds not found in the model and 1 unmapped ion from the salts mapping
+    assert len(warnings) == 51
+    assert len(errors) == 0
+    assert set(iJO1366.medium) == {'EX_fe2_e', 'EX_fe3_e', 'EX_h2o_e', 'EX_mobd_e', 'EX_nh4_e', 'EX_so4_e', 'EX_ni2_e', 'EX_mn2_e', 'EX_cl_e'}  # noqa
     assert all(iJO1366.reactions.get_by_id(r).lower_bound == -1000 for r in iJO1366.medium)
 
 
@@ -44,7 +46,7 @@ def test_genotype_adapter(monkeypatch, iJO1366):
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
     genotype_changes = ['+Aac', '-pta']
-    operations, errors = apply_genotype(iJO1366, genotype_changes)
+    operations, warnings, errors = apply_genotype(iJO1366, genotype_changes)
     assert len(operations) == 1
     assert len(errors) == 0
 
@@ -57,6 +59,6 @@ def test_measurements_adapter(iJO1366):
         {'type': 'reaction', 'id': 'PFK', 'namespace': "bigg.reaction", 'measurements': [5, 4.8, 7]},
         {'type': 'reaction', 'id': 'PGK', 'namespace': "bigg.reaction", 'measurements': [5, 5]},
     ]
-    operations, errors = apply_measurements(iJO1366, biomass_reaction, measurements)
+    operations, warnings, errors = apply_measurements(iJO1366, biomass_reaction, measurements)
     assert len(operations) == 4
     assert len(errors) == 0
