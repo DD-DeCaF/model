@@ -14,6 +14,7 @@
 
 import json
 import logging
+from collections import namedtuple
 
 import numpy as np
 from cobra import Reaction
@@ -62,14 +63,22 @@ def apply_medium(model, medium):
     warnings = []
     errors = []
 
-    # Detect salt compounds
+    # Convert the list of dicts to a set of namedtuples to avoid duplicates, as
+    # looking up metabolites in the model is a somewhat expensive operation.
+    Compound = namedtuple("Compound", ["id", "namespace"])
+    medium = set(
+        Compound(id=c['id'], namespace=c['namespace'])
+        for c in medium
+    )
+
+    # Detect salt compounds and split them into their ions and metals
     for compound in medium.copy():  # Make a copy to be able to mutate the original list
-        if compound['id'] in SALTS:
-            salt = SALTS[compound['id']]
-            logger.info(f"Replacing {compound['id']} with ions: {salt['ions']} and metals: {salt['metals']}")
+        if compound.id in SALTS:
+            salt = SALTS[compound.id]
+            logger.info(f"Replacing {compound.id} with ions: {salt['ions']} and metals: {salt['metals']}")
             medium.remove(compound)
-            medium.extend([{'id': ion, 'namespace': 'chebi'} for ion in salt['ions']])
-            medium.extend([{'id': metal, 'namespace': 'chebi'} for metal in salt['metals']])
+            medium.update([Compound(id=ion, namespace='chebi') for ion in salt['ions']])
+            medium.update([Compound(id=metal, namespace='chebi') for metal in salt['metals']])
 
             if salt['ions_missing_smiles']:
                 warning = f"Unable to add ions, smiles id could not be mapped: {salt['ions_missing_smiles']}"
@@ -81,9 +90,9 @@ def apply_medium(model, medium):
                 logger.warning(warning)
 
     # Add trace metals
-    medium.extend([
-        {'id': 'CHEBI:25517', 'namespace': 'chebi'},
-        {'id': 'CHEBI:25368', 'namespace': 'chebi'},
+    medium.update([
+        Compound(id="CHEBI:25517", namespace="chebi"),
+        Compound(id="CHEBI:25368", namespace="chebi"),
     ])
 
     # Create a map of exchange reactions and corresponding fluxes to apply to
@@ -91,10 +100,10 @@ def apply_medium(model, medium):
     medium_mapping = {}
     for compound in medium:
         try:
-            metabolite = find_metabolite(model, compound['id'], compound['namespace'], 'e')
+            metabolite = find_metabolite(model, compound.id, compound.namespace, 'e')
         except MetaboliteNotFound:
             warning = (
-                f"Cannot add medium compund '{compound['id']}' - metabolite not found in extracellular compartment"
+                f"Cannot add medium compund '{compound.id}' - metabolite not found in extracellular compartment"
             )
             warnings.append(warning)
             logger.warning(warning)
