@@ -23,7 +23,7 @@ from model.exceptions import MetaboliteNotFound, PartNotFound, ReactionNotFound
 from model.ice_client import ICE
 from model.modeling.cobra_helpers import find_metabolite, find_reaction
 from model.modeling.driven import minimize_distance
-from model.modeling.gnomic_helpers import feature_id, full_genotype
+from model.modeling.gnomic_helpers import feature_id
 
 
 logger = logging.getLogger(__name__)
@@ -151,9 +151,8 @@ def apply_genotype(model, genotype_changes):
     Parameters
     ----------
     model: cobra.Model
-    genotype_changes: list(str)
-        A list of genotype change strings parseable by gnomic. For example:
-        ["-tyrA::kanMX+", "kanMX-"].
+    genotype_changes: gnomic.Genotype
+        A gnomic genotype object describing the strain modifications.
 
     Returns
     -------
@@ -168,8 +167,6 @@ def apply_genotype(model, genotype_changes):
     operations = []
     warnings = []
     errors = []
-
-    genotype_changes = full_genotype(genotype_changes)
 
     # Apply feature operations
     for feature in genotype_changes.removed_features:

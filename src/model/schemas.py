@@ -17,6 +17,8 @@
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf
 
+from model.modeling.gnomic_helpers import full_genotype
+
 
 class Operation(Schema):
     operation = fields.String(required=True)
@@ -57,7 +59,7 @@ class Measurement(Schema):
 
 class ModificationRequest(Schema):
     medium = fields.Nested(MediumCompound, many=True, missing=None)
-    genotype = fields.List(fields.String(), missing=None)
+    genotype = fields.Function(deserialize=full_genotype, missing=None)
     measurements = fields.Nested(Measurement, many=True, missing=None)
 
     class Meta:
