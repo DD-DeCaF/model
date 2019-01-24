@@ -14,6 +14,7 @@
 
 from model.ice_client import ICE
 from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium
+from model.modeling.gnomic_helpers import full_genotype
 
 
 def test_medium_adapter(iJO1366):
@@ -36,7 +37,7 @@ def test_genotype_adapter(monkeypatch, iJO1366):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, 'get_reaction_equations', lambda self, genotype: {})
 
-    genotype_changes = ['+Aac', '-pta']
+    genotype_changes = full_genotype(['+Aac', '-pta'])
     operations, errors = apply_genotype(iJO1366, genotype_changes)
     assert len(operations) == 1
     assert len(errors) == 0
