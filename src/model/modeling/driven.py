@@ -47,7 +47,8 @@ def minimize_distance(model, biomass_reaction, measurements):
         uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
                              if len(growth_rate['measurements']) >= 3 else 1)
     except StopIteration:
-        pass
+        raise ValueError("Expected measurements to contain an objective "
+                         "constraint as measured growth rate")
 
     observations = pd.Series(index=index, data=observations)
     uncertainties = pd.Series(index=index, data=uncertainties)

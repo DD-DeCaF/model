@@ -268,8 +268,14 @@ def apply_measurements(model, biomass_reaction, measurements):
     warnings = []
     errors = []
 
-    # First, improve the fluxomics dataset by minimizing the distance to a feasible problem
-    measurements = minimize_distance(model, biomass_reaction, measurements)
+    # First, improve the fluxomics dataset by minimizing the distance to a feasible problem.
+    # If there is no objective constraint, skip minimization as it can yield unreliable results.
+    try:
+        next(m for m in measurements if m['type'] == 'growth-rate')
+    except StopIteration:
+        pass
+    else:
+        measurements = minimize_distance(model, biomass_reaction, measurements)
 
     for scalar in measurements:
         # If there are three or more observations, use the 97% normal distribution range, i.e., mean +- 1.96.
