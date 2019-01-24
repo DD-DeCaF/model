@@ -14,7 +14,6 @@
 
 import logging
 
-from cobra.io.dict import model_to_dict
 from flask import Response, abort, jsonify, request
 from flask_apispec import use_kwargs
 from flask_apispec.extension import FlaskApiSpec
@@ -26,7 +25,7 @@ from model.exceptions import Forbidden, ModelNotFound, Unauthorized
 from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium
 from model.modeling.operations import apply_operations
 from model.modeling.simulations import simulate
-from model.schemas import ModificationRequest, Operation, SimulationRequest
+from model.schemas import ModificationRequest, SimulationRequest
 
 
 logger = logging.getLogger(__name__)
@@ -37,31 +36,12 @@ def init_app(app):
     app.add_url_rule('/healthz', view_func=healthz)
     app.add_url_rule('/metrics', view_func=metrics)
 
-    app.add_url_rule('/models/<int:model_id>', view_func=model_get_modified, methods=['POST'])
     app.add_url_rule('/models/<int:model_id>/modify', view_func=model_modify, methods=['POST'])
     app.add_url_rule('/simulate', view_func=model_simulate, methods=['POST'])
 
     docs = FlaskApiSpec(app)
-    docs.register(model_get_modified, endpoint=model_get_modified.__name__)
     docs.register(model_modify, endpoint=model_modify.__name__)
     docs.register(model_simulate, endpoint=model_simulate.__name__)
-
-
-@use_kwargs(Operation(many=True))
-def model_get_modified(model_id, operations):
-    try:
-        model_wrapper = storage.get(model_id)
-    except Unauthorized as error:
-        abort(401, error.message)
-    except Forbidden as error:
-        abort(403, error.message)
-    except ModelNotFound as error:
-        abort(404, error.message)
-
-    # Use the context manager to undo all modifications to the shared model instance on completion.
-    with model_wrapper.model as model:
-        apply_operations(model, operations)
-        return jsonify(model_to_dict(model))
 
 
 @use_kwargs(ModificationRequest)
