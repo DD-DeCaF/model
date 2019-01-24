@@ -75,6 +75,9 @@ def main():
     print(f"  {sum([len(c.metals) for c in all_chemicals])} metals mapped")
     print(f"  {sum([len(c.metals_missing_inchi) for c in all_chemicals])} metals are still unknown")
 
+    # TODO (Ali Kaafarani): Deal with nested structures. For example, CHEBI:86368 -> CHEBI:63041 -> CHEBI:29035 etc.
+    # Currently, only the topmost level will be mapped to its respective ions/metals.
+
     # Create a suitable json format and persist it to a file. We're adding indentation and sorting keys
     # for readable diffs at later updates, at a small cost of file size.
     salts = {c.chebi: c.to_json() for c in all_chemicals if c.ions or c.metals}
