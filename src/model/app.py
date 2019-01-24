@@ -41,7 +41,7 @@ def init_app(application, interface):
     logging.config.dictConfig(application.config['LOGGING'])
     if application.config['SENTRY_DSN']:
         sentry = Sentry(dsn=application.config['SENTRY_DSN'], logging=True,
-                        level=logging.WARNING)
+                        level=logging.ERROR)
         sentry.init_app(application)
 
     # Middleware and global handlers
