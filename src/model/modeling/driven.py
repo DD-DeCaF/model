@@ -34,11 +34,14 @@ def minimize_distance(model, biomass_reaction, growth_rate, measurements):
     if not growth_rate:
         raise ValueError("Expected measurements to contain an objective "
                          "constraint as measured growth rate")
-    # Include the growth rate in measurements
-    index.append(biomass_reaction)
-    observations.append(np.nanmean(growth_rate['measurements']))
-    uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
-                         if len(growth_rate['measurements']) >= 3 else 1)
+
+    # Trust the growth rate over the measurements. Meaning, constrain the
+    # biomass reaction to the observed values instead of simply including it in
+    # the measurements to be minimized.
+    # TODO (Ali Kaafarani): Support for uncertainties or multiple observations
+    if len(growth_rate['measurements']) != 1:
+        raise NotImplementedError("Cannot handle multiple growth rate measurements yet")
+    model.reactions.get_by_id(biomass_reaction).bounds = (growth_rate['measurements'][0], growth_rate['measurements'][0])
 
     for measure in [m for m in measurements if m['type'] == 'reaction']:
         index.append(measure['id'])
