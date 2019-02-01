@@ -19,6 +19,7 @@ from collections import namedtuple
 import numpy as np
 from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
+from cobra.medium.boundary_types import find_external_compartment
 
 from model.exceptions import MetaboliteNotFound, PartNotFound, ReactionNotFound
 from model.ice_client import ICE
@@ -100,10 +101,12 @@ def apply_medium(model, medium):
     medium_mapping = {}
     for compound in medium:
         try:
-            metabolite = find_metabolite(model, compound.id, compound.namespace, 'e')
+            extracellular = find_external_compartment(model)
+            metabolite = find_metabolite(model, compound.id, compound.namespace, extracellular)
         except MetaboliteNotFound:
             warning = (
-                f"Cannot add medium compund '{compound.id}' - metabolite not found in extracellular compartment"
+                f"Cannot add medium compund '{compound.id}' - metabolite not found in extracellular compartment "
+                f"'{extracellular}'"
             )
             warnings.append(warning)
             logger.warning(warning)
