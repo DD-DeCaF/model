@@ -25,11 +25,20 @@ logger = logging.getLogger(__name__)
 """This module may one day be replaced with http://driven.bio/"""
 
 
-def minimize_distance(model, biomass_reaction, measurements):
+def minimize_distance(model, biomass_reaction, growth_rate, measurements):
     """Replaces fluxomics measurements with the minimized distance"""
     index = []
     observations = []
     uncertainties = []
+
+    if not growth_rate:
+        raise ValueError("Expected measurements to contain an objective "
+                         "constraint as measured growth rate")
+    # Include the growth rate in measurements
+    index.append(biomass_reaction)
+    observations.append(np.nanmean(growth_rate['measurements']))
+    uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
+                         if len(growth_rate['measurements']) >= 3 else 1)
 
     for measure in [m for m in measurements if m['type'] == 'reaction']:
         index.append(measure['id'])
@@ -39,27 +48,17 @@ def minimize_distance(model, biomass_reaction, measurements):
         else:
             uncertainties.append(1)
 
-    try:
-        # Include growth rate measurement
-        growth_rate = next(m for m in measurements if m['type'] == 'growth-rate')
-        index.append(biomass_reaction)
-        observations.append(np.nanmean(growth_rate['measurements']))
-        uncertainties.append(np.nanstd(growth_rate['measurements'], ddof=1)
-                             if len(growth_rate['measurements']) >= 3 else 1)
-    except StopIteration:
-        raise ValueError("Expected measurements to contain an objective "
-                         "constraint as measured growth rate")
-
     observations = pd.Series(index=index, data=observations)
     uncertainties = pd.Series(index=index, data=uncertainties)
 
     solution = adjust_fluxes2model(model, observations, uncertainties)
     for reaction, minimized_distance in solution.fluxes.iteritems():
+        if reaction == biomass_reaction:
+            growth_rate['measurements'] = [minimized_distance]
         for measurement in measurements:
-            if (measurement['type'] == 'growth-rate' and reaction == biomass_reaction
-                    or reaction == measurement.get('id')):
+            if reaction == measurement.get('id'):
                 measurement['measurements'] = [minimized_distance]
-    return measurements
+    return growth_rate, measurements
 
 
 def adjust_fluxes2model(model, observations, uncertainties=None, linear=True,

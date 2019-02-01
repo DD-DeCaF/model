@@ -247,7 +247,7 @@ def apply_genotype(model, genotype_changes):
     return operations, warnings, errors
 
 
-def apply_measurements(model, biomass_reaction, measurements):
+def apply_measurements(model, biomass_reaction, growth_rate, measurements):
     """
     Apply omics measurements to a metabolic model.
 
@@ -259,6 +259,8 @@ def apply_measurements(model, biomass_reaction, measurements):
     model: cobra.Model
     biomass_reaction: str
         The id of the biomass reaction in the given model.
+    growth_rate: dict
+        The growth rate, matching the `GrowthRate` schema.
     measurements: list(dict)
         The measurements, a list of dicts matching the `Measurement` schema.
 
@@ -279,25 +281,23 @@ def apply_measurements(model, biomass_reaction, measurements):
 
     # First, improve the fluxomics dataset by minimizing the distance to a feasible problem.
     # If there is no objective constraint, skip minimization as it can yield unreliable results.
-    try:
-        next(m for m in measurements if m['type'] == 'growth-rate')
-    except StopIteration:
-        pass
-    else:
-        measurements = minimize_distance(model, biomass_reaction, measurements)
+    if growth_rate:
+        growth_rate, measurements = minimize_distance(model, biomass_reaction, growth_rate, measurements)
 
+    # Constrain the model with the observed growth rate
+    if growth_rate:
+        reaction = model.reactions.get_by_id(biomass_reaction)
+        reaction.bounds = _bounds_for_measurements(growth_rate['measurements'])
+        operations.append({
+            'operation': 'modify',
+            'type': 'reaction',
+            'id': reaction.id,
+            'data': reaction_to_dict(reaction),
+        })
+
+    # Constrain the model with the observed measurements
     for scalar in measurements:
-        # If there are three or more observations, use the 97% normal distribution range, i.e., mean +- 1.96.
-        # Otherwise, just use the max/min values of the measurements.
-        scalar_data = np.array([v for v in scalar['measurements'] if not np.isnan(v)])
-        if len(scalar_data) > 2:
-            upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))
-            lower_bound = float(np.mean(scalar_data) - 1.96 * np.std(scalar_data, ddof=1))
-        elif len(scalar_data) > 0:
-            upper_bound = float(np.max(scalar_data))
-            lower_bound = float(np.min(scalar_data))
-        else:
-            continue
+        lower_bound, upper_bound = _bounds_for_measurements(scalar['measurements'])
 
         if scalar['type'] == 'compound':
             try:
@@ -337,15 +337,6 @@ def apply_measurements(model, biomass_reaction, measurements):
                     'id': reaction.id,
                     'data': reaction_to_dict(reaction),
                 })
-        elif scalar['type'] == 'growth-rate':
-            reaction = model.reactions.get_by_id(biomass_reaction)
-            reaction.bounds = lower_bound, upper_bound
-            operations.append({
-                'operation': 'modify',
-                'type': 'reaction',
-                'id': reaction.id,
-                'data': reaction_to_dict(reaction),
-            })
         elif scalar['type'] == 'protein':
             try:
                 reaction = find_reaction(model, scalar['id'], scalar['namespace'])
@@ -362,3 +353,17 @@ def apply_measurements(model, biomass_reaction, measurements):
         else:
             raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
     return operations, warnings, errors
+
+
+def _bounds_for_measurements(measurements):
+    # If there are three or more observations, use the 97% normal distribution range, i.e., mean +- 1.96.
+    # Otherwise, just use the max/min values of the measurements.
+    scalar_data = np.array([v for v in measurements if not np.isnan(v)])
+    if len(scalar_data) > 2:
+        upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))
+        lower_bound = float(np.mean(scalar_data) - 1.96 * np.std(scalar_data, ddof=1))
+        return (lower_bound, upper_bound)
+    else:
+        upper_bound = float(np.max(scalar_data))
+        lower_bound = float(np.min(scalar_data))
+        return (lower_bound, upper_bound)
