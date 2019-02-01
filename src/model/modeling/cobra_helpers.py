@@ -82,7 +82,9 @@ def find_metabolite(model, id, namespace, compartment):
     ----------
     model: cobra.Model
     id: str
-        The identifier of the metabolite to find, e.g. "CHEBI:12965".
+        The identifier of the metabolite to find, e.g. "CHEBI:12965". Note that
+        BiGG identifiers (in namespace "bigg.metabolite") should NOT include a
+        compartment postfix, e.g., use "o2" and not "o2_e".
     namespace: str
         The miriam namespace identifier in which the given metabolite is
         registered. See https://www.ebi.ac.uk/miriam/main/collections
@@ -101,6 +103,17 @@ def find_metabolite(model, id, namespace, compartment):
     MetaboliteNotFound
         If no metabolites are found for the given parameters.
     """
+    # Add compartment postfix to metabolites in the BiGG namespace.
+    if namespace == "bigg.metabolite":
+        for model_compartment in model.compartments.keys():
+            if id.endswith(f"_{model_compartment}"):
+                logger.warning(
+                    f"BiGG metabolite {id} seems to already include a "
+                    f"compartment postfix. Compartment {compartment} will be "
+                    f"appended anyway, searching for {id}_{compartment}."
+                )
+        id = f"{id}_{compartment}"
+
     def query_fun(metabolite):
         if metabolite.compartment != compartment:
             return False
