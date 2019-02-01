@@ -60,6 +60,6 @@ def test_measurements_adapter(iJO1366):
         {'type': 'reaction', 'id': 'PFK', 'namespace': "bigg.reaction", 'measurements': [5, 4.8, 7]},
         {'type': 'reaction', 'id': 'PGK', 'namespace': "bigg.reaction", 'measurements': [5, 5]},
     ]
-    operations, warnings, errors = apply_measurements(iJO1366, biomass_reaction, measurements)
+    operations, warnings, errors = apply_measurements(iJO1366, biomass_reaction, None, measurements)
     assert len(operations) == 4
     assert len(errors) == 0

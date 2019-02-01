@@ -20,7 +20,7 @@ from model.modeling.cobra_helpers import find_metabolite
 
 def test_existing_metabolite(iJO1366):
     iJO1366, biomass_reaction = iJO1366
-    assert find_metabolite(iJO1366, 'CHEBI:17790', 'chebi') == find_metabolite(iJO1366, 'meoh', 'bigg.metabolite')
-    assert find_metabolite(iJO1366, 'succ', 'bigg.metabolite').formula == 'C4H4O4'
+    assert find_metabolite(iJO1366, 'CHEBI:17790', 'chebi', 'e') == find_metabolite(iJO1366, 'meoh', 'bigg.metabolite', 'e')
+    assert find_metabolite(iJO1366, 'succ', 'bigg.metabolite', 'e').formula == 'C4H4O4'
     with pytest.raises(MetaboliteNotFound):
-        find_metabolite(iJO1366, 'wrong_id', 'wrong_namespace')
+        find_metabolite(iJO1366, 'wrong_id', 'wrong_namespace', 'e')

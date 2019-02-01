@@ -28,7 +28,7 @@ def test_minimize_distance_no_growth_rate(iJO1366):
             'namespace': 'bigg.reaction',
             'measurements': [2.36, 2.45, 1.92]
         }]
-        minimize_distance(iJO1366, biomass_reaction, measurements)
+        minimize_distance(iJO1366, biomass_reaction, None, measurements)
 
 
 def test_adjust_fluxes2model(iJO1366):
