@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from model.exceptions import MetaboliteNotFound, ReactionNotFound
+
+
+logger = logging.getLogger(__name__)
 
 
 def find_reaction(model, id, namespace):
@@ -69,7 +74,7 @@ def find_reaction(model, id, namespace):
         return reactions[0]
 
 
-def find_metabolite(model, id, namespace, compartment='e'):
+def find_metabolite(model, id, namespace, compartment):
     """
     Search for a given metabolite in the model, also searching in annotations.
 
@@ -82,8 +87,7 @@ def find_metabolite(model, id, namespace, compartment='e'):
         The miriam namespace identifier in which the given metabolite is
         registered. See https://www.ebi.ac.uk/miriam/main/collections
     compartment: str
-        The compartment in which to look for the metabolite. Defaults to the
-        extracellular compartment.
+        The compartment in which to look for the metabolite.
 
     Returns
     -------
