@@ -22,16 +22,18 @@ logger = logging.getLogger(__name__)
 
 def find_reaction(model, id, namespace):
     """
-    Search for a given reaction in the model, also searching in annotations.
+    Search a model for a given reaction, also looking in annotations.
 
     Parameters
     ----------
     model: cobra.Model
     id: str
-        The identifier of the reaction to find.
+        The identifier of the reaction to find. The comparison is made case
+        insensitively.
     namespace: str
         The miriam namespace identifier in which the given metabolite is
         registered. See https://www.ebi.ac.uk/miriam/main/collections
+        The comparison is made case insensitively.
 
     Returns
     -------
@@ -46,24 +48,10 @@ def find_reaction(model, id, namespace):
         If no reactions are found for the given parameters.
     """
     def query_fun(reaction):
-        # Match namespace and identifiers case-insensitively
-        for model_namespace, model_ids in reaction.annotation.items():
-            if namespace.lower() != model_namespace.lower():
-                return False
-            if isinstance(model_ids, list):
-                return id.lower() in [i.lower() for i in model_ids]
-            else:
-                return id.lower() == model_ids.lower()
+        return _query_item(reaction, id, namespace)
 
     reactions = model.reactions.query(query_fun)
     if len(reactions) == 0:
-        # No annotated result, try the default namespace (without confirming the
-        # namespace id).
-        try:
-            return model.reactions.get_by_id(id)
-        except KeyError:
-            pass
-
         raise ReactionNotFound(
             f"Could not find reaction {id} in namespace {namespace} for "
             f"model {model.id}"
@@ -76,18 +64,21 @@ def find_reaction(model, id, namespace):
 
 def find_metabolite(model, id, namespace, compartment):
     """
-    Search for a given metabolite in the model, also searching in annotations.
+    Search a model for a given metabolite, also looking in annotations.
 
     Parameters
     ----------
     model: cobra.Model
     id: str
-        The identifier of the metabolite to find, e.g. "CHEBI:12965". Note that
-        BiGG identifiers (in namespace "bigg.metabolite") should NOT include a
-        compartment postfix, e.g., use "o2" and not "o2_e".
+        The identifier of the metabolite to find, e.g. "CHEBI:12965". The
+        comparison is made case insensitively. If a match is not found, another
+        attempt will be made with the compartment id appended, e.g., looking for
+        both "o2" and "o2_e". However, the caller should ideally pass the full
+        metabolite identifier.
     namespace: str
         The miriam namespace identifier in which the given metabolite is
         registered. See https://www.ebi.ac.uk/miriam/main/collections
+        The comparison is made case insensitively.
     compartment: str
         The compartment in which to look for the metabolite.
 
@@ -103,49 +94,66 @@ def find_metabolite(model, id, namespace, compartment):
     MetaboliteNotFound
         If no metabolites are found for the given parameters.
     """
-    # Add compartment postfix to metabolites in the BiGG namespace.
-    if namespace == "bigg.metabolite":
-        for model_compartment in model.compartments:
-            if id.endswith(f"_{model_compartment}"):
-                logger.warning(
-                    f"BiGG metabolite {id} seems to already include a "
-                    f"compartment postfix. Compartment {compartment} will be "
-                    f"appended anyway, searching for {id}_{compartment}."
-                )
-        id = f"{id}_{compartment}"
-
     def query_fun(metabolite):
         if metabolite.compartment != compartment:
             return False
 
-        # Try to find a case insensitive match for the namespace key
-        for met_namespace in metabolite.annotation:
-            if namespace.lower() == met_namespace.lower():
-                identifier = metabolite.annotation[met_namespace]
-                # Compare the identifier case insensitively as well
-                # Annotations may contain a single id or a list of ids
-                if isinstance(identifier, list):
-                    return id.lower() in [i.lower() for i in identifier]
-                else:
-                    return id.lower() == identifier.lower()
-        return False
+        result = _query_item(metabolite, id, namespace)
+        if result:
+            return result
+
+        # If the original query fails, retry with the compartment id appended
+        # to the identifier (a regular convenation with BiGG metabolites, but
+        # may also be the case in other namespaces).
+        return _query_item(metabolite, f"{id}_{compartment}", namespace)
 
     metabolites = model.metabolites.query(query_fun)
     if len(metabolites) == 0:
-        # No annotated result, try the default namespace (without confirming the
-        # namespace id).
-        try:
-            metabolite = model.metabolites.get_by_id(id)
-            if metabolite.compartment == compartment:
-                return metabolite
-        except KeyError:
-            pass
-
         raise MetaboliteNotFound(
-            f"Could not find metabolite {id} in namespace {namespace} and "
-            f"compartment {compartment} for model {model.id}"
+            f"Could not find metabolite {id} or {id}_{compartment} in "
+            f"namespace {namespace} and compartment {compartment} for model "
+            f"{model.id}"
         )
     elif len(metabolites) > 1:
         raise IndexError(f"Expected single metabolite, found {metabolites}")
     else:
         return metabolites[0]
+
+
+def _query_item(item, query_id, query_namespace):
+    """
+    Check if the given cobra collection item matches the query arguments.
+
+    Parameters
+    ----------
+    item: cobra.Reaction or cobra.Metabolite
+    query_id: str
+        The identifier to compare. The comparison is made case insensitively.
+    query_namespace: str
+        The miriam namespace identifier in which the given metabolite is
+        registered. See https://www.ebi.ac.uk/miriam/main/collections
+        The comparison is made case insensitively.
+
+    Returns
+    -------
+    bool
+        True if the given id exists in the default namespace, or in the model
+        annotations by the queried namespace, otherwise False.
+    """
+    # Try the default identifiers (without confirming the namespace)
+    if query_id.lower() == item.id.lower():
+        return True
+
+    # Otherwise, try to find a case insensitive match for the namespace key
+    for namespace in item.annotation:
+        if query_namespace.lower() == namespace.lower():
+            annotation = item.annotation[namespace]
+            # Compare the identifier case insensitively as well
+            # Annotations may contain a single id or a list of ids
+            if isinstance(annotation, list):
+                if query_id.lower() in [i.lower() for i in annotation]:
+                    return True
+            else:
+                if query_id.lower() == annotation.lower():
+                    return True
+    return False
