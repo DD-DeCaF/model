@@ -96,12 +96,24 @@ def apply_medium(model, medium):
         Compound(id="CHEBI:25368", namespace="chebi"),
     ])
 
+    try:
+        extracellular = find_external_compartment(model)
+    except RuntimeError as error:
+        # cobrapy throws RuntimeError if it for any reason is unable to find an
+        # external compartment. See:
+        # https://github.com/opencobra/cobrapy/blob/95d920d135fa824e6087f1fcbc88d50882da4dab/cobra/medium/boundary_types.py#L26
+        message = f"Cannot find an external compartment in model {model.id}: {str(error)}"
+        errors.append(message)
+        logger.error(message)
+        # Cannot continue without knowing the external compartment, so
+        # immediately return the error.
+        return operations, warnings, errors
+
     # Create a map of exchange reactions and corresponding fluxes to apply to
     # the medium.
     medium_mapping = {}
     for compound in medium:
         try:
-            extracellular = find_external_compartment(model)
             metabolite = find_metabolite(model, compound.id, compound.namespace, extracellular)
         except MetaboliteNotFound:
             warning = (
