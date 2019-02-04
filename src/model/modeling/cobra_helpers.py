@@ -105,7 +105,7 @@ def find_metabolite(model, id, namespace, compartment):
     """
     # Add compartment postfix to metabolites in the BiGG namespace.
     if namespace == "bigg.metabolite":
-        for model_compartment in model.compartments.keys():
+        for model_compartment in model.compartments:
             if id.endswith(f"_{model_compartment}"):
                 logger.warning(
                     f"BiGG metabolite {id} seems to already include a "
