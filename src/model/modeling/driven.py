@@ -41,10 +41,10 @@ def minimize_distance(model, biomass_reaction, growth_rate, measurements):
     # TODO (Ali Kaafarani): Support for uncertainties or multiple observations
     if len(growth_rate['measurements']) != 1:
         raise NotImplementedError("Cannot handle multiple growth rate measurements yet")
-    model.reactions.get_by_id(biomass_reaction).bounds = (
-        growth_rate['measurements'][0],
-        growth_rate['measurements'][0]
-    )
+    # Until uncertainties are specified in the dataset, allow for ~5% deviation
+    lower_bound = growth_rate['measurements'][0] * 0.95
+    upper_bound = growth_rate['measurements'][0] * 1.05
+    model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
 
     for measure in [m for m in measurements if m['type'] == 'reaction']:
         index.append(measure['id'])
