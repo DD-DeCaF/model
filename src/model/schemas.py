@@ -64,10 +64,10 @@ class GrowthRate(Schema):
 
 
 class ModificationRequest(Schema):
-    medium = fields.Nested(MediumCompound, many=True, missing=None)
+    medium = fields.Nested(MediumCompound, many=True, missing=[])
     genotype = fields.Function(deserialize=full_genotype, missing=None)
     growth_rate = fields.Nested(GrowthRate, missing=None)
-    measurements = fields.Nested(Measurement, many=True, missing=None)
+    measurements = fields.Nested(Measurement, many=True, missing=[])
 
     class Meta:
         strict = True
