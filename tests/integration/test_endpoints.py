@@ -31,10 +31,8 @@ MEASUREMENTS = [
 
 def test_simulate_wrong_id(monkeypatch, client):
     # Mock `requests` to skip the external API request
-    def mock_response(*args, **kwargs):
-        Response = namedtuple("Response", ["status_code"])
-        return Response(status_code=404)
-    monkeypatch.setattr(requests, 'get', mock_response)
+    Response = namedtuple("Response", ["status_code"])
+    monkeypatch.setattr(requests, 'get', lambda *args, **kwargs: Response(status_code=404))
     response = client.post("/simulate", json={'model_id': 404, 'message': {}})
     assert response.status_code == 404
 
