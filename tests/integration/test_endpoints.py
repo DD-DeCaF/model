@@ -145,3 +145,18 @@ def test_prokaryomics_md120_bw25113(client, models):
     })
     assert response.status_code == 200
     assert response.json['growth_rate'] == pytest.approx(0.5134445454218568)
+
+
+def test_growth_rate_measurement(client, models):
+    """Constrain the model with a single growth rate measurement."""
+    data = {"growth_rate": {"measurements": [0.3]}}
+
+    response = client.post(f"/models/{models['iJO1366']}/modify", json=data)
+    assert response.status_code == 200
+
+    response = client.post("/simulate", json={
+        'model_id': models['iJO1366'],
+        'operations': response.json['operations'],
+    })
+    assert response.status_code == 200
+    assert response.json['growth_rate'] == pytest.approx(0.285)
