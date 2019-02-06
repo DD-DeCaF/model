@@ -114,7 +114,7 @@ def apply_medium(model, medium):
     medium_mapping = {}
     for compound in medium:
         try:
-            metabolite = find_metabolite(model, compound.id, compound.namespace, extracellular)
+            extracellular_metabolite = find_metabolite(model, compound.id, compound.namespace, extracellular)
         except MetaboliteNotFound:
             warning = (
                 f"Cannot add medium compund '{compound.id}' - metabolite not found in extracellular compartment "
@@ -123,10 +123,10 @@ def apply_medium(model, medium):
             warnings.append(warning)
             logger.warning(warning)
         else:
-            exchange_reactions = metabolite.reactions.intersection(model.exchanges)
+            exchange_reactions = extracellular_metabolite.reactions.intersection(model.exchanges)
             if len(exchange_reactions) != 1:
-                errors.append(f"Medium compound metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange "
-                              f"reactions in the model; expected 1")
+                errors.append(f"Medium compound metabolite '{extracellular_metabolite.id}' has "
+                              f"{len(exchange_reactions)} exchange reactions in the model; expected 1")
                 continue
             exchange_reaction = next(iter(exchange_reactions))
 
@@ -136,14 +136,16 @@ def apply_medium(model, medium):
                 medium_mapping[exchange_reaction.id] = model.medium[exchange_reaction.id]
                 continue
 
-            if not metabolite.formula:
-                warning = f"No formula for metabolite '{metabolite.id}', cannot check if it is a carbon source"
+            if not extracellular_metabolite.formula:
+                warning = (
+                    f"No formula for metabolite '{extracellular_metabolite.id}', cannot check if it is a carbon source"
+                )
                 warnings.append(warning)
                 logger.warning(warning)
                 # If we don't know, it's most likely that the metabolite does not have a higher uptake rate than a
                 # carbon source, so set the bound still to 10
                 medium_mapping[exchange_reaction.id] = 10
-            elif 'C' in metabolite.elements:
+            elif 'C' in extracellular_metabolite.elements:
                 # Limit the uptake rate for carbon sources to 10
                 medium_mapping[exchange_reaction.id] = 10
             else:
