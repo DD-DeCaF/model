@@ -35,7 +35,7 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
     if objective_id:
         model.objective = model.reactions.get_by_id(objective_id)
     if objective_direction:
-        model.objective.direction = objective_direction
+        model.objective_direction = objective_direction
 
     try:
         logger.info(f"Simulating model {model.id} with {method}")
