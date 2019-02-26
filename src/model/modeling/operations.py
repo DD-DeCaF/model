@@ -14,8 +14,7 @@
 
 import logging
 
-from cobra import Metabolite
-from cobra.io.dict import reaction_from_dict
+from cobra import Metabolite, Reaction
 
 
 logger = logging.getLogger(__name__)
@@ -43,8 +42,10 @@ def _add_reaction(model, data):
     # future.
     metabolites = [Metabolite(id, compartment='c') for id in data['metabolites'].keys()]
     model.add_metabolites(metabolites)
-    reaction = reaction_from_dict(data, model)
+    reaction = Reaction(
+        id=data['id'], name=data['name'], lower_bound=data['lower_bound'], upper_bound=data['upper_bound'])
     model.add_reactions([reaction])
+    reaction.add_metabolites(data['metabolites'])
 
 
 def _modify_reaction(model, id, data):
