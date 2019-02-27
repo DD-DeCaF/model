@@ -97,15 +97,15 @@ def test_simulate_modify(monkeypatch, client, models):
 
 
 def test_simulate_different_objective(client, models):
-    response = client.post("/simulate", json={'model_id': models['iJO1366'], 'objective': 'EX_etoh_e'})
+    response = client.post("/simulate", json={'model_id': models['iJO1366'], 'objective_id': 'EX_etoh_e'})
     assert response.status_code == 200
     result = response.json
-    assert abs(result['flux_distribution']['EX_etoh_e']) - 20.0 < 0.001
+    assert abs(result['flux_distribution']['EX_etoh_e']) == pytest.approx(20)
 
     response = client.post("/simulate", json={'model_id': models['iJO1366']})
     assert response.status_code == 200
     result = response.json
-    assert abs(result['flux_distribution']['EX_etoh_e']) < 0.001
+    assert abs(result['flux_distribution']['EX_etoh_e']) == pytest.approx(0)
 
 
 def test_modify(monkeypatch, client, models):
