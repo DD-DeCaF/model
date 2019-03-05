@@ -51,7 +51,6 @@ def test_adjust_fluxes2model(iJO1366):
     calculated_distance = sum([
         abs(abs(minimized_fluxes[reaction_id]) - measured_flux)
         for reaction_id, measured_flux in measurements.items()
-        if reaction_id in minimized_fluxes
     ])
 
     assert expected_distance == pytest.approx(solution.objective_value)
