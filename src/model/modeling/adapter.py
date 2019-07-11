@@ -225,13 +225,14 @@ def apply_genotype(model, genotype_changes):
                 logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_name}'")
 
                 # Add the reaction
-                try:
-                    reaction = Reaction(reaction_id)
-                    reaction.gene_reaction_rule = feature_name
-                    model.add_reaction(reaction)
-                except ValueError:
-                    # The reaction ID is already in the model
-                    continue
+                if reaction_id in model.reactions:
+                    warning = f"Reaction {reaction_id} already exists in the model, removing and replacing it"
+                    logger.warning(warning)
+                    warnings.append(warning)
+                    model.remove_reactions([reaction_id])
+                reaction = Reaction(reaction_id)
+                reaction.gene_reaction_rule = feature_name
+                model.add_reaction(reaction)
 
                 # Before building the reaction's metabolites, keep track of the existing ones to detect new
                 # metabolites added to the model
