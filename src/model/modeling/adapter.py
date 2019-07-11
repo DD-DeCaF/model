@@ -232,7 +232,7 @@ def apply_genotype(model, genotype_changes):
                     model.remove_reactions([reaction_id])
                 reaction = Reaction(reaction_id)
                 reaction.gene_reaction_rule = feature_name
-                model.add_reaction(reaction)
+                model.add_reactions([reaction])
 
                 # Before building the reaction's metabolites, keep track of the existing ones to detect new
                 # metabolites added to the model
