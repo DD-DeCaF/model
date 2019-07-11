@@ -15,6 +15,7 @@
 import json
 import logging
 from collections import namedtuple
+from os.path import dirname, join
 
 import numpy as np
 from cobra import Reaction
@@ -31,7 +32,7 @@ from model.modeling.gnomic_helpers import feature_id
 logger = logging.getLogger(__name__)
 ice = ICE()
 
-with open("data/salts.json") as file_:
+with open(join(dirname(__file__), "data", "salts.json")) as file_:
     SALTS = json.load(file_)
 
 
