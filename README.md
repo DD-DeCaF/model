@@ -32,3 +32,5 @@ Specify environment variables in a `.env` file. See `docker-compose.yml` for the
 * `ICE_USERNAME` ICE username
 * `ICE_PASSWORD` ICE password
 * `ID_MAPPER_API` URL to the ID mapper service
+* `MODEL_STORAGE_API`
+* `IAM_API`
