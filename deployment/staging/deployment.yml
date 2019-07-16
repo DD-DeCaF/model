@@ -26,7 +26,7 @@ spec:
         - name: SCRIPT_NAME
           value: /simulations
         - name: MODEL_STORAGE_API
-          value: http://model-storage-staging/mstorage
+          value: http://model-storage-staging/model-storage
         - name: ICE_API
           value: http://ice
         - name: IAM_API
@@ -42,7 +42,7 @@ spec:
               name: simulations-staging
               key: ICE_PASSWORD
         - name: ID_MAPPER_API
-          value: http://id-mapper-production/idmapping/query
+          value: http://id-mapper-production/id-mapper
         - name: prometheus_multiproc_dir
           value: /prometheus-client
         - name: SENTRY_DSN

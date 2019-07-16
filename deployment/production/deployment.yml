@@ -42,7 +42,7 @@ spec:
               name: simulations-production
               key: ICE_PASSWORD
         - name: ID_MAPPER_API
-          value: http://id-mapper-production/id-mapper/query
+          value: http://id-mapper-production/id-mapper
         - name: prometheus_multiproc_dir
           value: /prometheus-client
         - name: SENTRY_DSN

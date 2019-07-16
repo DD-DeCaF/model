@@ -40,4 +40,4 @@ def query_identifiers(object_ids, db_from, db_to):
     logger.info('query id mapper at %s with %s', app.config['ID_MAPPER_API'], str(query))
     with log_time(operation=f"ID map request for ids: {object_ids}"):
         with API_REQUESTS.labels('model', os.environ['ENVIRONMENT'], 'id-mapper', app.config['ID_MAPPER_API']).time():
-            return requests.post(app.config['ID_MAPPER_API'], data=query).json()['ids']
+            return requests.post(f"{app.config['ID_MAPPER_API']}/query", data=query).json()['ids']

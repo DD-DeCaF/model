@@ -19,8 +19,8 @@ services:
       - IAM_API=${IAM_API:-https://api-staging.dd-decaf.eu/iam}
       - ICE_USERNAME=${ICE_USERNAME}
       - ICE_PASSWORD=${ICE_PASSWORD}
-      - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/idmapping/query}
-      - MODEL_STORAGE_API=${MODEL_STORAGE_API:-https://api-staging.dd-decaf.eu/mstorage}
+      - ID_MAPPER_API=${ID_MAPPER_API:-https://api.dd-decaf.eu/id-mapper}
+      - MODEL_STORAGE_API=${MODEL_STORAGE_API:-https://api-staging.dd-decaf.eu/model-storage}
       - prometheus_multiproc_dir=/prometheus-client
     volumes:
       - .:/app
