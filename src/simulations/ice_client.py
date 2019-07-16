@@ -18,10 +18,10 @@ import os
 
 import requests
 
-from model.app import app
-from model.exceptions import PartNotFound
-from model.metrics import API_REQUESTS
-from model.utils import Singleton
+from simulations.app import app
+from simulations.exceptions import PartNotFound
+from simulations.metrics import API_REQUESTS
+from simulations.utils import Singleton
 
 
 logger = logging.getLogger(__name__)

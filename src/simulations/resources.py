@@ -20,12 +20,12 @@ from flask_apispec.extension import FlaskApiSpec
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 
-from model import storage
-from model.exceptions import Forbidden, ModelNotFound, Unauthorized
-from model.modeling.adapter import apply_genotype, apply_measurements, apply_medium
-from model.modeling.operations import apply_operations
-from model.modeling.simulations import simulate
-from model.schemas import ModificationRequest, SimulationRequest
+from simulations import storage
+from simulations.exceptions import Forbidden, ModelNotFound, Unauthorized
+from simulations.modeling.adapter import apply_genotype, apply_measurements, apply_medium
+from simulations.modeling.operations import apply_operations
+from simulations.modeling.simulations import simulate
+from simulations.schemas import ModificationRequest, SimulationRequest
 
 
 logger = logging.getLogger(__name__)

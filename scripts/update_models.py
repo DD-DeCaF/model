@@ -21,8 +21,8 @@ from cameo import load_model
 from cobra.io import read_sbml_model, write_sbml_model
 from tqdm import tqdm
 
-from model import storage
-from model.app import app
+from simulations import storage
+from simulations.app import app
 
 
 LOCAL_MODELS = ['ecYeast7', 'ecYeast7_proteomics']

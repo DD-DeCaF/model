@@ -14,7 +14,7 @@
 
 import logging
 
-from model.exceptions import MetaboliteNotFound, ReactionNotFound
+from simulations.exceptions import MetaboliteNotFound, ReactionNotFound
 
 
 logger = logging.getLogger(__name__)

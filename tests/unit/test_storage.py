@@ -17,8 +17,8 @@ import requests
 from cobra import Model
 from flask import g
 
-from model import storage
-from model.exceptions import Forbidden, Unauthorized
+from simulations import storage
+from simulations.exceptions import Forbidden, Unauthorized
 
 
 class MockResponseSuccess:

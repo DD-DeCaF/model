@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.ice_client import ICE
-from model.modeling.adapter import SALTS, apply_genotype, apply_measurements, apply_medium
-from model.modeling.gnomic_helpers import full_genotype
+from simulations.ice_client import ICE
+from simulations.modeling.adapter import SALTS, apply_genotype, apply_measurements, apply_medium
+from simulations.modeling.gnomic_helpers import full_genotype
 
 
 def test_medium_salts():

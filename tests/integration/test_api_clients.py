@@ -16,8 +16,8 @@
 
 import pytest
 
-from model.exceptions import PartNotFound
-from model.ice_client import ICE
+from simulations.exceptions import PartNotFound
+from simulations.ice_client import ICE
 
 
 ice = ICE()

@@ -38,31 +38,31 @@ style: flake8 isort license
 
 ## Run flake8.
 flake8:
-	docker-compose run --rm web flake8 src/model tests
+	docker-compose run --rm web flake8 src tests
 
 ## Check Python package import order.
 isort:
-	docker-compose run --rm web isort --check-only --recursive src/model tests
+	docker-compose run --rm web isort --check-only --recursive src tests
 
 ## Sort imports and write changes to files.
 isort-save:
-	docker-compose run --rm web isort --recursive src/model tests
+	docker-compose run --rm web isort --recursive src tests
 
 ## Run the tests.
 test:
-	docker-compose run --rm web pytest -v --cov=src/model tests
+	docker-compose run --rm web pytest -v --cov=src tests
 
 ## Run the tests and report coverage (see https://docs.codecov.io/docs/testing-with-docker).
 shared := /tmp/coverage
 test-travis:
 	mkdir --parents "$(shared)"
 	docker-compose run --rm -v "$(shared):$(shared)" web pytest \
-		--cov-report "xml:$(shared)/coverage.xml" --cov-report term --cov=src/model
+		--cov-report "xml:$(shared)/coverage.xml" --cov-report term --cov=src
 	bash <(curl -s https://codecov.io/bash) -f "$(shared)/coverage.xml"
 
 ## Verify source code license headers.
 license:
-	./scripts/verify_license_headers.sh src/model tests
+	./scripts/verify_license_headers.sh src tests
 
 ## Stop all services.
 stop:

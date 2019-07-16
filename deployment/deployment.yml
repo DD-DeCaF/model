@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: model-staging
+  name: simulations-staging
 spec:
   selector:
     matchLabels:
-      app: model
+      app: simulations
       env: staging
   replicas: 1
   template:
     metadata:
       labels:
-        app: model
+        app: simulations
         env: staging
     spec:
       containers:
       - name: web
-        image: gcr.io/dd-decaf-cfbf6/model:devel
+        image: gcr.io/dd-decaf-cfbf6/simulations:devel
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -24,7 +24,7 @@ spec:
         - name: ENVIRONMENT
           value: staging
         - name: SCRIPT_NAME
-          value: /mcaffeine
+          value: /simulations
         - name: MODEL_STORAGE_API
           value: http://model-storage-staging/mstorage
         - name: ICE_API
@@ -34,12 +34,12 @@ spec:
         - name: ICE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: model-staging
+              name: simulations-staging
               key: ICE_USERNAME
         - name: ICE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: model-staging
+              name: simulations-staging
               key: ICE_PASSWORD
         - name: ID_MAPPER_API
           value: http://id-mapper-production/idmapping/query
@@ -48,15 +48,15 @@ spec:
         - name: SENTRY_DSN
           valueFrom:
             secretKeyRef:
-              name: model-staging
+              name: simulations-staging
               key: SENTRY_DSN
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app"]
+        command: ["gunicorn", "-c", "gunicorn.py", "simulations.wsgi:app"]
         readinessProbe:
           httpGet:
-            path: /mcaffeine/healthz
+            path: /simulations/healthz
             port: 8000
           initialDelaySeconds: 5
         resources:

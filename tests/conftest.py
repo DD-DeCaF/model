@@ -15,9 +15,9 @@
 import pytest
 from cobra.io import read_sbml_model
 
-from model import storage
-from model.app import app as app_
-from model.app import init_app
+from simulations import storage
+from simulations.app import app as app_
+from simulations.app import init_app
 
 
 @pytest.fixture(scope="session")

@@ -17,7 +17,7 @@
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf
 
-from model.modeling.gnomic_helpers import full_genotype
+from simulations.modeling.gnomic_helpers import full_genotype
 
 
 class Operation(Schema):

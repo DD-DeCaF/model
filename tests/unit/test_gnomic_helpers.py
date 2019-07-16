@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.modeling.gnomic_helpers import feature_id, full_genotype
+from simulations.modeling.gnomic_helpers import feature_id, full_genotype
 
 
 def test_feature_operations():

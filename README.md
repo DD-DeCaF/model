@@ -1,12 +1,12 @@
-# model
+# Simulations
 
 ![master Branch](https://img.shields.io/badge/branch-master-blue.svg)
-[![master Build Status](https://travis-ci.org/DD-DeCaF/model.svg?branch=master)](https://travis-ci.org/DD-DeCaF/model)
-[![master Codecov](https://codecov.io/gh/DD-DeCaF/model/branch/master/graph/badge.svg)](https://codecov.io/gh/DD-DeCaF/model/branch/master)
+[![master Build Status](https://travis-ci.org/DD-DeCaF/simulations.svg?branch=master)](https://travis-ci.org/DD-DeCaF/simulations)
+[![master Codecov](https://codecov.io/gh/DD-DeCaF/simulations/branch/master/graph/badge.svg)](https://codecov.io/gh/DD-DeCaF/simulations/branch/master)
 
 ![devel Branch](https://img.shields.io/badge/branch-devel-blue.svg)
-[![devel Build Status](https://travis-ci.org/DD-DeCaF/model.svg?branch=devel)](https://travis-ci.org/DD-DeCaF/model)
-[![devel Codecov](https://codecov.io/gh/DD-DeCaF/model/branch/devel/graph/badge.svg)](https://codecov.io/gh/DD-DeCaF/model/branch/devel)
+[![devel Build Status](https://travis-ci.org/DD-DeCaF/simulations.svg?branch=devel)](https://travis-ci.org/DD-DeCaF/simulations)
+[![devel Codecov](https://codecov.io/gh/DD-DeCaF/simulations/branch/devel/graph/badge.svg)](https://codecov.io/gh/DD-DeCaF/simulations/branch/devel)
 
 ## Development
 

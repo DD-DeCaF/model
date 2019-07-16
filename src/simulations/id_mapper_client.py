@@ -18,9 +18,9 @@ import os
 
 import requests
 
-from model.app import app
-from model.metrics import API_REQUESTS
-from model.utils import log_time
+from simulations.app import app
+from simulations.metrics import API_REQUESTS
+from simulations.utils import log_time
 
 
 logger = logging.getLogger(__name__)

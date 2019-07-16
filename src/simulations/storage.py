@@ -18,9 +18,9 @@ import requests
 from cobra.io.dict import model_from_dict
 from flask import g
 
-from model.app import app
-from model.exceptions import Forbidden, ModelNotFound, Unauthorized
-from model.jwt import jwt_require_claim
+from simulations.app import app
+from simulations.exceptions import Forbidden, ModelNotFound, Unauthorized
+from simulations.jwt import jwt_require_claim
 
 
 logger = logging.getLogger(__name__)

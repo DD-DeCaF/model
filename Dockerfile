@@ -13,5 +13,3 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade -r /tmp/requirements.txt
 
 COPY . "${CWD}/"
-
-CMD ["gunicorn", "-c", "gunicorn.py", "model.wsgi:app""]

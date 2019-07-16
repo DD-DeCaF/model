@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from model.modeling.driven import adjust_fluxes2model, minimize_distance
+from simulations.modeling.driven import adjust_fluxes2model, minimize_distance
 
 
 def test_minimize_distance_no_growth_rate(iJO1366):

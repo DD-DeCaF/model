@@ -1,7 +1,7 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: model-staging
+  name: simulations-staging
   annotations:
     kubernetes.io/ingress.class: "nginx"
 spec:
@@ -13,7 +13,7 @@ spec:
   - host: api-staging.dd-decaf.eu
     http:
       paths:
-      - path: /mcaffeine
+      - path: /simulations
         backend:
-          serviceName: model-staging
+          serviceName: simulations-staging
           servicePort: 80

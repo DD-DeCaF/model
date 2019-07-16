@@ -19,7 +19,7 @@ from collections import namedtuple
 import pytest
 import requests
 
-from model.ice_client import ICE
+from simulations.ice_client import ICE
 
 
 MEASUREMENTS = [

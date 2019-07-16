@@ -23,7 +23,7 @@ from flask_cors import CORS
 from raven.contrib.flask import Sentry
 from werkzeug.contrib.fixers import ProxyFix
 
-from model.settings import current_config
+from simulations.settings import current_config
 
 
 app = Flask(__name__)
@@ -34,7 +34,7 @@ def init_app(application, interface):
     """Initialize the main app with config information and routes."""
     # Note that local modules are imported here to avoid circular imports in
     # modules that need to import the app.
-    from model import errorhandlers, jwt, middleware, resources, storage
+    from simulations import errorhandlers, jwt, middleware, resources, storage
 
     # Configuration
     app.wsgi_app = ProxyFix(app.wsgi_app)

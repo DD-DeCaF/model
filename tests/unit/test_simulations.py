@@ -14,7 +14,7 @@
 
 import pytest
 
-from model.modeling.simulations import METHODS, simulate
+from simulations.modeling.simulations import METHODS, simulate
 
 
 @pytest.mark.skip(reason="TMY results is currently not implemented")

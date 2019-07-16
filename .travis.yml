@@ -14,7 +14,7 @@ services:
 
 env:
   global:
-    - IMAGE_REPO=gcr.io/dd-decaf-cfbf6/model
+    - IMAGE_REPO=gcr.io/dd-decaf-cfbf6/simulations
     - IMAGE_TAG=${TRAVIS_BRANCH}
 
 before_install:

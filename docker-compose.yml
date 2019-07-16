@@ -4,12 +4,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: gcr.io/dd-decaf-cfbf6/model:${IMAGE_TAG:-latest}
+    image: gcr.io/dd-decaf-cfbf6/simulations:${IMAGE_TAG:-latest}
     networks:
       default:
       DD-DeCaF:
         aliases:
-          - model
+          - simulations
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
@@ -26,7 +26,7 @@ services:
       - .:/app
       - type: tmpfs
         target: "/prometheus-client"
-    command: gunicorn -c gunicorn.py model.wsgi:app
+    command: gunicorn -c gunicorn.py simulations.wsgi:app
 
 networks:
   DD-DeCaF:

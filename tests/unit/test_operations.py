@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.modeling.operations import apply_operations
+from simulations.modeling.operations import apply_operations
 
 
 def test_add_reaction(e_coli_core):

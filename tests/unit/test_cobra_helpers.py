@@ -14,8 +14,8 @@
 
 import pytest
 
-from model.exceptions import MetaboliteNotFound
-from model.modeling.cobra_helpers import find_metabolite
+from simulations.exceptions import MetaboliteNotFound
+from simulations.modeling.cobra_helpers import find_metabolite
 
 
 def test_existing_metabolite(iJO1366):

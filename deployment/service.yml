@@ -1,14 +1,14 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: model-staging
+  name: simulations-staging
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "8000"
-    prometheus.io/path: "/mcaffeine/metrics"
+    prometheus.io/path: "/simulations/metrics"
 spec:
   selector:
-    app: model
+    app: simulations
     env: staging
   ports:
   - name: web

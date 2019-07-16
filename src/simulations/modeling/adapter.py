@@ -21,11 +21,11 @@ from cobra import Reaction
 from cobra.io.dict import reaction_to_dict
 from cobra.medium.boundary_types import find_external_compartment
 
-from model.exceptions import MetaboliteNotFound, PartNotFound, ReactionNotFound
-from model.ice_client import ICE
-from model.modeling.cobra_helpers import find_metabolite, find_reaction
-from model.modeling.driven import minimize_distance
-from model.modeling.gnomic_helpers import feature_id
+from simulations.exceptions import MetaboliteNotFound, PartNotFound, ReactionNotFound
+from simulations.ice_client import ICE
+from simulations.modeling.cobra_helpers import find_metabolite, find_reaction
+from simulations.modeling.driven import minimize_distance
+from simulations.modeling.gnomic_helpers import feature_id
 
 
 logger = logging.getLogger(__name__)
