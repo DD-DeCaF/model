@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: simulations-production
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/simulations/metrics"
+spec:
+  selector:
+    app: simulations
+    env: production
+  ports:
+  - name: web
+    protocol: TCP
+    port: 80
+    targetPort: 8000

@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulations-production
+spec:
+  selector:
+    matchLabels:
+      app: simulations
+      env: production
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: simulations
+        env: production
+    spec:
+      containers:
+      - name: web
+        image: gcr.io/dd-decaf-cfbf6/simulations:master
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: ENVIRONMENT
+          value: production
+        - name: SCRIPT_NAME
+          value: /simulations
+        - name: MODEL_STORAGE_API
+          value: http://model-storage-production/model-storage
+        - name: ICE_API
+          value: http://ice
+        - name: IAM_API
+          value: http://iam-production/iam
+        - name: ICE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: simulations-production
+              key: ICE_USERNAME
+        - name: ICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: simulations-production
+              key: ICE_PASSWORD
+        - name: ID_MAPPER_API
+          value: http://id-mapper-production/id-mapper/query
+        - name: prometheus_multiproc_dir
+          value: /prometheus-client
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: simulations-production
+              key: SENTRY_DSN
+        volumeMounts:
+        - mountPath: /prometheus-client
+          name: prometheus-client
+        command: ["gunicorn", "-c", "gunicorn.py", "simulations.wsgi:app"]
+        readinessProbe:
+          httpGet:
+            path: /simulations/healthz
+            port: 8000
+          initialDelaySeconds: 5
+        resources:
+          requests:
+            cpu: "10m"
+          limits:
+            cpu: "4000m"
+      volumes:
+      - name: prometheus-client
+        emptyDir: {}
