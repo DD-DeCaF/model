@@ -236,9 +236,7 @@ def apply_genotype(model, genotype_changes):
             continue
 
         try:
-            heterologous_reactions = list(
-                ice.get_reaction_equations(genotype=feature_identifer).items()
-            )
+            heterologous = ice.get_reaction_equations(genotype=feature_identifer)
         except PartNotFound:
             warning = f"Cannot add gene '{feature_identifer}', " \
                 f"no gene-protein-reaction rules were found on ICE."
@@ -246,7 +244,7 @@ def apply_genotype(model, genotype_changes):
             logger.warning(warning)
             continue
 
-        for reaction_id, equation in heterologous_reactions:
+        for reaction_id, equation in heterologous.items():
             logger.info(
                 f"Adding reaction '{reaction_id}' catalyzed by genetic part "
                 f"'{feature_identifer}'."
