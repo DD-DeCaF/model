@@ -273,7 +273,7 @@ def apply_genotype(model, genotype_changes):
             # Ensure all metabolites have a compartment. (Check all of the reaction's
             # metabolites, but presumably only new metabolites will not have a
             # compartment.)
-            for metabolite in reaction.metabolites.keys():
+            for metabolite in reaction.metabolites:
                 if metabolite.compartment:
                     continue
                 # Assume BiGG identifier convention and try to parse the compartment
