@@ -196,10 +196,24 @@ def apply_genotype(model, genotype_changes):
 
     # Apply feature operations
     for feature in genotype_changes.removed_features:
-        feature_name = feature_id(feature)
+        feature_identifer = feature_id(feature)
+        feature_lower = feature_identifer.lower()
         # Perform gene knockout. Use feature name as gene name
         try:
-            gene = model.genes.query(lambda g: feature_name in (g.id, g.name))[0]
+            # Some genotype descriptions wrongly use the protein names rather
+            # than the gene names, for example, AdhE instead of adhE.
+            # We want to be forgiving here and only compare lower case names.
+            def compare_feature(gene):
+                if gene.id == feature_identifer:
+                    return True
+                elif gene.name.lower() == feature_lower:
+                    return True
+                else:
+                    return False
+
+            # We pick the first result. A fuzzy search on the name would be
+            # useful in future.
+            gene = model.genes.query(compare_feature)[0]
             gene.knock_out()
             operations.append({
                 'operation': 'knockout',
@@ -207,57 +221,77 @@ def apply_genotype(model, genotype_changes):
                 'id': gene.id,
             })
         except IndexError:
-            warning = f"Cannot knockout gene '{feature_name}', not found in the model"
+            warning = f"Cannot knockout gene '{feature_identifer}', not found in the model"
             warnings.append(warning)
             logger.warning(warning)
 
     for feature in genotype_changes.added_features:
-        feature_name = feature_id(feature)
-        # Perform gene insertion.
-        # Find all the reactions associated with this gene using KEGGClient and add them to the model
-        if model.genes.query(lambda g: feature_name in (g.id, g.name)):
-            # do not add if gene is already in the model
-            logger.info(f"Not adding gene '{feature_name}', it already exists in the model")
+        feature_identifer = feature_id(feature)
+        feature_lower = feature_identifer.lower()
+        # Perform gene insertion unless the gene already exists in the model.
+
+        def compare_feature(gene):
+            if gene.id == feature_identifer:
+                return True
+            elif gene.name.lower() == feature_lower:
+                return True
+            else:
+                return False
+
+        if model.genes.query(compare_feature):
+            logger.info(
+                f"Not adding gene '{feature_identifer}', "
+                f"it already exists in the model."
+            )
             continue
 
         try:
-            for reaction_id, equation in ice.get_reaction_equations(genotype=feature_name).items():
-                logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_name}'")
+            heterologous_reactions = list(
+                ice.get_reaction_equations(genotype=feature_identifer).items()
+            )
+        except PartNotFound:
+            warning = f"Cannot add gene '{feature_identifer}', " \
+                f"no gene-protein-reaction rules were found on ICE."
+            warnings.append(warning)
+            logger.warning(warning)
+            continue
 
-                # Add the reaction
-                if reaction_id in model.reactions:
-                    warning = f"Reaction {reaction_id} already exists in the model, removing and replacing it"
-                    logger.warning(warning)
-                    warnings.append(warning)
-                    model.remove_reactions([reaction_id])
-                reaction = Reaction(reaction_id)
-                reaction.gene_reaction_rule = feature_name
-                model.add_reactions([reaction])
+        for reaction_id, equation in heterologous_reactions:
+            logger.info(
+                f"Adding reaction '{reaction_id}' catalyzed by genetic part "
+                f"'{feature_identifer}'."
+            )
+            if reaction_id in model.reactions:
+                warning = f"Reaction {reaction_id} already exists in the " \
+                    f"model, removing and replacing it."
+                logger.warning(warning)
+                warnings.append(warning)
+                model.remove_reactions([reaction_id])
+            reaction = Reaction(reaction_id)
+            reaction.gene_reaction_rule = feature_identifer
+            model.add_reactions([reaction])
 
-                # Before building the reaction's metabolites, keep track of the existing ones to detect new
-                # metabolites added to the model
-                metabolites_before = set(model.metabolites)
-                reaction.build_reaction_from_string(equation)
-                new_metabolites = set(model.metabolites).difference(metabolites_before)
+            # Before building the reaction's metabolites, keep track of the
+            # existing ones to detect new metabolites added to the model.
+            metabolites_before = set(model.metabolites)
+            reaction.build_reaction_from_string(equation)
+            new_metabolites = set(model.metabolites) - metabolites_before
 
+            operations.append({
+                'operation': 'add',
+                'type': 'reaction',
+                'data': reaction_to_dict(reaction),
+            })
+
+            # For all new metabolites, create a demand reactions so that they
+            # may leave the system.
+            for metabolite in new_metabolites:
+                demand_reaction = model.add_boundary(metabolite, type='demand')
                 operations.append({
                     'operation': 'add',
                     'type': 'reaction',
-                    'data': reaction_to_dict(reaction),
+                    'data': reaction_to_dict(demand_reaction),
                 })
-
-                # For all new metabolites, create a demand reaction so that it may leave the system
-                for metabolite in new_metabolites:
-                    demand_reaction = model.add_boundary(metabolite, type='demand')
-                    operations.append({
-                        'operation': 'add',
-                        'type': 'reaction',
-                        'data': reaction_to_dict(demand_reaction),
-                    })
-        except PartNotFound:
-            warning = f"Cannot add gene '{feature_name}', no gene-protein-reaction rules were found in ICE"
-            warnings.append(warning)
-            logger.warning(warning)
 
     return operations, warnings, errors
 
