@@ -35,15 +35,30 @@ def apply_operations(model, operations):
                              f"'{operation['type']}'")
 
 
+def _parse_metabolite(metabolite_id):
+    """Create a metabolite object from an identifier."""
+    try:
+        compartment = metabolite_id.rsplit("_", 1)[1]
+    except IndexError:
+        # Since we cannot parse the compartment from the identifier,
+        # we assume it is in the cytosol.
+        compartment = "c"
+    return Metabolite(metabolite_id, compartment=compartment)
+
+
 def _add_reaction(model, data):
     logger.debug(f"Adding reaction to model '{model.id}' from: {data}")
-    # Ensure all reaction metabolites exist in the model (adding existing metabolites is silently ignored).
-    # Note: Assuming the reaction occurs in the cytosol compartment, but this might be overridable by the user in the
-    # future.
-    metabolites = [Metabolite(id, compartment='c') for id in data['metabolites'].keys()]
+    metabolites = [
+        _parse_metabolite(m) for m in data['metabolites']
+        if m not in model.metabolites
+    ]
     model.add_metabolites(metabolites)
     reaction = Reaction(
-        id=data['id'], name=data['name'], lower_bound=data['lower_bound'], upper_bound=data['upper_bound'])
+        id=data['id'],
+        name=data['name'],
+        lower_bound=data['lower_bound'],
+        upper_bound=data['upper_bound']
+    )
     model.add_reactions([reaction])
     reaction.add_metabolites(data['metabolites'])
 
