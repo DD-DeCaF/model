@@ -30,6 +30,8 @@ def apply_operations(model, operations):
             _knockout_reaction(model, operation['id'])
         elif operation['operation'] == 'knockout' and operation['type'] == 'gene':
             _knockout_gene(model, operation['id'])
+        elif operation['operation'] == 'remove' and operation['type'] == 'reaction':
+            _remove_reaction(model, operation['id'])
         else:
             raise ValueError(f"Invalid operation: Cannot perform operation '{operation['operation']}' on type "
                              f"'{operation['type']}'")
@@ -69,11 +71,16 @@ def _modify_reaction(model, id, data):
 
 
 def _knockout_reaction(model, id):
-    logger.debug(f"Removing reaction '{id}' from model '{model.id}'")
+    logger.debug(f"Knocking out reaction '{id}' in model '{model.id}'")
     model.reactions.get_by_id(id).knock_out()
 
 
+def _remove_reaction(model, id):
+    logger.debug(f"Removing reaction '{id}' from model '{model.id}'")
+    model.remove_reactions([model.reactions.get_by_id(id)])
+
+
 def _knockout_gene(model, id):
-    logger.debug(f"Removing gene '{id}' from model '{model.id}'")
+    logger.debug(f"Knocking out gene '{id}' in model '{model.id}'")
     gene = model.genes.query(lambda g: id in (g.id, g.name))[0]
     gene.knock_out()
