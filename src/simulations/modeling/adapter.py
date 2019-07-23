@@ -17,7 +17,7 @@ import logging
 from collections import namedtuple
 
 import numpy as np
-from cobra import Reaction
+from cobra import Configuration, Metabolite, Reaction
 from cobra.io.dict import reaction_to_dict
 from cobra.medium.boundary_types import find_external_compartment
 
@@ -315,14 +315,54 @@ def apply_genotype(model, genotype_changes):
                 'data': reaction_to_dict(reaction),
             })
 
-            # For all new metabolites, create a demand reactions so that they
-            # may leave the system.
+            # We have to ensure that all new metabolites can leave the system. Create an
+            # extracellular metabolite + exchange reaction (as opposed to just creating
+            # a demand reaction for the intracellular metabolite) because if there are
+            # metabolomics for this metabolite in a later step, our adapter logic always
+            # assumes it exists in the 'e' compartment and that there exists an exchange
+            # reaction.
             for metabolite in new_metabolites:
-                demand_reaction = model.add_boundary(metabolite, type='demand')
+                # Create an extracellular version of the same metabolite
+                if metabolite.compartment == "e":
+                    error = (
+                        f"Metabolite {metabolite} was added to 'e' compartment, "
+                        "that is not yet handled"
+                    )
+                    errors.append(error)
+                    logger.error(error)
+                    continue
+                metabolite_id, compartment_id = metabolite.id.rsplit("_", 1)
+                metabolite_e = Metabolite(
+                    f"{metabolite_id}_e",
+                    name=metabolite.name,
+                    formula=metabolite.formula,
+                    compartment="e",
+                )
+
+                # Create a transport reaction between the compartments
+                transport_reaction = Reaction(
+                    id=f"{metabolite_id.upper()}t",
+                    name=f"{metabolite.name} transport",
+                )
+                transport_reaction.bounds = Configuration().bounds
+                transport_reaction.add_metabolites({
+                    metabolite: -1,
+                    metabolite_e: 1,
+                })
+                model.add_reactions([transport_reaction])
                 operations.append({
                     'operation': 'add',
                     'type': 'reaction',
-                    'data': reaction_to_dict(demand_reaction),
+                    'data': reaction_to_dict(transport_reaction),
+                })
+
+                # Create an exchange reaction for the extracellular metabolite so that
+                # it may leave the system
+                exchange_reaction = model.add_boundary(metabolite_e)
+                operations.append({
+                    'operation': 'add',
+                    'type': 'reaction',
+                    'data': reaction_to_dict(exchange_reaction),
                 })
 
     return operations, warnings, errors
