@@ -280,8 +280,8 @@ def apply_genotype(model, genotype_changes):
                 # id.
                 if "_" not in metabolite.id:
                     error = (
-                        f"Metabolite {metabolite.id} is unknown, and we cannot parse a "
-                        "compartment for it."
+                        f"We cannot parse a compartment from heterologous metabolite "
+                        f"'{metabolite.id}'."
                     )
                     errors.append(error)
                     logger.error(error)
