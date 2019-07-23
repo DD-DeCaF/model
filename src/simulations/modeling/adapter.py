@@ -317,12 +317,10 @@ def apply_genotype(model, genotype_changes):
             for metabolite in new_metabolites:
                 # Create an extracellular version of the same metabolite
                 if metabolite.compartment == "e":
-                    error = (
-                        f"Metabolite {metabolite} was added to 'e' compartment, "
-                        "that is not yet handled"
+                    logger.info(
+                        f"Metabolite {metabolite} is already in the extracellular "
+                        f"compartment; not creating transport/exchange reactions for it"
                     )
-                    errors.append(error)
-                    logger.error(error)
                     continue
                 metabolite_id, compartment_id = metabolite.id.rsplit("_", 1)
                 metabolite_e = Metabolite(
