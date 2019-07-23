@@ -230,6 +230,11 @@ def apply_genotype(model, genotype_changes):
                     logger.warning(warning)
                     warnings.append(warning)
                     model.remove_reactions([reaction_id])
+                    operations.append({
+                        'operation': 'remove',
+                        'type': 'reaction',
+                        'id': reaction_id,
+                    })
                 reaction = Reaction(reaction_id)
                 reaction.gene_reaction_rule = feature_name
                 model.add_reactions([reaction])
