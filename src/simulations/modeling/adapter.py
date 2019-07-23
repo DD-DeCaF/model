@@ -277,6 +277,38 @@ def apply_genotype(model, genotype_changes):
             reaction.build_reaction_from_string(equation)
             new_metabolites = set(model.metabolites) - metabolites_before
 
+            # Ensure all metabolites have a compartment. (Check all of the reaction's
+            # metabolites, but presumably only new metabolites will not have a
+            # compartment.)
+            for metabolite in reaction.metabolites.keys():
+                if metabolite.compartment:
+                    continue
+                # Assume BiGG identifier convention and try to parse the compartment
+                # id.
+                if "_" not in metabolite.id:
+                    error = (
+                        f"Metabolite {metabolite.id} is unknown, and we cannot parse a "
+                        "compartment for it."
+                    )
+                    errors.append(error)
+                    logger.error(error)
+                    continue
+                metabolite_id, compartment_id = metabolite.id.rsplit("_", 1)
+                if compartment_id not in model.compartments:
+                    error = (
+                        f"Compartment {compartment_id} does not exist in the model,"
+                        f"but that's what we understand metabolite {metabolite.id} "
+                        f"to exist in."
+                    )
+                    errors.append(error)
+                    logger.error(error)
+                    continue
+                logger.debug(
+                    f"Setting compartment for metabolite {metabolite} to: "
+                    f"{compartment_id}"
+                )
+                metabolite.compartment = compartment_id
+
             operations.append({
                 'operation': 'add',
                 'type': 'reaction',
