@@ -204,12 +204,7 @@ def apply_genotype(model, genotype_changes):
             # than the gene names, for example, AdhE instead of adhE.
             # We want to be forgiving here and only compare lower case names.
             def compare_feature(gene):
-                if gene.id == feature_identifer:
-                    return True
-                elif gene.name.lower() == feature_lower:
-                    return True
-                else:
-                    return False
+                return gene.id == feature_identifer or gene.name.lower() == feature_lower
 
             # We pick the first result. A fuzzy search on the name would be
             # useful in future.
@@ -231,12 +226,7 @@ def apply_genotype(model, genotype_changes):
         # Perform gene insertion unless the gene already exists in the model.
 
         def compare_feature(gene):
-            if gene.id == feature_identifer:
-                return True
-            elif gene.name.lower() == feature_lower:
-                return True
-            else:
-                return False
+            return gene.id == feature_identifer or gene.name.lower() == feature_lower
 
         if model.genes.query(compare_feature):
             logger.info(
