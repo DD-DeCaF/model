@@ -17,7 +17,7 @@ import logging
 from collections import namedtuple
 
 import numpy as np
-from cobra import Reaction
+from cobra import Configuration, Metabolite, Reaction
 from cobra.io.dict import reaction_to_dict
 from cobra.medium.boundary_types import find_external_compartment
 
@@ -196,10 +196,19 @@ def apply_genotype(model, genotype_changes):
 
     # Apply feature operations
     for feature in genotype_changes.removed_features:
-        feature_name = feature_id(feature)
+        feature_identifer = feature_id(feature)
+        feature_lower = feature_identifer.lower()
         # Perform gene knockout. Use feature name as gene name
         try:
-            gene = model.genes.query(lambda g: feature_name in (g.id, g.name))[0]
+            # Some genotype descriptions wrongly use the protein names rather
+            # than the gene names, for example, AdhE instead of adhE.
+            # We want to be forgiving here and only compare lower case names.
+            def compare_feature(gene):
+                return gene.id == feature_identifer or gene.name.lower() == feature_lower
+
+            # We pick the first result. A fuzzy search on the name would be
+            # useful in future.
+            gene = model.genes.query(compare_feature)[0]
             gene.knock_out()
             operations.append({
                 'operation': 'knockout',
@@ -207,62 +216,147 @@ def apply_genotype(model, genotype_changes):
                 'id': gene.id,
             })
         except IndexError:
-            warning = f"Cannot knockout gene '{feature_name}', not found in the model"
+            warning = f"Cannot knockout gene '{feature_identifer}', not found in the model"
             warnings.append(warning)
             logger.warning(warning)
 
     for feature in genotype_changes.added_features:
-        feature_name = feature_id(feature)
-        # Perform gene insertion.
-        # Find all the reactions associated with this gene using KEGGClient and add them to the model
-        if model.genes.query(lambda g: feature_name in (g.id, g.name)):
-            # do not add if gene is already in the model
-            logger.info(f"Not adding gene '{feature_name}', it already exists in the model")
+        feature_identifer = feature_id(feature)
+        feature_lower = feature_identifer.lower()
+        # Perform gene insertion unless the gene already exists in the model.
+
+        def compare_feature(gene):
+            return gene.id == feature_identifer or gene.name.lower() == feature_lower
+
+        if model.genes.query(compare_feature):
+            logger.info(
+                f"Not adding gene '{feature_identifer}', "
+                f"it already exists in the model."
+            )
             continue
 
         try:
-            for reaction_id, equation in ice.get_reaction_equations(genotype=feature_name).items():
-                logger.info(f"Adding reaction '{reaction_id}' for gene '{feature_name}'")
+            heterologous = ice.get_reaction_equations(genotype=feature_identifer)
+        except PartNotFound:
+            warning = f"Cannot add gene '{feature_identifer}', " \
+                f"no gene-protein-reaction rules were found on ICE."
+            warnings.append(warning)
+            logger.warning(warning)
+            continue
 
-                # Add the reaction
-                if reaction_id in model.reactions:
-                    warning = f"Reaction {reaction_id} already exists in the model, removing and replacing it"
-                    logger.warning(warning)
-                    warnings.append(warning)
-                    model.remove_reactions([reaction_id])
-                    operations.append({
-                        'operation': 'remove',
-                        'type': 'reaction',
-                        'id': reaction_id,
-                    })
-                reaction = Reaction(reaction_id)
-                reaction.gene_reaction_rule = feature_name
-                model.add_reactions([reaction])
+        for reaction_id, equation in heterologous.items():
+            logger.info(
+                f"Adding reaction '{reaction_id}' catalyzed by genetic part "
+                f"'{feature_identifer}'."
+            )
+            if reaction_id in model.reactions:
+                warning = f"Reaction {reaction_id} already exists in the " \
+                    f"model, removing and replacing it."
+                logger.warning(warning)
+                warnings.append(warning)
+                model.remove_reactions([reaction_id])
+                operations.append({
+                    'operation': 'remove',
+                    'type': 'reaction',
+                    'id': reaction_id,
+                })
+            reaction = Reaction(reaction_id)
+            reaction.gene_reaction_rule = feature_identifer
+            model.add_reactions([reaction])
 
-                # Before building the reaction's metabolites, keep track of the existing ones to detect new
-                # metabolites added to the model
-                metabolites_before = set(model.metabolites)
-                reaction.build_reaction_from_string(equation)
-                new_metabolites = set(model.metabolites).difference(metabolites_before)
+            # Before building the reaction's metabolites, keep track of the
+            # existing ones to detect new metabolites added to the model.
+            metabolites_before = set(model.metabolites)
+            reaction.build_reaction_from_string(equation)
+            new_metabolites = set(model.metabolites) - metabolites_before
 
+            # Ensure all metabolites have a compartment. (Check all of the reaction's
+            # metabolites, but presumably only new metabolites will not have a
+            # compartment.)
+            for metabolite in reaction.metabolites.keys():
+                if metabolite.compartment:
+                    continue
+                # Assume BiGG identifier convention and try to parse the compartment
+                # id.
+                if "_" not in metabolite.id:
+                    error = (
+                        f"Metabolite {metabolite.id} is unknown, and we cannot parse a "
+                        "compartment for it."
+                    )
+                    errors.append(error)
+                    logger.error(error)
+                    continue
+                metabolite_id, compartment_id = metabolite.id.rsplit("_", 1)
+                if compartment_id not in model.compartments:
+                    error = (
+                        f"Compartment {compartment_id} does not exist in the model,"
+                        f"but that's what we understand metabolite {metabolite.id} "
+                        f"to exist in."
+                    )
+                    errors.append(error)
+                    logger.error(error)
+                    continue
+                logger.debug(
+                    f"Setting compartment for metabolite {metabolite} to: "
+                    f"{compartment_id}"
+                )
+                metabolite.compartment = compartment_id
+
+            operations.append({
+                'operation': 'add',
+                'type': 'reaction',
+                'data': reaction_to_dict(reaction),
+            })
+
+            # We have to ensure that all new metabolites can leave the system. Create an
+            # extracellular metabolite + exchange reaction (as opposed to just creating
+            # a demand reaction for the intracellular metabolite) because if there are
+            # metabolomics for this metabolite in a later step, our adapter logic always
+            # assumes it exists in the 'e' compartment and that there exists an exchange
+            # reaction.
+            for metabolite in new_metabolites:
+                # Create an extracellular version of the same metabolite
+                if metabolite.compartment == "e":
+                    error = (
+                        f"Metabolite {metabolite} was added to 'e' compartment, "
+                        "that is not yet handled"
+                    )
+                    errors.append(error)
+                    logger.error(error)
+                    continue
+                metabolite_id, compartment_id = metabolite.id.rsplit("_", 1)
+                metabolite_e = Metabolite(
+                    f"{metabolite_id}_e",
+                    name=metabolite.name,
+                    formula=metabolite.formula,
+                    compartment="e",
+                )
+
+                # Create a transport reaction between the compartments
+                transport_reaction = Reaction(
+                    id=f"{metabolite_id.upper()}t",
+                    name=f"{metabolite.name} transport",
+                )
+                transport_reaction.bounds = Configuration().bounds
+                transport_reaction.add_metabolites({
+                    metabolite: -1,
+                    metabolite_e: 1,
+                })
+                model.add_reactions([transport_reaction])
                 operations.append({
                     'operation': 'add',
                     'type': 'reaction',
-                    'data': reaction_to_dict(reaction),
+                    'data': reaction_to_dict(transport_reaction),
                 })
 
-                # For all new metabolites, create a demand reaction so that it may leave the system
-                for metabolite in new_metabolites:
-                    demand_reaction = model.add_boundary(metabolite, type='demand')
-                    operations.append({
-                        'operation': 'add',
-                        'type': 'reaction',
-                        'data': reaction_to_dict(demand_reaction),
-                    })
-        except PartNotFound:
-            warning = f"Cannot add gene '{feature_name}', no gene-protein-reaction rules were found in ICE"
-            warnings.append(warning)
-            logger.warning(warning)
+                # Create an exchange reaction for the extracellular metabolite so that
+                # it may leave the system
+                exchange_reaction = model.add_boundary(metabolite_e)
+                operations.append({
+                    'operation': 'add',
+                    'type': 'reaction',
+                    'data': reaction_to_dict(exchange_reaction),
+                })
 
     return operations, warnings, errors
 
