@@ -35,7 +35,7 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
     try:
         logger.info(f"Simulating model {model.id} with {method}")
         if method == "fba":
-            solution = model.optimize()
+            solution = model.optimize(raise_error=True)
         elif method == "pfba":
             solution = pfba(model)
         elif method == "fva":
