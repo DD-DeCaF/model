@@ -14,6 +14,7 @@
 
 import logging
 
+from cobra.exceptions import OptimizationError
 from flask import Response, abort, jsonify, request
 from flask_apispec import use_kwargs
 from flask_apispec.extension import FlaskApiSpec
@@ -116,16 +117,24 @@ def model_simulate(model_id, method, objective_id, objective_direction, operatio
     # completion.
     with model:
         apply_operations(model, operations)
-        flux_distribution, growth_rate = simulate(
-            model,
-            model_wrapper.biomass_reaction,
-            method,
-            objective_id,
-            objective_direction,
-        )
-        return jsonify(
-            {"flux_distribution": flux_distribution, "growth_rate": growth_rate}
-        )
+        try:
+            flux_distribution, growth_rate = simulate(
+                model,
+                model_wrapper.biomass_reaction,
+                method,
+                objective_id,
+                objective_direction,
+            )
+        except OptimizationError:
+            return jsonify({"status": "infeasible"})
+        else:
+            return jsonify(
+                {
+                    "status": "optimal",
+                    "flux_distribution": flux_distribution,
+                    "growth_rate": growth_rate,
+                }
+            )
 
 
 def metrics():
