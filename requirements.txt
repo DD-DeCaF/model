@@ -12,11 +12,10 @@ raven[flask]
 prometheus-client
 python-jose
 
-# Testing and QA
+# Development, testing, QA
 codecov
+black
 flake8
 isort
 pytest-cov
-
-# Development tools
 ipython

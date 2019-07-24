@@ -26,6 +26,7 @@ install:
   - make setup
 
 script:
+  - make black-check
   - make flake8
   - make isort
   - make license
