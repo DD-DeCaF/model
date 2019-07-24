@@ -21,9 +21,18 @@ from cobra import Configuration, Metabolite, Reaction
 from cobra.io.dict import reaction_to_dict
 from cobra.medium.boundary_types import find_external_compartment
 
-from simulations.exceptions import MetaboliteNotFound, PartNotFound, ReactionNotFound
+from simulations.exceptions import (
+    CompartmentNotFound,
+    MetaboliteNotFound,
+    PartNotFound,
+    ReactionNotFound,
+)
 from simulations.ice_client import ICE
-from simulations.modeling.cobra_helpers import find_metabolite, find_reaction
+from simulations.modeling.cobra_helpers import (
+    find_metabolite,
+    find_reaction,
+    parse_bigg_compartment,
+)
 from simulations.modeling.driven import minimize_distance
 from simulations.modeling.gnomic_helpers import feature_id
 
@@ -306,7 +315,11 @@ def apply_genotype(model, genotype_changes):
                     continue
                 # Assume BiGG identifier convention and try to parse the compartment
                 # id.
-                if "_" not in metabolite.id:
+                try:
+                    metabolite_id, compartment_id = parse_bigg_compartment(
+                        metabolite.id, model
+                    )
+                except ValueError:
                     error = (
                         f"We cannot parse a compartment from heterologous metabolite "
                         f"'{metabolite.id}'."
@@ -314,8 +327,7 @@ def apply_genotype(model, genotype_changes):
                     errors.append(error)
                     logger.error(error)
                     continue
-                metabolite_id, compartment_id = metabolite.id.rsplit("_", 1)
-                if compartment_id not in model.compartments:
+                except CompartmentNotFound:
                     error = (
                         f"Compartment {compartment_id} does not exist in the model,"
                         f"but that's what we understand metabolite {metabolite.id} "
@@ -352,7 +364,9 @@ def apply_genotype(model, genotype_changes):
                         f"compartment; not creating transport/exchange reactions for it"
                     )
                     continue
-                metabolite_id, compartment_id = metabolite.id.rsplit("_", 1)
+                metabolite_id, compartment_id = parse_bigg_compartment(
+                    metabolite.id, model
+                )
                 metabolite_e = Metabolite(
                     f"{metabolite_id}_e",
                     name=metabolite.name,

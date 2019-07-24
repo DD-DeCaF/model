@@ -14,7 +14,11 @@
 
 import logging
 
-from simulations.exceptions import MetaboliteNotFound, ReactionNotFound
+from simulations.exceptions import (
+    CompartmentNotFound,
+    MetaboliteNotFound,
+    ReactionNotFound,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -159,3 +163,41 @@ def _query_item(item, query_id, query_namespace):
                 if query_id.lower() == annotation.lower():
                     return True
     return False
+
+
+def parse_bigg_compartment(metabolite_id, model):
+    """
+    Parse the compartment ID of the given metabolite BiGG identifier.
+
+    Parameters
+    ----------
+    metabolite_id: str
+        A metabolite identifier, with the bigg convention of appending an underscore
+        followed by the compartment id. For example: "h2o_c"
+    model: cobra.Model
+        The model the metabolite belongs to. Used to confirm that the parsed compartment
+        id exists in the model.
+
+    Returns
+    -------
+    tuple(str, str)
+        First string: The metabolite identifier without its compartment postfix.
+        Second string: The compartment identifier.
+
+    Raises
+    ------
+    ValueError
+        If the given identifier does not match the expected BiGG format, i.e., does not
+        contain an underscore.
+    CompartmentNotFound
+        If the compartment identifier parsed out of the metabolite does not exist in the
+        model.
+    """
+    if "_" not in metabolite_id:
+        raise ValueError(f"The identifier {metabolite_id} is not valid BiGG format.")
+    metabolite_id, compartment_id = metabolite_id.rsplit("_", 1)
+    if compartment_id not in model.compartments:
+        raise CompartmentNotFound(
+            f"Compartment {compartment_id} does not exist in model {model.id}"
+        )
+    return metabolite_id, compartment_id

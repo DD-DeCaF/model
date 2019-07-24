@@ -16,6 +16,9 @@ import logging
 
 from cobra import Metabolite, Reaction
 
+from simulations.exceptions import CompartmentNotFound
+from simulations.modeling.cobra_helpers import parse_bigg_compartment
+
 
 logger = logging.getLogger(__name__)
 
@@ -39,21 +42,23 @@ def apply_operations(model, operations):
             )
 
 
-def _parse_metabolite(metabolite_id):
+def _parse_metabolite(metabolite_id, model):
     """Create a metabolite object from an identifier."""
     try:
-        compartment = metabolite_id.rsplit("_", 1)[1]
-    except IndexError:
+        _, compartment_id = parse_bigg_compartment(metabolite_id, model)
+    except (ValueError, CompartmentNotFound):
         # Since we cannot parse the compartment from the identifier,
         # we assume it is in the cytosol.
-        compartment = "c"
-    return Metabolite(metabolite_id, compartment=compartment)
+        compartment_id = "c"
+    return Metabolite(metabolite_id, compartment=compartment_id)
 
 
 def _add_reaction(model, data):
     logger.debug(f"Adding reaction to model '{model.id}' from: {data}")
     metabolites = [
-        _parse_metabolite(m) for m in data["metabolites"] if m not in model.metabolites
+        _parse_metabolite(m, model)
+        for m in data["metabolites"]
+        if m not in model.metabolites
     ]
     model.add_metabolites(metabolites)
     reaction = Reaction(

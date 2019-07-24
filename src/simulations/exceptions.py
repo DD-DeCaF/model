@@ -29,6 +29,10 @@ class ReactionNotFound(Exception):
     pass
 
 
+class CompartmentNotFound(Exception):
+    pass
+
+
 class PartNotFound(Exception):
     """Thrown by the ICE client when a requested genotype part is not found"""
 
