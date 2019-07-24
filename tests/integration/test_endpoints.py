@@ -72,7 +72,8 @@ def test_simulate_infeasible(client, models):
         {
             "id": "BIOMASS_Ec_iJO1366_core_53p95M",
             "namespace": "bigg.reaction",
-            "measurements": [-1000, -1000],
+            # Force an impossible growth to ensure infeasability
+            "measurements": [1000],
             "type": "reaction",
         }
     ]
