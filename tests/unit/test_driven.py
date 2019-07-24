@@ -200,7 +200,7 @@ def test_adjust_fluxes2model(iJO1366):
             "namespace": "bigg.reaction",
             "measurements": [1.1],
         },
-    ]  # noqa
+    ]
     expected_distance = 4.269723695500828
 
     index = []

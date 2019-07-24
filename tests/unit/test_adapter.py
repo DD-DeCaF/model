@@ -52,7 +52,7 @@ def test_medium_adapter(iJO1366):
         "EX_ni2_e",
         "EX_mn2_e",
         "EX_cl_e",
-    }  # noqa
+    }
     assert all(
         iJO1366.reactions.get_by_id(r).lower_bound == -1000 for r in iJO1366.medium
     )

@@ -130,7 +130,7 @@ def test_simulate_modify(monkeypatch, client, models):
             and op["id"] == "EX_etoh_e"
             for op in operations
         ]
-    )  # noqa
+    )
     assert any(
         [
             op["operation"] == "modify"
@@ -204,7 +204,7 @@ def test_modify(monkeypatch, client, models):
                 {"id": "CHEBI:29108", "namespace": "chebi"},
                 {"id": "CHEBI:36271", "namespace": "chebi"},
                 {"id": "CHEBI:42758", "namespace": "chebi"},
-                {"id": "CHEBI:49786", "namespace": "chebi"},  # noqa
+                {"id": "CHEBI:49786", "namespace": "chebi"},
             ],
             "genotype": ["+Aac", "-pta"],
             "measurements": [
@@ -213,13 +213,13 @@ def test_modify(monkeypatch, client, models):
                     "id": "CHEBI:42758",
                     "namespace": "chebi",
                     "measurements": [-9.0],
-                },  # noqa
+                },
                 {
                     "type": "compound",
                     "id": "CHEBI:16236",
                     "namespace": "chebi",
                     "measurements": [5.0, 4.8, 5.2, 4.9],
-                },  # noqa
+                },
                 {
                     "type": "reaction",
                     "id": "PFK",
@@ -258,7 +258,7 @@ def test_prokaryomics_md120_bw25113(client, models):
             {"id": "CHEBI:63041", "namespace": "chebi"},
             {"id": "CHEBI:63043", "namespace": "chebi"},
             {"id": "CHEBI:75215", "namespace": "chebi"},
-        ],  # noqa
+        ],
         "measurements": [
             {
                 "id": "CS",
@@ -368,7 +368,7 @@ def test_prokaryomics_md120_bw25113(client, models):
                 "measurements": [1.1],
                 "type": "reaction",
             },
-        ],  # noqa
+        ],
         "genotype": ["-b3643,-b0062,-b0063,-b0061,-b4350,-b3902,-b3903"],
     }
 
