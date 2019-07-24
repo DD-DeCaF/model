@@ -167,13 +167,13 @@ def _query_item(item, query_id, query_namespace):
 
 def parse_bigg_compartment(metabolite_id, model):
     """
-    Parse the compartment ID of the given metabolite BiGG identifier.
+    Parse the compartment ID of the given metabolite identifier.
 
     Parameters
     ----------
     metabolite_id: str
-        A metabolite identifier, with the bigg convention of appending an underscore
-        followed by the compartment id. For example: "h2o_c"
+        A metabolite identifier, expected to follow the BiGG convention of appending an
+        underscore followed by the compartment id. For example: "h2o_c"
     model: cobra.Model
         The model the metabolite belongs to. Used to confirm that the parsed compartment
         id exists in the model.
