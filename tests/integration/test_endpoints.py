@@ -69,9 +69,9 @@ def test_simulate_no_operations(client, models):
 def test_simulate_infeasible(client, models):
     measurements = [
         {
-            "id": "ATPM",
+            "id": "BIOMASS_Ec_iJO1366_core_53p95M",
             "namespace": "bigg.reaction",
-            "measurements": [100, 100],
+            "measurements": [-1000, -1000],
             "type": "reaction",
         }
     ]
