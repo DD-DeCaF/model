@@ -47,9 +47,7 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
                 model, fraction_of_optimum=1, pfba_factor=1.05
             )
     except OptimizationError as error:
-        logger.info(
-            f"Optimization Error: {error} (solver status: {model.solver.status})"
-        )
+        logger.info(f"Optimization Error: {error}")
         raise
     else:
         logger.info(f"Simulation completed successfully")
