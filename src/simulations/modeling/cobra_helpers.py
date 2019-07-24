@@ -197,7 +197,7 @@ def parse_bigg_compartment(metabolite_id, model):
         metabolite_id, compartment_id = metabolite_id.rsplit("_", 1)
     except ValueError as error:
         raise ValueError(
-            f"The identifier {metabolite_id} is not valid BiGG format."
+            f"The identifier {metabolite_id} has no valid BiGG compartment suffix."
         ) from error
     metabolite_id, compartment_id = metabolite_id.rsplit("_", 1)
     if compartment_id not in model.compartments:
