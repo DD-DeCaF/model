@@ -38,10 +38,11 @@ def init_app(application, interface):
 
     # Configuration
     app.wsgi_app = ProxyFix(app.wsgi_app)
-    logging.config.dictConfig(application.config['LOGGING'])
-    if application.config['SENTRY_DSN']:
-        sentry = Sentry(dsn=application.config['SENTRY_DSN'], logging=True,
-                        level=logging.ERROR)
+    logging.config.dictConfig(application.config["LOGGING"])
+    if application.config["SENTRY_DSN"]:
+        sentry = Sentry(
+            dsn=application.config["SENTRY_DSN"], logging=True, level=logging.ERROR
+        )
         sentry.init_app(application)
 
     # Middleware and global handlers
@@ -54,5 +55,5 @@ def init_app(application, interface):
     resources.init_app(application)
 
     # Preload all models in production/staging environments
-    if os.environ['ENVIRONMENT'] in ('production', 'staging'):
+    if os.environ["ENVIRONMENT"] in ("production", "staging"):
         storage.preload_public_models()

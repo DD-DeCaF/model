@@ -46,11 +46,9 @@ class Measurement(Schema):
     # See https://www.ebi.ac.uk/miriam/main/collections
     namespace = fields.String(required=True)
     measurements = fields.List(fields.Float())
-    type = fields.String(required=True, validate=OneOf([
-        'compound',
-        'reaction',
-        'protein',
-    ]))
+    type = fields.String(
+        required=True, validate=OneOf(["compound", "reaction", "protein"])
+    )
 
     class Meta:
         strict = True
@@ -75,7 +73,7 @@ class ModificationRequest(Schema):
 
 class SimulationRequest(Schema):
     model_id = fields.Integer(required=True)
-    method = fields.String(missing='fba')
+    method = fields.String(missing="fba")
     objective_id = fields.String(missing=None)
     objective_direction = fields.String(missing=None)
     operations = fields.Nested(Operation, many=True, missing=[])

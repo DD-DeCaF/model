@@ -20,12 +20,7 @@ from cobra.flux_analysis import flux_variability_analysis, pfba
 
 logger = logging.getLogger(__name__)
 
-METHODS = [
-    'fba',
-    'pfba',
-    'fva',
-    'pfba-fva',
-]
+METHODS = ["fba", "pfba", "fva", "pfba-fva"]
 
 
 def simulate(model, biomass_reaction, method, objective_id, objective_direction):
@@ -39,30 +34,34 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
 
     try:
         logger.info(f"Simulating model {model.id} with {method}")
-        if method == 'fba':
+        if method == "fba":
             solution = model.optimize()
-        elif method == 'pfba':
+        elif method == "pfba":
             solution = pfba(model)
-        elif method == 'fva':
+        elif method == "fva":
             # FIXME: accept list of relevant fva reactions to calculate
             solution = flux_variability_analysis(model)
-        elif method == 'pfba-fva':
+        elif method == "pfba-fva":
             # FIXME: accept list of relevant fva reactions to calculate
-            solution = flux_variability_analysis(model, fraction_of_optimum=1, pfba_factor=1.05)
+            solution = flux_variability_analysis(
+                model, fraction_of_optimum=1, pfba_factor=1.05
+            )
     except OptimizationError as error:
         logger.info(f"Optimization Error: {error}")
         flux_distribution = {}
         growth_rate = 0.0
     else:
         logger.info(f"Simulation completed successfully")
-        if method in ('fba', 'pfba'):
+        if method in ("fba", "pfba"):
             flux_distribution = solution.fluxes.to_dict()
             growth_rate = flux_distribution[biomass_reaction]
-        elif method in ('fva', 'pfba-fva'):
-            df = solution.rename(index=str, columns={'maximum': 'upper_bound', 'minimum': 'lower_bound'})
-            for key in ['lower_bound', 'upper_bound']:
-                df[key] = df[key].astype('float')
+        elif method in ("fva", "pfba-fva"):
+            df = solution.rename(
+                index=str, columns={"maximum": "upper_bound", "minimum": "lower_bound"}
+            )
+            for key in ["lower_bound", "upper_bound"]:
+                df[key] = df[key].astype("float")
             flux_distribution = df.T.to_dict()
-            growth_rate = flux_distribution[biomass_reaction]['upper_bound']
+            growth_rate = flux_distribution[biomass_reaction]["upper_bound"]
 
     return flux_distribution, growth_rate

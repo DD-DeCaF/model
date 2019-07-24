@@ -16,6 +16,13 @@ from simulations.modeling.gnomic_helpers import feature_id, full_genotype
 
 
 def test_feature_operations():
-    changes = full_genotype(['-A -B +promoter.C:#D:#E:terminator.F', '+G', '+B +Y -H'])
-    assert {feature_id(f) for f in changes.removed_features} == {'A', 'H'}
-    assert {feature_id(f) for f in changes.added_features} == {'C', 'D', 'E', 'F', 'G', 'Y'}
+    changes = full_genotype(["-A -B +promoter.C:#D:#E:terminator.F", "+G", "+B +Y -H"])
+    assert {feature_id(f) for f in changes.removed_features} == {"A", "H"}
+    assert {feature_id(f) for f in changes.added_features} == {
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "Y",
+    }

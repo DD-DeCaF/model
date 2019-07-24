@@ -21,9 +21,10 @@ import prometheus_client
 #   environment: The current runtime environment ('production' or 'staging')
 #   endpoint: The path to the requested endpoint without query parameters (e.g. '/models/iJO1366')
 REQUEST_TIME = prometheus_client.Histogram(
-    'decaf_request_handler_duration_seconds',
+    "decaf_request_handler_duration_seconds",
     "Total time spent in request handlers",
-    ['service', 'environment', 'endpoint'])
+    ["service", "environment", "endpoint"],
+)
 
 
 # API_REQUESTS: Time spent waiting for outgoing API request to internal or external services
@@ -34,6 +35,7 @@ REQUEST_TIME = prometheus_client.Histogram(
 #   endpoint: The full URL to the external API (e.g.
 #             'http://gene-to-reactions/annotations/genes')
 API_REQUESTS = prometheus_client.Histogram(
-    'decaf_api_request_duration_seconds',
+    "decaf_api_request_duration_seconds",
     "Time spent waiting for outgoing API request to internal or external services",
-    ['service', 'environment', 'api_name', 'endpoint'])
+    ["service", "environment", "api_name", "endpoint"],
+)

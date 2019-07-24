@@ -47,6 +47,7 @@ def find_reaction(model, id, namespace):
     ReactionNotFound
         If no reactions are found for the given parameters.
     """
+
     def query_fun(reaction):
         return _query_item(reaction, id, namespace)
 
@@ -94,6 +95,7 @@ def find_metabolite(model, id, namespace, compartment):
     MetaboliteNotFound
         If no metabolites are found for the given parameters.
     """
+
     def query_fun(metabolite):
         if metabolite.compartment != compartment:
             return False

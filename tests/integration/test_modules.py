@@ -17,7 +17,9 @@
 import pytest
 
 
-@pytest.mark.skip(reason="Namespaces are not currently mapped. Large test; unclear what exactly is tested for.")
+@pytest.mark.skip(
+    reason="Namespaces are not currently mapped. Large test; unclear what exactly is tested for."
+)
 def test_reactions_additions(monkeypatch, iJO1366):
     pass
     # # Mock id-mapper api queries for efficiency

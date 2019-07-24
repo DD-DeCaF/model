@@ -22,7 +22,11 @@ from prometheus_client.multiprocess import MultiProcessCollector
 
 from simulations import storage
 from simulations.exceptions import Forbidden, ModelNotFound, Unauthorized
-from simulations.modeling.adapter import apply_genotype, apply_measurements, apply_medium
+from simulations.modeling.adapter import (
+    apply_genotype,
+    apply_measurements,
+    apply_medium,
+)
 from simulations.modeling.operations import apply_operations
 from simulations.modeling.simulations import simulate
 from simulations.schemas import ModificationRequest, SimulationRequest
@@ -33,11 +37,13 @@ logger = logging.getLogger(__name__)
 
 def init_app(app):
     """Register API resources on the provided Flask application."""
-    app.add_url_rule('/healthz', view_func=healthz)
-    app.add_url_rule('/metrics', view_func=metrics)
+    app.add_url_rule("/healthz", view_func=healthz)
+    app.add_url_rule("/metrics", view_func=metrics)
 
-    app.add_url_rule('/models/<int:model_id>/modify', view_func=model_modify, methods=['POST'])
-    app.add_url_rule('/simulate', view_func=model_simulate, methods=['POST'])
+    app.add_url_rule(
+        "/models/<int:model_id>/modify", view_func=model_modify, methods=["POST"]
+    )
+    app.add_url_rule("/simulate", view_func=model_simulate, methods=["POST"])
 
     docs = FlaskApiSpec(app)
     docs.register(model_modify, endpoint=model_modify.__name__)
@@ -77,7 +83,9 @@ def model_modify(model_id, medium, genotype, growth_rate, measurements):
             errors.extend(results[2])
 
         if growth_rate or measurements:
-            results = apply_measurements(model, model_wrapper.biomass_reaction, growth_rate, measurements)
+            results = apply_measurements(
+                model, model_wrapper.biomass_reaction, growth_rate, measurements
+            )
             operations.extend(results[0])
             warnings.extend(results[1])
             errors.extend(results[2])
@@ -85,9 +93,9 @@ def model_modify(model_id, medium, genotype, growth_rate, measurements):
         if errors:
             # If any errors occured during modifications, discard generated operations and return the error messages to
             # the client for follow-up
-            return {'errors': errors}, 400
+            return {"errors": errors}, 400
         else:
-            return {'operations': operations, 'warnings': warnings}
+            return {"operations": operations, "warnings": warnings}
 
 
 @use_kwargs(SimulationRequest)
@@ -106,13 +114,23 @@ def model_simulate(model_id, method, objective_id, objective_direction, operatio
     # Use the context manager to undo all modifications to the shared model instance on completion.
     with model:
         apply_operations(model, operations)
-        flux_distribution, growth_rate = simulate(model, model_wrapper.biomass_reaction, method, objective_id,
-                                                  objective_direction)
-        return jsonify({'flux_distribution': flux_distribution, 'growth_rate': growth_rate})
+        flux_distribution, growth_rate = simulate(
+            model,
+            model_wrapper.biomass_reaction,
+            method,
+            objective_id,
+            objective_direction,
+        )
+        return jsonify(
+            {"flux_distribution": flux_distribution, "growth_rate": growth_rate}
+        )
 
 
 def metrics():
-    return Response(generate_latest(MultiProcessCollector(CollectorRegistry())), mimetype=CONTENT_TYPE_LATEST)
+    return Response(
+        generate_latest(MultiProcessCollector(CollectorRegistry())),
+        mimetype=CONTENT_TYPE_LATEST,
+    )
 
 
 def healthz():

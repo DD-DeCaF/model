@@ -15,21 +15,25 @@
 
 class MetaboliteNotFound(Exception):
     """Thrown when a search for a given metabolite identifier does not yield any result."""
+
     pass
 
 
 class ReactionNotFound(Exception):
     """Thrown when a search for a given reaction identifier does not yield any result."""
+
     pass
 
 
 class PartNotFound(Exception):
     """Thrown by the ICE client when a requested genotype part is not found"""
+
     pass
 
 
 class ModelStorageError(IOError):
     """Base exception thrown when a model can not be retrieved from the storage."""
+
     def __init__(self, message, *args, **kwargs):
         super().__init__(message, *args, **kwargs)
         self.message = message
@@ -37,14 +41,17 @@ class ModelStorageError(IOError):
 
 class ModelNotFound(ModelStorageError):
     """Thrown when requesting a model which is not found."""
+
     pass
 
 
 class Unauthorized(ModelStorageError):
     """Thrown when requesting a private model with invalid credentials."""
+
     pass
 
 
 class Forbidden(ModelStorageError):
     """Thrown when requesting a private model for which the provided credentials are not authorized."""
+
     pass

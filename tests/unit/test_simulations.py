@@ -18,11 +18,13 @@ from simulations.modeling.simulations import METHODS, simulate
 
 
 @pytest.mark.skip(reason="TMY results is currently not implemented")
-@pytest.mark.parametrize("objective", ['bigg:akg'])
+@pytest.mark.parametrize("objective", ["bigg:akg"])
 def test_tmy_result(e_coli_core, objective):
     e_coli_core, biomass_reaction = e_coli_core
-    to_return = ['fluxes', 'tmy', 'model', 'growth-rate', 'removed-reactions']
-    result = simulate(e_coli_core, biomass_reaction, 'fba', None, None, [objective], to_return)
+    to_return = ["fluxes", "tmy", "model", "growth-rate", "removed-reactions"]
+    result = simulate(
+        e_coli_core, biomass_reaction, "fba", None, None, [objective], to_return
+    )
     assert set(result) == set(to_return)
 
 
@@ -30,7 +32,9 @@ def test_tmy_result(e_coli_core, objective):
 def test_simulation_methods(e_coli_core, method):
     e_coli_core, biomass_reaction = e_coli_core
     for method in METHODS:
-        fluxes, growth_rate = simulate(e_coli_core, biomass_reaction, method, None, None)
-        if method not in {'fva', 'pfba-fva'}:
+        fluxes, growth_rate = simulate(
+            e_coli_core, biomass_reaction, method, None, None
+        )
+        if method not in {"fva", "pfba-fva"}:
             reactions_ids = [i.id for i in e_coli_core.reactions]
             assert set(fluxes) == set(reactions_ids)

@@ -45,7 +45,7 @@ class ModelWrapper:
         """
         self.model = model
         # Use the cplex solver for performance
-        self.model.solver = 'cplex'
+        self.model.solver = "cplex"
         self.project_id = project_id
         self.organism_id = organism_id
         self.biomass_reaction = biomass_reaction
@@ -63,7 +63,7 @@ def get(model_id):
     wrapper = _MODELS[model_id]
     # Enforce access control for non-public cached models.
     if wrapper.project_id is not None:
-        jwt_require_claim(wrapper.project_id, 'read')
+        jwt_require_claim(wrapper.project_id, "read")
     return wrapper
 
 
@@ -73,7 +73,7 @@ def preload_public_models():
     response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models")
     response.raise_for_status()
     for model in response.json():
-        _load_model(model['id'])
+        _load_model(model["id"])
     logger.info(f"Done preloading {len(response.json())} models")
 
 
@@ -84,15 +84,19 @@ def _load_model(model_id):
     # where models are preloaded outside of any request context.
     if g and g.jwt_valid:
         logger.debug(f"Forwarding provided JWT")
-        headers['Authorization'] = f"Bearer {g.jwt_token}"
-    response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models/{model_id}", headers=headers)
+        headers["Authorization"] = f"Bearer {g.jwt_token}"
+    response = requests.get(
+        f"{app.config['MODEL_STORAGE_API']}/models/{model_id}", headers=headers
+    )
 
     if response.status_code == 401:
-        message = response.json().get('message', "No error message")
+        message = response.json().get("message", "No error message")
         raise Unauthorized(f"Invalid credentials ({message})")
     elif response.status_code == 403:
-        message = response.json().get('message', "No error message")
-        raise Forbidden(f"Insufficient permissions to access model {model_id} ({message})")
+        message = response.json().get("message", "No error message")
+        raise Forbidden(
+            f"Insufficient permissions to access model {model_id} ({message})"
+        )
     elif response.status_code == 404:
         raise ModelNotFound(f"No model with id {model_id}")
     response.raise_for_status()
@@ -100,8 +104,8 @@ def _load_model(model_id):
     logger.debug(f"Deserializing received model with cobrapy")
     model_data = response.json()
     _MODELS[model_id] = ModelWrapper(
-        model_from_dict(model_data['model_serialized']),
-        model_data['project_id'],
-        model_data['organism_id'],
-        model_data['default_biomass_reaction'],
+        model_from_dict(model_data["model_serialized"]),
+        model_data["project_id"],
+        model_data["organism_id"],
+        model_data["default_biomass_reaction"],
     )

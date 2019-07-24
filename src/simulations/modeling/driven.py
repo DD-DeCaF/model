@@ -32,25 +32,27 @@ def minimize_distance(model, biomass_reaction, growth_rate, measurements):
     uncertainties = []
 
     if not growth_rate:
-        raise ValueError("Expected measurements to contain an objective "
-                         "constraint as measured growth rate")
+        raise ValueError(
+            "Expected measurements to contain an objective "
+            "constraint as measured growth rate"
+        )
 
     # Trust the growth rate over the measurements. Meaning, constrain the
     # biomass reaction to the observed values instead of simply including it in
     # the measurements to be minimized.
     # TODO (Ali Kaafarani): Support for uncertainties or multiple observations
-    if len(growth_rate['measurements']) != 1:
+    if len(growth_rate["measurements"]) != 1:
         raise NotImplementedError("Cannot handle multiple growth rate measurements yet")
     # Until uncertainties are specified in the dataset, allow for ~5% deviation
-    lower_bound = growth_rate['measurements'][0] * 0.95
-    upper_bound = growth_rate['measurements'][0] * 1.05
+    lower_bound = growth_rate["measurements"][0] * 0.95
+    upper_bound = growth_rate["measurements"][0] * 1.05
     model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
 
-    for measure in [m for m in measurements if m['type'] == 'reaction']:
-        index.append(measure['id'])
-        observations.append(np.nanmean(measure['measurements']))
-        if len(measure['measurements']) >= 3:
-            uncertainties.append(np.nanstd(measure['measurements'], ddof=1))
+    for measure in [m for m in measurements if m["type"] == "reaction"]:
+        index.append(measure["id"])
+        observations.append(np.nanmean(measure["measurements"]))
+        if len(measure["measurements"]) >= 3:
+            uncertainties.append(np.nanstd(measure["measurements"], ddof=1))
         else:
             uncertainties.append(1)
 
@@ -60,15 +62,16 @@ def minimize_distance(model, biomass_reaction, growth_rate, measurements):
     solution = adjust_fluxes2model(model, observations, uncertainties)
     for reaction, minimized_distance in solution.fluxes.iteritems():
         if reaction == biomass_reaction:
-            growth_rate['measurements'] = [minimized_distance]
+            growth_rate["measurements"] = [minimized_distance]
         for measurement in measurements:
-            if reaction == measurement.get('id'):
-                measurement['measurements'] = [minimized_distance]
+            if reaction == measurement.get("id"):
+                measurement["measurements"] = [minimized_distance]
     return growth_rate, measurements
 
 
-def adjust_fluxes2model(model, observations, uncertainties=None, linear=True,
-                        big_m=1E05):
+def adjust_fluxes2model(
+    model, observations, uncertainties=None, linear=True, big_m=1e05
+):
     """
     Minimize the distance to observed fluxes accounting for multiple directions.
 
@@ -106,8 +109,12 @@ def adjust_fluxes2model(model, observations, uncertainties=None, linear=True,
         data = observations.to_frame().join(uncertainties)
     data.columns = [flux_col, weight_col]
     # replace missing and zero values
-    data.loc[data[weight_col].isnull() | np.isinf(data[weight_col]) |
-             (data[weight_col] == 0), weight_col] = 1
+    data.loc[
+        data[weight_col].isnull()
+        | np.isinf(data[weight_col])
+        | (data[weight_col] == 0),
+        weight_col,
+    ] = 1
     prob = model.problem
     to_add = list()
     new_obj = Zero
@@ -119,25 +126,42 @@ def adjust_fluxes2model(model, observations, uncertainties=None, linear=True,
                 dist = prob.Variable("dist_" + rxn_id)
                 forward_pos = prob.Constraint(
                     flux - rxn.flux_expression - big_m * (1 - direction) - dist,
-                    ub=0, name="forward_pos_" + rxn_id)
+                    ub=0,
+                    name="forward_pos_" + rxn_id,
+                )
                 forward_neg = prob.Constraint(
                     rxn.flux_expression - flux - big_m * (1 - direction) - dist,
-                    ub=0, name="forward_neg_" + rxn_id)
+                    ub=0,
+                    name="forward_neg_" + rxn_id,
+                )
                 reverse_pos = prob.Constraint(
                     (-flux) - rxn.flux_expression - big_m * direction - dist,
-                    ub=0, name="reverse_pos_" + rxn_id)
+                    ub=0,
+                    name="reverse_pos_" + rxn_id,
+                )
                 reverse_neg = prob.Constraint(
                     rxn.flux_expression - (-flux) - big_m * direction - dist,
-                    ub=0, name="reverse_neg_" + rxn_id)
+                    ub=0,
+                    name="reverse_neg_" + rxn_id,
+                )
                 if linear:
-                    new_obj += (dist / weight)
+                    new_obj += dist / weight
                 else:
                     new_obj += (dist / weight) ** 2
-                to_add.extend([direction, dist, forward_pos, forward_neg,
-                               reverse_pos, reverse_neg])
+                to_add.extend(
+                    [
+                        direction,
+                        dist,
+                        forward_pos,
+                        forward_neg,
+                        reverse_pos,
+                        reverse_neg,
+                    ]
+                )
             except KeyError:
-                logger.warning(f"Reaction '{rxn_id}' not found in the model. "
-                               f"Ignored.")
+                logger.warning(
+                    f"Reaction '{rxn_id}' not found in the model. " f"Ignored."
+                )
         model.add_cons_vars(to_add)
         model.objective = prob.Objective(new_obj, direction="min")
         solution = model.optimize(raise_error=True)

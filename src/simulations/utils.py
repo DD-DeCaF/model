@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Singleton(type):
     """Implement the singleton pattern by using this type as metaclass"""
+
     _instances = {}
 
     def __call__(cls, *args, **kwargs):
@@ -36,6 +37,7 @@ def timing(f):
     def wrap(*args, **kwargs):
         with log_time(operation=f"func: {f.__name__}, args: [{args}, {kwargs}]"):
             return f(*args, **kwargs)
+
     return wrap
 
 
@@ -44,5 +46,6 @@ def log_time(level=logging.INFO, operation="Task"):
     time_start = time.time()
     yield
     time_end = time.time()
-    logger.log(level, "{}: completed in {:.4f}s".format(operation,
-                                                        time_end - time_start))
+    logger.log(
+        level, "{}: completed in {:.4f}s".format(operation, time_end - time_start)
+    )

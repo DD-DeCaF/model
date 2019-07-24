@@ -26,17 +26,17 @@ class MockResponseSuccess:
 
     def json(self):
         return {
-            'model_serialized': {
-                'version': "1",
-                'id': "foo",
-                'genes': [],
-                'reactions': [],
-                'metabolites': [],
-                'compartments': {},
+            "model_serialized": {
+                "version": "1",
+                "id": "foo",
+                "genes": [],
+                "reactions": [],
+                "metabolites": [],
+                "compartments": {},
             },
-            'project_id': None,
-            'organism_id': 2,
-            'default_biomass_reaction': "baz",
+            "project_id": None,
+            "organism_id": 2,
+            "default_biomass_reaction": "baz",
         }
 
     def raise_for_status(self):
@@ -47,31 +47,33 @@ class MockResponseUnauthorized:
     status_code = 401
 
     def json(self):
-        return {'message': "Mocked response: Unauthorized"}
+        return {"message": "Mocked response: Unauthorized"}
 
 
 class MockResponseForbidden:
     status_code = 403
 
     def json(self):
-        return {'message': "Mocked response: Forbidden"}
+        return {"message": "Mocked response: Forbidden"}
 
 
 def test_get_model(monkeypatch, app):
-    monkeypatch.setattr(requests, 'get', lambda url, headers: MockResponseSuccess())
+    monkeypatch.setattr(requests, "get", lambda url, headers: MockResponseSuccess())
     g.jwt_valid = False
     assert type(storage.get(10).model) == Model
 
 
 def test_get_model_forbidden(monkeypatch, app):
-    monkeypatch.setattr(requests, 'get', lambda url, headers: MockResponseForbidden())
+    monkeypatch.setattr(requests, "get", lambda url, headers: MockResponseForbidden())
     g.jwt_valid = False
     with pytest.raises(Forbidden):
         storage.get(11)
 
 
 def test_get_model_unauthorized(monkeypatch, app):
-    monkeypatch.setattr(requests, 'get', lambda url, headers: MockResponseUnauthorized())
+    monkeypatch.setattr(
+        requests, "get", lambda url, headers: MockResponseUnauthorized()
+    )
     g.jwt_valid = False
     with pytest.raises(Unauthorized):
         storage.get(11)

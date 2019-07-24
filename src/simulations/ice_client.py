@@ -32,25 +32,35 @@ class ICE(metaclass=Singleton):
 
     def __init__(self):
         """On instantiation, request and store a session id for later use."""
-        if os.environ['ENVIRONMENT'] in ('production', 'staging', 'testing'):
+        if os.environ["ENVIRONMENT"] in ("production", "staging", "testing"):
             self._update_session_id()
         else:
             # To speed up development, don't set a valid session id on init but rely on the re-authentication logic
             # should ICE be needed.
-            self.SESSION_ID = ''
+            self.SESSION_ID = ""
 
     def get_reaction_equations(self, genotype):
         """Request genotype part info from ICE and return reaction map information from the references field."""
         logger.info(f"Requesting genotype '{genotype}' from ICE")
-        with API_REQUESTS.labels('model', os.environ['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
-            response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
+        with API_REQUESTS.labels(
+            "model", os.environ["ENVIRONMENT"], "ice", app.config["ICE_API"]
+        ).time():
+            response = requests.get(
+                f"{app.config['ICE_API']}/rest/parts/{genotype}",
+                headers=self._headers(),
+            )
 
         # In case of authentication failure, get a new session id and re-try the request. The ICE documentation says
         # nothing about access token expiry, so it's not clear whether this can or will ever occur.
         if response.status_code in (401, 403):
             self._update_session_id()
-            with API_REQUESTS.labels('model', os.environ['ENVIRONMENT'], 'ice', app.config['ICE_API']).time():
-                response = requests.get(f"{app.config['ICE_API']}/rest/parts/{genotype}", headers=self._headers())
+            with API_REQUESTS.labels(
+                "model", os.environ["ENVIRONMENT"], "ice", app.config["ICE_API"]
+            ).time():
+                response = requests.get(
+                    f"{app.config['ICE_API']}/rest/parts/{genotype}",
+                    headers=self._headers(),
+                )
 
         # If the part is not found, raise the corresponding exception
         if response.status_code == 404:
@@ -62,24 +72,30 @@ class ICE(metaclass=Singleton):
         # Extract reaction id -> string map from the expected format in the references field
         # Note: This could be removed in the future, in favor of storing only the reaction IDs in ICE, and looking up
         # the corresponding stoichiometry/reaction equations from the BiGG database instead.
-        reactions = result['references'].split(',')
-        reaction_tuples = [reaction.split(':') for reaction in reactions]
+        reactions = result["references"].split(",")
+        reaction_tuples = [reaction.split(":") for reaction in reactions]
         reactions_map = {id.strip(): string.strip() for id, string in reaction_tuples}
         return reactions_map
 
     def _update_session_id(self):
         """Query ICE for a new access token. Note that this usually takes ~10 seconds!"""
         logger.info(f"Requesting session token from ICE")
-        response = requests.post(f"{app.config['ICE_API']}/rest/accesstokens",
-                                 headers=self._headers(add_session_id=False),
-                                 data=json.dumps({'email': app.config['ICE_USERNAME'],
-                                                  'password': app.config['ICE_PASSWORD']}))
+        response = requests.post(
+            f"{app.config['ICE_API']}/rest/accesstokens",
+            headers=self._headers(add_session_id=False),
+            data=json.dumps(
+                {
+                    "email": app.config["ICE_USERNAME"],
+                    "password": app.config["ICE_PASSWORD"],
+                }
+            ),
+        )
         response.raise_for_status()
-        self.SESSION_ID = response.json()['sessionId']
+        self.SESSION_ID = response.json()["sessionId"]
 
     def _headers(self, add_session_id=True):
         """Return headers dict for use with ICE API requests."""
-        headers = {'Content-Type': 'application/json'}
+        headers = {"Content-Type": "application/json"}
         if add_session_id:
-            headers.update({'X-ICE-Authentication-SessionId': self.SESSION_ID})
+            headers.update({"X-ICE-Authentication-SessionId": self.SESSION_ID})
         return headers

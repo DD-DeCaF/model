@@ -17,72 +17,82 @@ from simulations.modeling.operations import apply_operations
 
 def test_add_reaction(e_coli_core):
     e_coli_core, biomass_reaction = e_coli_core
-    assert not e_coli_core.reactions.has_id('FOOBAR')
-    apply_operations(e_coli_core, [{
-        'operation': "add",
-        'type': "reaction",
-        'data': {
-            'id': 'FOOBAR',
-            'name': 'Foo Bar',
-            'metabolites': {
-                'accoa_c': -1.0,
-                'cit_c': 1.0,
-                'coa_c': 1.0,
-                'h2o_c': -1.0,
-                'h_c': 1.0,
-                'oaa_c': -1.0
-            },
-            'lower_bound': 0.0,
-            'upper_bound': 1000.0,
-            'gene_reaction_rule': 'b0720',
-        }
-    }])
+    assert not e_coli_core.reactions.has_id("FOOBAR")
+    apply_operations(
+        e_coli_core,
+        [
+            {
+                "operation": "add",
+                "type": "reaction",
+                "data": {
+                    "id": "FOOBAR",
+                    "name": "Foo Bar",
+                    "metabolites": {
+                        "accoa_c": -1.0,
+                        "cit_c": 1.0,
+                        "coa_c": 1.0,
+                        "h2o_c": -1.0,
+                        "h_c": 1.0,
+                        "oaa_c": -1.0,
+                    },
+                    "lower_bound": 0.0,
+                    "upper_bound": 1000.0,
+                    "gene_reaction_rule": "b0720",
+                },
+            }
+        ],
+    )
     assert e_coli_core.reactions.FOOBAR.bounds == (0.0, 1000.0)
 
 
 def test_add_reaction_unknown_metabolites(e_coli_core):
     e_coli_core, biomass_reaction = e_coli_core
-    assert not e_coli_core.metabolites.has_id('foo_c')
-    assert not e_coli_core.metabolites.has_id('bar_c')
-    apply_operations(e_coli_core, [{
-        'operation': "add",
-        'type': "reaction",
-        'data': {
-            'id': 'FOOBAR',
-            'name': 'Foo Bar',
-            'metabolites': {
-                'foo_c': -1.0,
-                'bar_c': 1.0,
-            },
-            'lower_bound': -1000.0,
-            'upper_bound': 1000.0,
-            'gene_reaction_rule': '',
-        }
-    }])
-    assert e_coli_core.metabolites.has_id('foo_c')
-    assert e_coli_core.metabolites.has_id('bar_c')
+    assert not e_coli_core.metabolites.has_id("foo_c")
+    assert not e_coli_core.metabolites.has_id("bar_c")
+    apply_operations(
+        e_coli_core,
+        [
+            {
+                "operation": "add",
+                "type": "reaction",
+                "data": {
+                    "id": "FOOBAR",
+                    "name": "Foo Bar",
+                    "metabolites": {"foo_c": -1.0, "bar_c": 1.0},
+                    "lower_bound": -1000.0,
+                    "upper_bound": 1000.0,
+                    "gene_reaction_rule": "",
+                },
+            }
+        ],
+    )
+    assert e_coli_core.metabolites.has_id("foo_c")
+    assert e_coli_core.metabolites.has_id("bar_c")
 
 
 def test_modify_reaction(e_coli_core):
     e_coli_core, biomass_reaction = e_coli_core
     assert e_coli_core.reactions.CS.bounds == (0.0, 1000.0)
-    apply_operations(e_coli_core, [{
-        'operation': "modify",
-        'type': "reaction",
-        'id': "CS",
-        'data': {
-            'id': 'CS',
-            'lower_bound': -20.0,
-            'upper_bound': 20.0,
-        }
-    }])
+    apply_operations(
+        e_coli_core,
+        [
+            {
+                "operation": "modify",
+                "type": "reaction",
+                "id": "CS",
+                "data": {"id": "CS", "lower_bound": -20.0, "upper_bound": 20.0},
+            }
+        ],
+    )
     assert e_coli_core.reactions.CS.bounds == (-20.0, 20)
 
 
 def test_knockout_reaction(e_coli_core):
     e_coli_core, biomass_reaction = e_coli_core
     assert e_coli_core.reactions.CS.bounds != (0.0, 0.0)
-    apply_operations(e_coli_core, [{'operation': "knockout", 'type': "reaction", 'id': "CS"}])
+    apply_operations(
+        e_coli_core, [{"operation": "knockout", "type": "reaction", "id": "CS"}]
+    )
     assert e_coli_core.reactions.CS.bounds == (0.0, 0.0)
 
 
@@ -90,6 +100,8 @@ def test_knockout_gene(e_coli_core):
     e_coli_core, biomass_reaction = e_coli_core
     assert e_coli_core.genes.b4025.functional
     assert all([r.bounds != (0.0, 0.0) for r in e_coli_core.genes.b4025.reactions])
-    apply_operations(e_coli_core, [{'operation': "knockout", 'type': "gene", 'id': "b4025"}])
+    apply_operations(
+        e_coli_core, [{"operation": "knockout", "type": "gene", "id": "b4025"}]
+    )
     assert not e_coli_core.genes.b4025.functional
     assert all([r.bounds == (0.0, 0.0) for r in e_coli_core.genes.b4025.reactions])

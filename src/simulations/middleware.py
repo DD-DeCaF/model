@@ -32,7 +32,7 @@ def init_app(app):
     @app.after_request
     def after_request(response):
         request_duration = time.time() - g.request_start
-        REQUEST_TIME.labels('model',
-                            os.environ['ENVIRONMENT'],
-                            request.path).observe(request_duration)
+        REQUEST_TIME.labels("model", os.environ["ENVIRONMENT"], request.path).observe(
+            request_duration
+        )
         return response

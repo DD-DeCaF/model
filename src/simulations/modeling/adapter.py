@@ -67,34 +67,37 @@ def apply_medium(model, medium):
     # Convert the list of dicts to a set of namedtuples to avoid duplicates, as
     # looking up metabolites in the model is a somewhat expensive operation.
     Compound = namedtuple("Compound", ["id", "namespace"])
-    medium = set(
-        Compound(id=c['id'], namespace=c['namespace'])
-        for c in medium
-    )
+    medium = set(Compound(id=c["id"], namespace=c["namespace"]) for c in medium)
 
     # Detect salt compounds and split them into their ions and metals
     for compound in medium.copy():  # Make a copy to be able to mutate the original list
         if compound.id in SALTS:
             salt = SALTS[compound.id]
-            logger.info(f"Replacing {compound.id} with ions: {salt['ions']} and metals: {salt['metals']}")
+            logger.info(
+                f"Replacing {compound.id} with ions: {salt['ions']} and metals: {salt['metals']}"
+            )
             medium.remove(compound)
-            medium.update([Compound(id=ion, namespace='chebi') for ion in salt['ions']])
-            medium.update([Compound(id=metal, namespace='chebi') for metal in salt['metals']])
+            medium.update([Compound(id=ion, namespace="chebi") for ion in salt["ions"]])
+            medium.update(
+                [Compound(id=metal, namespace="chebi") for metal in salt["metals"]]
+            )
 
-            if salt['ions_missing_smiles']:
+            if salt["ions_missing_smiles"]:
                 warning = f"Unable to add ions, smiles id could not be mapped: {salt['ions_missing_smiles']}"
                 warnings.append(warning)
                 logger.warning(warning)
-            if salt['metals_missing_inchi']:
+            if salt["metals_missing_inchi"]:
                 warning = f"Unable to add metals; inchi string could not be mapped: {salt['metals_missing_inchi']}"
                 warnings.append(warning)
                 logger.warning(warning)
 
     # Add trace metals
-    medium.update([
-        Compound(id="CHEBI:25517", namespace="chebi"),
-        Compound(id="CHEBI:25368", namespace="chebi"),
-    ])
+    medium.update(
+        [
+            Compound(id="CHEBI:25517", namespace="chebi"),
+            Compound(id="CHEBI:25368", namespace="chebi"),
+        ]
+    )
 
     try:
         extracellular = find_external_compartment(model)
@@ -102,7 +105,9 @@ def apply_medium(model, medium):
         # cobrapy throws RuntimeError if it for any reason is unable to find an
         # external compartment. See:
         # https://github.com/opencobra/cobrapy/blob/95d920d135fa824e6087f1fcbc88d50882da4dab/cobra/medium/boundary_types.py#L26
-        message = f"Cannot find an external compartment in model {model.id}: {str(error)}"
+        message = (
+            f"Cannot find an external compartment in model {model.id}: {str(error)}"
+        )
         errors.append(message)
         logger.error(message)
         # Cannot continue without knowing the external compartment, so
@@ -114,7 +119,9 @@ def apply_medium(model, medium):
     medium_mapping = {}
     for compound in medium:
         try:
-            extracellular_metabolite = find_metabolite(model, compound.id, compound.namespace, extracellular)
+            extracellular_metabolite = find_metabolite(
+                model, compound.id, compound.namespace, extracellular
+            )
         except MetaboliteNotFound:
             warning = (
                 f"Cannot add medium compund '{compound.id}' - metabolite not found in extracellular compartment "
@@ -123,29 +130,33 @@ def apply_medium(model, medium):
             warnings.append(warning)
             logger.warning(warning)
         else:
-            exchange_reactions = extracellular_metabolite.reactions.intersection(model.exchanges)
+            exchange_reactions = extracellular_metabolite.reactions.intersection(
+                model.exchanges
+            )
             if len(exchange_reactions) != 1:
-                errors.append(f"Medium compound metabolite '{extracellular_metabolite.id}' has "
-                              f"{len(exchange_reactions)} exchange reactions in the model; expected 1")
+                errors.append(
+                    f"Medium compound metabolite '{extracellular_metabolite.id}' has "
+                    f"{len(exchange_reactions)} exchange reactions in the model; expected 1"
+                )
                 continue
             exchange_reaction = next(iter(exchange_reactions))
 
             # If someone already figured out the uptake rate for the compound, it's likely more accurate than our
             # assumptions, so keep it
             if exchange_reaction.id in model.medium:
-                medium_mapping[exchange_reaction.id] = model.medium[exchange_reaction.id]
+                medium_mapping[exchange_reaction.id] = model.medium[
+                    exchange_reaction.id
+                ]
                 continue
 
             if not extracellular_metabolite.formula:
-                warning = (
-                    f"No formula for metabolite '{extracellular_metabolite.id}', cannot check if it is a carbon source"
-                )
+                warning = f"No formula for metabolite '{extracellular_metabolite.id}', cannot check if it is a carbon source"
                 warnings.append(warning)
                 logger.warning(warning)
                 # If we don't know, it's most likely that the metabolite does not have a higher uptake rate than a
                 # carbon source, so set the bound still to 10
                 medium_mapping[exchange_reaction.id] = 10
-            elif 'C' in extracellular_metabolite.elements:
+            elif "C" in extracellular_metabolite.elements:
                 # Limit the uptake rate for carbon sources to 10
                 medium_mapping[exchange_reaction.id] = 10
             else:
@@ -156,12 +167,14 @@ def apply_medium(model, medium):
 
     # Add all exchange reactions to operations, to make sure any changed bounds is properly updated
     for reaction in model.exchanges:
-        operations.append({
-            'operation': 'modify',
-            'type': 'reaction',
-            'id': reaction.id,
-            'data': reaction_to_dict(reaction),
-        })
+        operations.append(
+            {
+                "operation": "modify",
+                "type": "reaction",
+                "id": reaction.id,
+                "data": reaction_to_dict(reaction),
+            }
+        )
 
     return operations, warnings, errors
 
@@ -204,19 +217,19 @@ def apply_genotype(model, genotype_changes):
             # than the gene names, for example, AdhE instead of adhE.
             # We want to be forgiving here and only compare lower case names.
             def compare_feature(gene):
-                return gene.id == feature_identifer or gene.name.lower() == feature_lower
+                return (
+                    gene.id == feature_identifer or gene.name.lower() == feature_lower
+                )
 
             # We pick the first result. A fuzzy search on the name would be
             # useful in future.
             gene = model.genes.query(compare_feature)[0]
             gene.knock_out()
-            operations.append({
-                'operation': 'knockout',
-                'type': 'gene',
-                'id': gene.id,
-            })
+            operations.append({"operation": "knockout", "type": "gene", "id": gene.id})
         except IndexError:
-            warning = f"Cannot knockout gene '{feature_identifer}', not found in the model"
+            warning = (
+                f"Cannot knockout gene '{feature_identifer}', not found in the model"
+            )
             warnings.append(warning)
             logger.warning(warning)
 
@@ -238,8 +251,10 @@ def apply_genotype(model, genotype_changes):
         try:
             heterologous = ice.get_reaction_equations(genotype=feature_identifer)
         except PartNotFound:
-            warning = f"Cannot add gene '{feature_identifer}', " \
+            warning = (
+                f"Cannot add gene '{feature_identifer}', "
                 f"no gene-protein-reaction rules were found on ICE."
+            )
             warnings.append(warning)
             logger.warning(warning)
             continue
@@ -250,16 +265,16 @@ def apply_genotype(model, genotype_changes):
                 f"'{feature_identifer}'."
             )
             if reaction_id in model.reactions:
-                warning = f"Reaction {reaction_id} already exists in the " \
+                warning = (
+                    f"Reaction {reaction_id} already exists in the "
                     f"model, removing and replacing it."
+                )
                 logger.warning(warning)
                 warnings.append(warning)
                 model.remove_reactions([reaction_id])
-                operations.append({
-                    'operation': 'remove',
-                    'type': 'reaction',
-                    'id': reaction_id,
-                })
+                operations.append(
+                    {"operation": "remove", "type": "reaction", "id": reaction_id}
+                )
             reaction = Reaction(reaction_id)
             reaction.gene_reaction_rule = feature_identifer
             model.add_reactions([reaction])
@@ -302,11 +317,13 @@ def apply_genotype(model, genotype_changes):
                 )
                 metabolite.compartment = compartment_id
 
-            operations.append({
-                'operation': 'add',
-                'type': 'reaction',
-                'data': reaction_to_dict(reaction),
-            })
+            operations.append(
+                {
+                    "operation": "add",
+                    "type": "reaction",
+                    "data": reaction_to_dict(reaction),
+                }
+            )
 
             # We have to ensure that all new metabolites can leave the system. Create an
             # extracellular metabolite + exchange reaction (as opposed to just creating
@@ -332,29 +349,29 @@ def apply_genotype(model, genotype_changes):
 
                 # Create a transport reaction between the compartments
                 transport_reaction = Reaction(
-                    id=f"{metabolite_id.upper()}t",
-                    name=f"{metabolite.name} transport",
+                    id=f"{metabolite_id.upper()}t", name=f"{metabolite.name} transport"
                 )
                 transport_reaction.bounds = Configuration().bounds
-                transport_reaction.add_metabolites({
-                    metabolite: -1,
-                    metabolite_e: 1,
-                })
+                transport_reaction.add_metabolites({metabolite: -1, metabolite_e: 1})
                 model.add_reactions([transport_reaction])
-                operations.append({
-                    'operation': 'add',
-                    'type': 'reaction',
-                    'data': reaction_to_dict(transport_reaction),
-                })
+                operations.append(
+                    {
+                        "operation": "add",
+                        "type": "reaction",
+                        "data": reaction_to_dict(transport_reaction),
+                    }
+                )
 
                 # Create an exchange reaction for the extracellular metabolite so that
                 # it may leave the system
                 exchange_reaction = model.add_boundary(metabolite_e)
-                operations.append({
-                    'operation': 'add',
-                    'type': 'reaction',
-                    'data': reaction_to_dict(exchange_reaction),
-                })
+                operations.append(
+                    {
+                        "operation": "add",
+                        "type": "reaction",
+                        "data": reaction_to_dict(exchange_reaction),
+                    }
+                )
 
     return operations, warnings, errors
 
@@ -394,33 +411,41 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
     # First, improve the fluxomics dataset by minimizing the distance to a feasible problem.
     # If there is no objective constraint, skip minimization as it can yield unreliable results.
     if growth_rate:
-        growth_rate, measurements = minimize_distance(model, biomass_reaction, growth_rate, measurements)
+        growth_rate, measurements = minimize_distance(
+            model, biomass_reaction, growth_rate, measurements
+        )
 
     # Constrain the model with the observed growth rate
     if growth_rate:
         reaction = model.reactions.get_by_id(biomass_reaction)
-        reaction.bounds = _bounds_for_measurements(growth_rate['measurements'])
-        operations.append({
-            'operation': 'modify',
-            'type': 'reaction',
-            'id': reaction.id,
-            'data': reaction_to_dict(reaction),
-        })
+        reaction.bounds = _bounds_for_measurements(growth_rate["measurements"])
+        operations.append(
+            {
+                "operation": "modify",
+                "type": "reaction",
+                "id": reaction.id,
+                "data": reaction_to_dict(reaction),
+            }
+        )
 
     # Constrain the model with the observed measurements
     for scalar in measurements:
-        lower_bound, upper_bound = _bounds_for_measurements(scalar['measurements'])
+        lower_bound, upper_bound = _bounds_for_measurements(scalar["measurements"])
 
-        if scalar['type'] == 'compound':
+        if scalar["type"] == "compound":
             try:
-                metabolite = find_metabolite(model, scalar['id'], scalar['namespace'], 'e')
+                metabolite = find_metabolite(
+                    model, scalar["id"], scalar["namespace"], "e"
+                )
             except MetaboliteNotFound as error:
                 errors.append(str(error))
             else:
                 exchange_reactions = metabolite.reactions.intersection(model.exchanges)
                 if len(exchange_reactions) != 1:
-                    errors.append(f"Measured metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange "
-                                  f"reactions in the model; expected 1")
+                    errors.append(
+                        f"Measured metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange "
+                        f"reactions in the model; expected 1"
+                    )
                     continue
                 exchange_reaction = next(iter(exchange_reactions))
 
@@ -430,40 +455,48 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
                 if direction > 0:
                     lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
                 exchange_reaction.bounds = lower_bound, upper_bound
-                operations.append({
-                    'operation': 'modify',
-                    'type': 'reaction',
-                    'id': exchange_reaction.id,
-                    'data': reaction_to_dict(exchange_reaction),
-                })
-        elif scalar['type'] == 'reaction':
+                operations.append(
+                    {
+                        "operation": "modify",
+                        "type": "reaction",
+                        "id": exchange_reaction.id,
+                        "data": reaction_to_dict(exchange_reaction),
+                    }
+                )
+        elif scalar["type"] == "reaction":
             try:
-                reaction = model.reactions.get_by_id(scalar['id'])
+                reaction = model.reactions.get_by_id(scalar["id"])
             except KeyError:
                 errors.append(f"Cannot find reaction '{scalar['id']}' in the model")
             else:
                 reaction.bounds = lower_bound, upper_bound
-                operations.append({
-                    'operation': 'modify',
-                    'type': 'reaction',
-                    'id': reaction.id,
-                    'data': reaction_to_dict(reaction),
-                })
-        elif scalar['type'] == 'protein':
+                operations.append(
+                    {
+                        "operation": "modify",
+                        "type": "reaction",
+                        "id": reaction.id,
+                        "data": reaction_to_dict(reaction),
+                    }
+                )
+        elif scalar["type"] == "protein":
             try:
-                reaction = find_reaction(model, scalar['id'], scalar['namespace'])
+                reaction = find_reaction(model, scalar["id"], scalar["namespace"])
             except ReactionNotFound as error:
                 errors.append(str(error))
             else:
                 reaction.bounds = 0, upper_bound
-                operations.append({
-                    'operation': 'modify',
-                    'type': 'reaction',
-                    'id': reaction.id,
-                    'data': reaction_to_dict(reaction),
-                })
+                operations.append(
+                    {
+                        "operation": "modify",
+                        "type": "reaction",
+                        "id": reaction.id,
+                        "data": reaction_to_dict(reaction),
+                    }
+                )
         else:
-            raise NotImplementedError(f"Measurement type '{scalar['type']}' is not supported")
+            raise NotImplementedError(
+                f"Measurement type '{scalar['type']}' is not supported"
+            )
     return operations, warnings, errors
 
 

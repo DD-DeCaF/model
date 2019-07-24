@@ -46,21 +46,20 @@ def models():
     For endpoint tests, use the returned dict to access the numeric id for a given model id. For unit tests, consider
     using the function-scoped fixtures below to be able to make revertable modifications to the models.
     """
-    model_keys = {
-        'e_coli_core': 1,
-        'e_coli_core_proprietary': 2,
-        'iJO1366': 3,
-    }
+    model_keys = {"e_coli_core": 1, "e_coli_core_proprietary": 2, "iJO1366": 3}
 
-    model = read_sbml_model('tests/data/e_coli_core.sbml.gz')
-    storage._MODELS[model_keys['e_coli_core']] = storage.ModelWrapper(model, None, "Escherichia coli",
-                                                                      'BIOMASS_Ecoli_core_w_GAM')
-    model = read_sbml_model('tests/data/e_coli_core.sbml.gz')
-    storage._MODELS[model_keys['e_coli_core_proprietary']] = storage.ModelWrapper(model, 1, "Escherichia coli",
-                                                                                  'BIOMASS_Ecoli_core_w_GAM')
-    model = read_sbml_model('tests/data/iJO1366.sbml.gz')
-    storage._MODELS[model_keys['iJO1366']] = storage.ModelWrapper(model, None, "Escherichia coli",
-                                                                  'BIOMASS_Ec_iJO1366_core_53p95M')
+    model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
+    storage._MODELS[model_keys["e_coli_core"]] = storage.ModelWrapper(
+        model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM"
+    )
+    model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
+    storage._MODELS[model_keys["e_coli_core_proprietary"]] = storage.ModelWrapper(
+        model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM"
+    )
+    model = read_sbml_model("tests/data/iJO1366.sbml.gz")
+    storage._MODELS[model_keys["iJO1366"]] = storage.ModelWrapper(
+        model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M"
+    )
     return model_keys
 
 
@@ -70,7 +69,7 @@ def e_coli_core(models):
     Provide the e_coli_core model in a context manager, so that modifications are not persisted beyond the scope of the
     test function. This model is fairly small and should be preferred in test cases where possible.
     """
-    wrapper = storage._MODELS[models['e_coli_core']]
+    wrapper = storage._MODELS[models["e_coli_core"]]
     with wrapper.model as model:
         yield model, wrapper.biomass_reaction
 
@@ -81,6 +80,6 @@ def iJO1366(models):
     Provide the iJO1366 model in a context manager, so that modifications are not persisted beyond the scope of the
     test function.
     """
-    wrapper = storage._MODELS[models['iJO1366']]
+    wrapper = storage._MODELS[models["iJO1366"]]
     with wrapper.model as model:
         yield model, wrapper.biomass_reaction
