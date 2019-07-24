@@ -50,7 +50,6 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
         logger.info(f"Optimization Error: {error}")
         raise
     else:
-        logger.info(f"Simulation completed successfully")
         if method in ("fba", "pfba"):
             flux_distribution = solution.fluxes.to_dict()
             growth_rate = flux_distribution[biomass_reaction]
@@ -62,4 +61,5 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
                 df[key] = df[key].astype("float")
             flux_distribution = df.T.to_dict()
             growth_rate = flux_distribution[biomass_reaction]["upper_bound"]
+        logger.info(f"Simulation was successful with growth rate {growth_rate}")
         return flux_distribution, growth_rate
