@@ -38,7 +38,8 @@ def test_medium_adapter(iJO1366):
         {"id": "CHEBI:131387", "namespace": "chebi"},
     ]
     operations, warnings, errors = apply_medium(iJO1366, medium)
-    # 30 warnings are expected; 29 unique compounds not found in the model and 1 unmapped ion from the salts mapping
+    # 30 warnings are expected; 29 unique compounds not found in the model and 1
+    # unmapped ion from the salts mapping
     assert len(warnings) == 30
     assert len(errors) == 0
     assert set(iJO1366.medium) == {

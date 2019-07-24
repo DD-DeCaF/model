@@ -74,7 +74,8 @@ def apply_medium(model, medium):
         if compound.id in SALTS:
             salt = SALTS[compound.id]
             logger.info(
-                f"Replacing {compound.id} with ions: {salt['ions']} and metals: {salt['metals']}"
+                f"Replacing {compound.id} with ions: {salt['ions']} and metals: "
+                f"{salt['metals']}"
             )
             medium.remove(compound)
             medium.update([Compound(id=ion, namespace="chebi") for ion in salt["ions"]])
@@ -83,11 +84,17 @@ def apply_medium(model, medium):
             )
 
             if salt["ions_missing_smiles"]:
-                warning = f"Unable to add ions, smiles id could not be mapped: {salt['ions_missing_smiles']}"
+                warning = (
+                    f"Unable to add ions, smiles id could not be mapped: "
+                    f"{salt['ions_missing_smiles']}"
+                )
                 warnings.append(warning)
                 logger.warning(warning)
             if salt["metals_missing_inchi"]:
-                warning = f"Unable to add metals; inchi string could not be mapped: {salt['metals_missing_inchi']}"
+                warning = (
+                    f"Unable to add metals; inchi string could not be mapped: "
+                    f"{salt['metals_missing_inchi']}"
+                )
                 warnings.append(warning)
                 logger.warning(warning)
 
@@ -124,8 +131,8 @@ def apply_medium(model, medium):
             )
         except MetaboliteNotFound:
             warning = (
-                f"Cannot add medium compund '{compound.id}' - metabolite not found in extracellular compartment "
-                f"'{extracellular}'"
+                f"Cannot add medium compund '{compound.id}' - metabolite not found in "
+                f"extracellular compartment '{extracellular}'"
             )
             warnings.append(warning)
             logger.warning(warning)
@@ -136,13 +143,14 @@ def apply_medium(model, medium):
             if len(exchange_reactions) != 1:
                 errors.append(
                     f"Medium compound metabolite '{extracellular_metabolite.id}' has "
-                    f"{len(exchange_reactions)} exchange reactions in the model; expected 1"
+                    f"{len(exchange_reactions)} exchange reactions in the model; "
+                    f"expected 1"
                 )
                 continue
             exchange_reaction = next(iter(exchange_reactions))
 
-            # If someone already figured out the uptake rate for the compound, it's likely more accurate than our
-            # assumptions, so keep it
+            # If someone already figured out the uptake rate for the compound, it's
+            # likely more accurate than our assumptions, so keep it
             if exchange_reaction.id in model.medium:
                 medium_mapping[exchange_reaction.id] = model.medium[
                     exchange_reaction.id
@@ -150,11 +158,14 @@ def apply_medium(model, medium):
                 continue
 
             if not extracellular_metabolite.formula:
-                warning = f"No formula for metabolite '{extracellular_metabolite.id}', cannot check if it is a carbon source"
+                warning = (
+                    f"No formula for metabolite '{extracellular_metabolite.id}', cannot"
+                    f" check if it is a carbon source"
+                )
                 warnings.append(warning)
                 logger.warning(warning)
-                # If we don't know, it's most likely that the metabolite does not have a higher uptake rate than a
-                # carbon source, so set the bound still to 10
+                # If we don't know, it's most likely that the metabolite does not have a
+                # higher uptake rate than a carbon source, so set the bound still to 10
                 medium_mapping[exchange_reaction.id] = 10
             elif "C" in extracellular_metabolite.elements:
                 # Limit the uptake rate for carbon sources to 10
@@ -162,10 +173,12 @@ def apply_medium(model, medium):
             else:
                 medium_mapping[exchange_reaction.id] = 1000
 
-    # Apply the medium to the model, letting cobrapy deal with figuring out the correct bounds to change
+    # Apply the medium to the model, letting cobrapy deal with figuring out the correct
+    # bounds to change
     model.medium = medium_mapping
 
-    # Add all exchange reactions to operations, to make sure any changed bounds is properly updated
+    # Add all exchange reactions to operations, to make sure any changed bounds is
+    # properly updated
     for reaction in model.exchanges:
         operations.append(
             {
@@ -408,8 +421,9 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
     warnings = []
     errors = []
 
-    # First, improve the fluxomics dataset by minimizing the distance to a feasible problem.
-    # If there is no objective constraint, skip minimization as it can yield unreliable results.
+    # First, improve the fluxomics dataset by minimizing the distance to a feasible
+    # problem. If there is no objective constraint, skip minimization as it can yield
+    # unreliable results.
     if growth_rate:
         growth_rate, measurements = minimize_distance(
             model, biomass_reaction, growth_rate, measurements
@@ -443,14 +457,16 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
                 exchange_reactions = metabolite.reactions.intersection(model.exchanges)
                 if len(exchange_reactions) != 1:
                     errors.append(
-                        f"Measured metabolite '{metabolite.id}' has {len(exchange_reactions)} exchange "
-                        f"reactions in the model; expected 1"
+                        f"Measured metabolite '{metabolite.id}' has "
+                        f"{len(exchange_reactions)} exchange reactions in the model; "
+                        f"expected 1"
                     )
                     continue
                 exchange_reaction = next(iter(exchange_reactions))
 
-                # data is adjusted assuming a forward exchange reaction, x <-- (sign = -1), so if we instead actually
-                # have <-- x, then multiply with -1
+                # data is adjusted assuming a forward exchange reaction, x <--
+                # (sign = -1), so if we instead actually have <-- x, then multiply with
+                # -1
                 direction = exchange_reaction.metabolites[metabolite]
                 if direction > 0:
                     lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
@@ -501,8 +517,8 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
 
 
 def _bounds_for_measurements(measurements):
-    # If there are three or more observations, use the 97% normal distribution range, i.e., mean +- 1.96.
-    # Otherwise, just use the max/min values of the measurements.
+    # If there are three or more observations, use the 97% normal distribution range,
+    # i.e., mean +- 1.96. Otherwise, just use the max/min values of the measurements.
     scalar_data = np.array([v for v in measurements if not np.isnan(v)])
     if len(scalar_data) > 2:
         upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))

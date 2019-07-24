@@ -30,7 +30,9 @@ ice = ICE()
 def test_ice_missing_parts(part):
     """
     Query ICE for missing parts.
-    Prone to failure when live data changes and will need to be kept in sync accordingly.
+
+    Prone to failure when live data changes and will need to be kept in sync
+    accordingly.
     """
     with pytest.raises(PartNotFound):
         ice.get_reaction_equations(part)
@@ -42,7 +44,9 @@ def test_ice_missing_parts(part):
 def test_ice_existing_part():
     """
     Query ICE for an existing part.
-    Prone to failure when live data changes and will need to be kept in sync accordingly.
+
+    Prone to failure when live data changes and will need to be kept in sync
+    accordingly.
     """
     result = ice.get_reaction_equations("BBa_0010")
     assert result == {"DECARB": "acon_C <=> itacon + co2"}

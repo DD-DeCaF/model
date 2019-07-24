@@ -34,8 +34,8 @@ def apply_operations(model, operations):
             _remove_reaction(model, operation["id"])
         else:
             raise ValueError(
-                f"Invalid operation: Cannot perform operation '{operation['operation']}' on type "
-                f"'{operation['type']}'"
+                f"Invalid operation: Cannot perform operation "
+                f"'{operation['operation']}' on type '{operation['type']}'"
             )
 
 

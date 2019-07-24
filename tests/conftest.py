@@ -41,10 +41,12 @@ def models():
     Preload the storage module with test models.
 
     This fixture ensures models are loaded locally, and only once per test session.
-    The returned dict contains a map of model identifier to the corresponding numeric id in the storage module.
+    The returned dict contains a map of model identifier to the corresponding numeric id
+    in the storage module.
 
-    For endpoint tests, use the returned dict to access the numeric id for a given model id. For unit tests, consider
-    using the function-scoped fixtures below to be able to make revertable modifications to the models.
+    For endpoint tests, use the returned dict to access the numeric id for a given model
+    id. For unit tests, consider using the function-scoped fixtures below to be able to
+    make revertable modifications to the models.
     """
     model_keys = {"e_coli_core": 1, "e_coli_core_proprietary": 2, "iJO1366": 3}
 
@@ -66,8 +68,9 @@ def models():
 @pytest.fixture(scope="function")
 def e_coli_core(models):
     """
-    Provide the e_coli_core model in a context manager, so that modifications are not persisted beyond the scope of the
-    test function. This model is fairly small and should be preferred in test cases where possible.
+    Provide the e_coli_core model in a context manager, so that modifications are not
+    persisted beyond the scope of the test function. This model is fairly small and
+    should be preferred in test cases where possible.
     """
     wrapper = storage._MODELS[models["e_coli_core"]]
     with wrapper.model as model:
@@ -77,8 +80,8 @@ def e_coli_core(models):
 @pytest.fixture(scope="function")
 def iJO1366(models):
     """
-    Provide the iJO1366 model in a context manager, so that modifications are not persisted beyond the scope of the
-    test function.
+    Provide the iJO1366 model in a context manager, so that modifications are not
+    persisted beyond the scope of the test function.
     """
     wrapper = storage._MODELS[models["iJO1366"]]
     with wrapper.model as model:

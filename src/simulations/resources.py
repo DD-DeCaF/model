@@ -64,7 +64,8 @@ def model_modify(model_id, medium, genotype, growth_rate, measurements):
     except ModelNotFound as error:
         abort(404, error.message)
 
-    # Use the context manager to undo all modifications to the shared model instance on completion.
+    # Use the context manager to undo all modifications to the shared model instance on
+    # completion.
     with model_wrapper.model as model:
         # Build list of operations to perform on the model
         operations = []
@@ -91,8 +92,8 @@ def model_modify(model_id, medium, genotype, growth_rate, measurements):
             errors.extend(results[2])
 
         if errors:
-            # If any errors occured during modifications, discard generated operations and return the error messages to
-            # the client for follow-up
+            # If any errors occured during modifications, discard generated operations
+            # and return the error messages to the client for follow-up
             return {"errors": errors}, 400
         else:
             return {"operations": operations, "warnings": warnings}
@@ -111,7 +112,8 @@ def model_simulate(model_id, method, objective_id, objective_direction, operatio
 
     model = model_wrapper.model
 
-    # Use the context manager to undo all modifications to the shared model instance on completion.
+    # Use the context manager to undo all modifications to the shared model instance on
+    # completion.
     with model:
         apply_operations(model, operations)
         flux_distribution, growth_rate = simulate(
@@ -137,7 +139,7 @@ def healthz():
     """
     HTTP endpoint for readiness probes.
 
-    Return an empty response. This response will not be ready until the application has finished initializing, e.g.,
-    preloading models, which takes a few minutes.
+    Return an empty response. This response will not be ready until the application has
+    finished initializing, e.g., preloading models, which takes a few minutes.
     """
     return ""

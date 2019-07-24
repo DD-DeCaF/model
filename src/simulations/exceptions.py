@@ -14,13 +14,17 @@
 
 
 class MetaboliteNotFound(Exception):
-    """Thrown when a search for a given metabolite identifier does not yield any result."""
+    """
+    Thrown when a search for a given metabolite identifier does not yield any result.
+    """
 
     pass
 
 
 class ReactionNotFound(Exception):
-    """Thrown when a search for a given reaction identifier does not yield any result."""
+    """
+    Thrown when a search for a given reaction identifier does not yield any result.
+    """
 
     pass
 
@@ -32,7 +36,9 @@ class PartNotFound(Exception):
 
 
 class ModelStorageError(IOError):
-    """Base exception thrown when a model can not be retrieved from the storage."""
+    """
+    Base exception thrown when a model can not be retrieved from the storage.
+    """
 
     def __init__(self, message, *args, **kwargs):
         super().__init__(message, *args, **kwargs)
@@ -52,6 +58,9 @@ class Unauthorized(ModelStorageError):
 
 
 class Forbidden(ModelStorageError):
-    """Thrown when requesting a private model for which the provided credentials are not authorized."""
+    """
+    Thrown when requesting a private model for which the provided credentials are not
+    authorized.
+    """
 
     pass

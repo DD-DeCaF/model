@@ -35,12 +35,15 @@ class ICE(metaclass=Singleton):
         if os.environ["ENVIRONMENT"] in ("production", "staging", "testing"):
             self._update_session_id()
         else:
-            # To speed up development, don't set a valid session id on init but rely on the re-authentication logic
-            # should ICE be needed.
+            # To speed up development, don't set a valid session id on init but rely on
+            # the re-authentication logic should ICE be needed.
             self.SESSION_ID = ""
 
     def get_reaction_equations(self, genotype):
-        """Request genotype part info from ICE and return reaction map information from the references field."""
+        """
+        Request genotype part info from ICE and return reaction map information from the
+        references field.
+        """
         logger.info(f"Requesting genotype '{genotype}' from ICE")
         with API_REQUESTS.labels(
             "model", os.environ["ENVIRONMENT"], "ice", app.config["ICE_API"]
@@ -50,8 +53,9 @@ class ICE(metaclass=Singleton):
                 headers=self._headers(),
             )
 
-        # In case of authentication failure, get a new session id and re-try the request. The ICE documentation says
-        # nothing about access token expiry, so it's not clear whether this can or will ever occur.
+        # In case of authentication failure, get a new session id and re-try the
+        # request. The ICE documentation says nothing about access token expiry, so it's
+        # not clear whether this can or will ever occur.
         if response.status_code in (401, 403):
             self._update_session_id()
             with API_REQUESTS.labels(
@@ -69,16 +73,19 @@ class ICE(metaclass=Singleton):
         response.raise_for_status()
         result = response.json()
 
-        # Extract reaction id -> string map from the expected format in the references field
-        # Note: This could be removed in the future, in favor of storing only the reaction IDs in ICE, and looking up
-        # the corresponding stoichiometry/reaction equations from the BiGG database instead.
+        # Extract reaction id -> string map from the expected format in the references
+        # field. Note: This could be removed in the future, in favor of storing only the
+        # reaction IDs in ICE, and looking up the corresponding stoichiometry/reaction
+        # equations from the BiGG database instead.
         reactions = result["references"].split(",")
         reaction_tuples = [reaction.split(":") for reaction in reactions]
         reactions_map = {id.strip(): string.strip() for id, string in reaction_tuples}
         return reactions_map
 
     def _update_session_id(self):
-        """Query ICE for a new access token. Note that this usually takes ~10 seconds!"""
+        """
+        Query ICE for a new access token. Note that this usually takes ~10 seconds!
+        """
         logger.info(f"Requesting session token from ICE")
         response = requests.post(
             f"{app.config['ICE_API']}/rest/accesstokens",

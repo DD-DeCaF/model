@@ -36,10 +36,13 @@ class ModelWrapper:
         model: cobra.Model
             A cobrapy model instance.
         project_id: int
-            Reference to the project id to which this model belongs, or None if it is a public model.
+            Reference to the project id to which this model belongs, or None if it is a
+            public model.
         organism_id: int
-            A reference to the organism for which the given model belongs. The identifier is internal to the DD-DeCaF
-            platform and references the `id` field in https://api.dd-decaf.eu/warehouse/organisms.
+            A reference to the organism for which the given model belongs. The
+            identifier is internal to the DD-DeCaF
+            platform and references the `id` field in
+            https://api.dd-decaf.eu/warehouse/organisms.
         biomass_reaction: str
             A string referencing the default biomass reaction in the given model.
         """
@@ -80,8 +83,9 @@ def preload_public_models():
 def _load_model(model_id):
     logger.debug(f"Requesting model {model_id} from the model warehouse")
     headers = {}
-    # Check g for truthiness; false means there is no request context. This is necessary in the production environment,
-    # where models are preloaded outside of any request context.
+    # Check g for truthiness; false means there is no request context. This is necessary
+    # in the production environment, where models are preloaded outside of any request
+    # context.
     if g and g.jwt_valid:
         logger.debug(f"Forwarding provided JWT")
         headers["Authorization"] = f"Bearer {g.jwt_token}"
