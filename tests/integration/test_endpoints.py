@@ -85,7 +85,7 @@ def test_simulate_infeasible(client, models):
         "/simulate", json={"model_id": models["iJO1366"], "operations": operations}
     )
     assert response.status_code == 200
-    assert response.json["flux_distribution"]["ATPM"] == pytest.approx(100)
+    assert response.json["status"] == "infeasible"
 
 
 def test_simulate_fluxomics(monkeypatch, client, models):
