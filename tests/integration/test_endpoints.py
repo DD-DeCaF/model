@@ -64,6 +64,7 @@ def test_simulate_unauthorized(client, models):
 def test_simulate_no_operations(client, models):
     response = client.post("/simulate", json={"model_id": models["iJO1366"]})
     assert response.status_code == 200
+    assert response.json["status"] == "optimal"
 
 
 def test_simulate_infeasible(client, models):
@@ -99,6 +100,7 @@ def test_simulate_fluxomics(monkeypatch, client, models):
         "/simulate", json={"model_id": models["iJO1366"], "operations": operations}
     )
     assert response.status_code == 200
+    assert response.json["status"] == "optimal"
     assert response.json["flux_distribution"]["EX_glc__D_e"] == -9.0
     assert (
         abs(response.json["flux_distribution"]["EX_etoh_e"] - 4.64) < 0.001
@@ -149,6 +151,7 @@ def test_simulate_modify(monkeypatch, client, models):
         },
     )
     assert response.status_code == 200
+    assert response.json["status"] == "optimal"
     fluxes = response.json["flux_distribution"]
 
     assert fluxes["EX_glc__D_e"] == -9.0
@@ -162,11 +165,13 @@ def test_simulate_different_objective(client, models):
     )
     assert response.status_code == 200
     result = response.json
+    assert result["status"] == "optimal"
     assert abs(result["flux_distribution"]["EX_etoh_e"]) == pytest.approx(20)
 
     response = client.post("/simulate", json={"model_id": models["iJO1366"]})
     assert response.status_code == 200
     result = response.json
+    assert result["status"] == "optimal"
     assert abs(result["flux_distribution"]["EX_etoh_e"]) == pytest.approx(0)
 
 
@@ -380,6 +385,7 @@ def test_prokaryomics_md120_bw25113(client, models):
         json={"model_id": models["iJO1366"], "operations": response.json["operations"]},
     )
     assert response.status_code == 200
+    assert response.json["status"] == "optimal"
     assert response.json["growth_rate"] == pytest.approx(0.5134445454218568)
 
 
@@ -395,4 +401,5 @@ def test_growth_rate_measurement(client, models):
         json={"model_id": models["iJO1366"], "operations": response.json["operations"]},
     )
     assert response.status_code == 200
+    assert response.json["status"] == "optimal"
     assert response.json["growth_rate"] == pytest.approx(0.285)
