@@ -67,7 +67,10 @@ def _add_reaction(model, data):
 
 
 def _modify_reaction(model, id, data):
-    logger.debug(f"Modifying reaction '{id}' in model '{model.id}'")
+    logger.debug(
+        f"Setting bounds of reaction '{id}' to ({data['lower_bound']}, "
+        f"{data['upper_bound']}) in model '{model.id}'"
+    )
     model.reactions.get_by_id(id).bounds = data["lower_bound"], data["upper_bound"]
 
 
