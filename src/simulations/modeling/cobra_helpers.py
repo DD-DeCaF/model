@@ -193,8 +193,12 @@ def parse_bigg_compartment(metabolite_id, model):
         If the compartment identifier parsed out of the metabolite does not exist in the
         model.
     """
-    if "_" not in metabolite_id:
-        raise ValueError(f"The identifier {metabolite_id} is not valid BiGG format.")
+    try:
+        metabolite_id, compartment_id = metabolite_id.rsplit("_", 1)
+    except ValueError as error:
+        raise ValueError(
+            f"The identifier {metabolite_id} is not valid BiGG format."
+        ) from error
     metabolite_id, compartment_id = metabolite_id.rsplit("_", 1)
     if compartment_id not in model.compartments:
         raise CompartmentNotFound(
