@@ -199,7 +199,6 @@ def parse_bigg_compartment(metabolite_id, model):
         raise ValueError(
             f"The identifier {metabolite_id} has no valid BiGG compartment suffix."
         ) from error
-    metabolite_id, compartment_id = metabolite_id.rsplit("_", 1)
     if compartment_id not in model.compartments:
         raise CompartmentNotFound(
             f"Compartment {compartment_id} does not exist in model {model.id}"
