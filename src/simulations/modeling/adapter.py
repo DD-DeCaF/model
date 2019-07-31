@@ -327,11 +327,11 @@ def apply_genotype(model, genotype_changes):
                     errors.append(error)
                     logger.error(error)
                     continue
-                except CompartmentNotFound:
+                except CompartmentNotFound as error:
                     error = (
-                        f"Compartment {compartment_id} does not exist in the model,"
-                        f"but that's what we understand metabolite {metabolite.id} "
-                        f"to exist in."
+                        f"Compartment {error.compartment_id} does not exist in the "
+                        f"model, but that's what we understand metabolite "
+                        f"{metabolite.id} to exist in."
                     )
                     errors.append(error)
                     logger.error(error)

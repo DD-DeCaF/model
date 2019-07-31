@@ -30,7 +30,9 @@ class ReactionNotFound(Exception):
 
 
 class CompartmentNotFound(Exception):
-    pass
+    def __init__(self, message, compartment_id):
+        super().__init__(message)
+        self.compartment_id = compartment_id
 
 
 class PartNotFound(Exception):
