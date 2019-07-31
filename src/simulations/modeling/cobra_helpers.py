@@ -202,6 +202,6 @@ def parse_bigg_compartment(metabolite_id, model):
     if compartment_id not in model.compartments:
         raise CompartmentNotFound(
             f"Compartment {compartment_id} does not exist in model {model.id}",
-            compartment_id
+            compartment_id,
         )
     return metabolite_id, compartment_id
