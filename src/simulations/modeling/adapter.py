@@ -391,7 +391,9 @@ def apply_genotype(model, genotype_changes):
 
                 # Create an exchange reaction for the extracellular metabolite so that
                 # it may leave the system
-                exchange_reaction = model.add_boundary(metabolite_e)
+                exchange_reaction = model.add_boundary(
+                    metabolite_e, type="exchange", lb=0, ub=1000
+                )
                 operations.append(
                     {
                         "operation": "add",
