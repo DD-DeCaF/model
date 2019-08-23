@@ -31,9 +31,11 @@ class Operation(Schema):
 
 
 class MediumCompound(Schema):
-    id = fields.String(required=True)
-    # Note: namespace should match a namespace identifier from miriam.
+    name = fields.String(required=True)
+    # `id` should be a valid identifier in the namespace defined below.
+    # `namespace` should match a namespace identifier from miriam.
     # See https://www.ebi.ac.uk/miriam/main/collections
+    id = fields.String(required=True)
     namespace = fields.String(required=True)
 
     class Meta:
@@ -41,9 +43,11 @@ class MediumCompound(Schema):
 
 
 class Measurement(Schema):
-    id = fields.String(required=True)
-    # Note: namespace should match a namespace identifier from miriam.
+    name = fields.String(required=True)
+    # `id` should be a valid identifier in the namespace defined below.
+    # `namespace` should match a namespace identifier from miriam.
     # See https://www.ebi.ac.uk/miriam/main/collections
+    id = fields.String(required=True)
     namespace = fields.String(required=True)
     measurements = fields.List(fields.Float())
     type = fields.String(
