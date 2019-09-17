@@ -26,9 +26,6 @@ class Operation(Schema):
     id = fields.String(missing=None)
     data = fields.Raw(missing=None)
 
-    class Meta:
-        strict = True
-
 
 class MediumCompound(Schema):
     name = fields.String(required=True)
@@ -37,9 +34,6 @@ class MediumCompound(Schema):
     # See https://www.ebi.ac.uk/miriam/main/collections
     id = fields.String(required=True)
     namespace = fields.String(required=True)
-
-    class Meta:
-        strict = True
 
 
 class Measurement(Schema):
@@ -54,15 +48,9 @@ class Measurement(Schema):
         required=True, validate=OneOf(["compound", "reaction", "protein"])
     )
 
-    class Meta:
-        strict = True
-
 
 class GrowthRate(Schema):
     measurements = fields.List(fields.Float())
-
-    class Meta:
-        strict = True
 
 
 class ModificationRequest(Schema):
@@ -71,9 +59,6 @@ class ModificationRequest(Schema):
     growth_rate = fields.Nested(GrowthRate, missing=None)
     measurements = fields.Nested(Measurement, many=True, missing=[])
 
-    class Meta:
-        strict = True
-
 
 class SimulationRequest(Schema):
     model_id = fields.Integer(required=True)
@@ -81,6 +66,3 @@ class SimulationRequest(Schema):
     objective_id = fields.String(missing=None)
     objective_direction = fields.String(missing=None)
     operations = fields.Nested(Operation, many=True, missing=[])
-
-    class Meta:
-        strict = True
