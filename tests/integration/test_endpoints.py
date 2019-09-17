@@ -22,27 +22,30 @@ import requests
 from simulations.ice_client import ICE
 
 
-MEASUREMENTS = [
+FLUXOMICS = [
+    {
+        "name": "Phosphofructokinase",
+        "identifier": "PFK",
+        "namespace": "bigg.reaction",
+        "measurement": 5,
+        "uncertainty": 0,
+    }
+]
+
+UPTAKE_SECRETION_RATES = [
     {
         "name": "aldehydo-D-glucose",
-        "id": "CHEBI:42758",
+        "identifier": "CHEBI:42758",
         "namespace": "chebi",
-        "measurements": [-9.0],
-        "type": "compound",
+        "measurement": -9.0,
+        "uncertainty": 0,
     },
     {
         "name": "ethanol",
-        "id": "CHEBI:16236",
+        "identifier": "CHEBI:16236",
         "namespace": "chebi",
-        "measurements": [5.0, 4.8, 5.2, 4.9],
-        "type": "compound",
-    },
-    {
-        "name": "Phosphofructokinase",
-        "id": "PFK",
-        "namespace": "bigg.reaction",
-        "measurements": [5, 5],
-        "type": "reaction",
+        "measurement": 4.9,
+        "uncertainty": 0,
     },
 ]
 
@@ -71,18 +74,18 @@ def test_simulate_no_operations(client, models):
 
 
 def test_simulate_infeasible(client, models):
-    measurements = [
+    fluxomics = [
         {
             "name": "E. coli biomass objective function",
-            "id": "BIOMASS_Ec_iJO1366_core_53p95M",
+            "identifier": "BIOMASS_Ec_iJO1366_core_53p95M",
             "namespace": "bigg.reaction",
             # Force an impossible growth to ensure infeasability
-            "measurements": [1000],
-            "type": "reaction",
+            "measurement": 1000,
+            "uncertainty": 0,
         }
     ]
     response = client.post(
-        f"/models/{models['iJO1366']}/modify", json={"measurements": measurements}
+        f"/models/{models['iJO1366']}/modify", json={"fluxomics": fluxomics}
     )
     assert response.status_code == 200
 
@@ -96,7 +99,7 @@ def test_simulate_infeasible(client, models):
 
 def test_simulate_fluxomics(monkeypatch, client, models):
     response = client.post(
-        f"/models/{models['iJO1366']}/modify", json={"measurements": MEASUREMENTS}
+        f"/models/{models['iJO1366']}/modify", json={"fluxomics": FLUXOMICS}
     )
     assert response.status_code == 200
 
@@ -106,19 +109,18 @@ def test_simulate_fluxomics(monkeypatch, client, models):
     )
     assert response.status_code == 200
     assert response.json["status"] == "optimal"
-    assert response.json["flux_distribution"]["EX_glc__D_e"] == -9.0
-    assert (
-        abs(response.json["flux_distribution"]["EX_etoh_e"] - 4.64) < 0.001
-    )  # lower bound
-    assert response.json["flux_distribution"]["PFK"] == pytest.approx(5)
 
 
 def test_simulate_modify(monkeypatch, client, models):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, "get_reaction_equations", lambda self, genotype: {})
 
-    conditions = {"measurements": MEASUREMENTS, "genotype": ["+Aac", "-pta"]}
-    response = client.post(f"/models/{models['iJO1366']}/modify", json=conditions)
+    experiment = {
+        "fluxomics": FLUXOMICS,
+        "uptake_secretion_rates": UPTAKE_SECRETION_RATES,
+        "genotype": "+Aac,-pta",
+    }
+    response = client.post(f"/models/{models['iJO1366']}/modify", json=experiment)
     assert response.status_code == 200
 
     operations = response.json["operations"]
@@ -160,7 +162,6 @@ def test_simulate_modify(monkeypatch, client, models):
     fluxes = response.json["flux_distribution"]
 
     assert fluxes["EX_glc__D_e"] == -9.0
-    assert abs(fluxes["EX_etoh_e"] - 4.64) < 0.001  # lower bound
     assert fluxes["PFK"] == pytest.approx(5)
 
 
@@ -188,75 +189,200 @@ def test_modify(monkeypatch, client, models):
         f"/models/{models['iJO1366']}/modify",
         json={
             "medium": [
-                {"name": "methanol", "id": "CHEBI:44080", "namespace": "chebi"},
-                {"name": "selenate", "id": "CHEBI:15075", "namespace": "chebi"},
-                {"name": "water", "id": "CHEBI:15377", "namespace": "chebi"},
-                {"name": "hydron", "id": "CHEBI:15378", "namespace": "chebi"},
-                {"name": "dioxygen", "id": "CHEBI:15379", "namespace": "chebi"},
-                {"name": "cob(I)alamin", "id": "CHEBI:15982", "namespace": "chebi"},
-                {"name": "sulfate", "id": "CHEBI:16189", "namespace": "chebi"},
-                {"name": "carbon dioxide", "id": "CHEBI:16526", "namespace": "chebi"},
-                {"name": "L-methionine", "id": "CHEBI:16643", "namespace": "chebi"},
+                {
+                    "name": "methanol",
+                    "identifier": "CHEBI:44080",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "selenate",
+                    "identifier": "CHEBI:15075",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "water",
+                    "identifier": "CHEBI:15377",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "hydron",
+                    "identifier": "CHEBI:15378",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "dioxygen",
+                    "identifier": "CHEBI:15379",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "cob(I)alamin",
+                    "identifier": "CHEBI:15982",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "sulfate",
+                    "identifier": "CHEBI:16189",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "carbon dioxide",
+                    "identifier": "CHEBI:16526",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "L-methionine",
+                    "identifier": "CHEBI:16643",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
                 {
                     "name": "hydrogen chloride",
-                    "id": "CHEBI:17883",
+                    "identifier": "CHEBI:17883",
                     "namespace": "chebi",
+                    "mass_concentration": None,
                 },
-                {"name": "selenite(2-)", "id": "CHEBI:18212", "namespace": "chebi"},
-                {"name": "phosphate(3-)", "id": "CHEBI:18367", "namespace": "chebi"},
-                {"name": "magnesium(2+)", "id": "CHEBI:18420", "namespace": "chebi"},
-                {"name": "molybdic acid", "id": "CHEBI:25371", "namespace": "chebi"},
-                {"name": "cobalt atom", "id": "CHEBI:27638", "namespace": "chebi"},
-                {"name": "ammonium", "id": "CHEBI:28938", "namespace": "chebi"},
-                {"name": "iron(2+)", "id": "CHEBI:29033", "namespace": "chebi"},
-                {"name": "iron(3+)", "id": "CHEBI:29034", "namespace": "chebi"},
-                {"name": "manganese(2+)", "id": "CHEBI:29035", "namespace": "chebi"},
-                {"name": "copper(2+)", "id": "CHEBI:29036", "namespace": "chebi"},
-                {"name": "sodium(1+)", "id": "CHEBI:29101", "namespace": "chebi"},
-                {"name": "potassium(1+)", "id": "CHEBI:29103", "namespace": "chebi"},
-                {"name": "zinc(2+)", "id": "CHEBI:29105", "namespace": "chebi"},
-                {"name": "calcium(2+)", "id": "CHEBI:29108", "namespace": "chebi"},
+                {
+                    "name": "selenite(2-)",
+                    "identifier": "CHEBI:18212",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "phosphate(3-)",
+                    "identifier": "CHEBI:18367",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "magnesium(2+)",
+                    "identifier": "CHEBI:18420",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "molybdic acid",
+                    "identifier": "CHEBI:25371",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "cobalt atom",
+                    "identifier": "CHEBI:27638",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "ammonium",
+                    "identifier": "CHEBI:28938",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "iron(2+)",
+                    "identifier": "CHEBI:29033",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "iron(3+)",
+                    "identifier": "CHEBI:29034",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "manganese(2+)",
+                    "identifier": "CHEBI:29035",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "copper(2+)",
+                    "identifier": "CHEBI:29036",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "sodium(1+)",
+                    "identifier": "CHEBI:29101",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "potassium(1+)",
+                    "identifier": "CHEBI:29103",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "zinc(2+)",
+                    "identifier": "CHEBI:29105",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
+                {
+                    "name": "calcium(2+)",
+                    "identifier": "CHEBI:29108",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
                 {
                     "name": "hydrogentungstate",
-                    "id": "CHEBI:36271",
+                    "identifier": "CHEBI:36271",
                     "namespace": "chebi",
+                    "mass_concentration": None,
                 },
                 {
                     "name": "aldehydo-D-glucose",
-                    "id": "CHEBI:42758",
+                    "identifier": "CHEBI:42758",
                     "namespace": "chebi",
+                    "mass_concentration": None,
                 },
-                {"name": "nickel(2+)", "id": "CHEBI:49786", "namespace": "chebi"},
+                {
+                    "name": "nickel(2+)",
+                    "identifier": "CHEBI:49786",
+                    "namespace": "chebi",
+                    "mass_concentration": None,
+                },
             ],
-            "genotype": ["+Aac", "-pta"],
-            "measurements": [
+            "genotype": "+Aac,-pta",
+            "uptake_secretion_rates": [
                 {
-                    "type": "compound",
                     "name": "aldehydo-D-glucose",
-                    "id": "CHEBI:42758",
+                    "identifier": "CHEBI:42758",
                     "namespace": "chebi",
-                    "measurements": [-9.0],
+                    "measurement": -9.0,
+                    "uncertainty": 0,
                 },
                 {
-                    "type": "compound",
                     "name": "ethanol",
-                    "id": "CHEBI:16236",
+                    "identifier": "CHEBI:16236",
                     "namespace": "chebi",
-                    "measurements": [5.0, 4.8, 5.2, 4.9],
+                    "measurement": 4.9,
+                    "uncertainty": 0,
                 },
+            ],
+            "fluxomics": [
                 {
-                    "type": "reaction",
                     "name": "Phosphofructokinase",
-                    "id": "PFK",
+                    "identifier": "PFK",
                     "namespace": "bigg.reaction",
-                    "measurements": [5, 4.8, 7],
+                    "measurement": 4.8,
+                    "uncertainty": 0,
                 },
                 {
-                    "type": "reaction",
                     "name": "Phosphoglycerate kinase",
-                    "id": "PGK",
+                    "identifier": "PGK",
                     "namespace": "bigg.reaction",
-                    "measurements": [5, 5],
+                    "measurement": 5,
+                    "uncertainty": 0,
                 },
             ],
         },
@@ -271,165 +397,224 @@ def test_prokaryomics_md120_bw25113(client, models):
         "medium": [
             {
                 "name": "dipotassium hydrogen phosphate",
-                "id": "CHEBI:131527",
+                "identifier": "CHEBI:131527",
                 "namespace": "chebi",
+                "mass_concentration": None,
             },
-            {"name": "calcium dichloride", "id": "CHEBI:3312", "namespace": "chebi"},
-            {"name": "L-glutamic acid", "id": "CHEBI:16015", "namespace": "chebi"},
-            {"name": "sodium chloride", "id": "CHEBI:26710", "namespace": "chebi"},
-            {"name": "iron trichloride", "id": "CHEBI:30808", "namespace": "chebi"},
-            {"name": "magnesium sulfate", "id": "CHEBI:32599", "namespace": "chebi"},
+            {
+                "name": "calcium dichloride",
+                "identifier": "CHEBI:3312",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "L-glutamic acid",
+                "identifier": "CHEBI:16015",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "sodium chloride",
+                "identifier": "CHEBI:26710",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "iron trichloride",
+                "identifier": "CHEBI:30808",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "magnesium sulfate",
+                "identifier": "CHEBI:32599",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
             {
                 "name": "disodium hydrogenphosphate",
-                "id": "CHEBI:34683",
+                "identifier": "CHEBI:34683",
                 "namespace": "chebi",
+                "mass_concentration": None,
             },
-            {"name": "cobalt dichloride", "id": "CHEBI:35696", "namespace": "chebi"},
-            {"name": "aldehydo-D-glucose", "id": "CHEBI:42758", "namespace": "chebi"},
-            {"name": "copper(II) chloride", "id": "CHEBI:49553", "namespace": "chebi"},
-            {"name": "zinc dichloride", "id": "CHEBI:49976", "namespace": "chebi"},
-            {"name": "ammonium sulfate", "id": "CHEBI:62946", "namespace": "chebi"},
+            {
+                "name": "cobalt dichloride",
+                "identifier": "CHEBI:35696",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "aldehydo-D-glucose",
+                "identifier": "CHEBI:42758",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "copper(II) chloride",
+                "identifier": "CHEBI:49553",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "zinc dichloride",
+                "identifier": "CHEBI:49976",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
+            {
+                "name": "ammonium sulfate",
+                "identifier": "CHEBI:62946",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
             {
                 "name": "manganese(II) chloride",
-                "id": "CHEBI:63041",
+                "identifier": "CHEBI:63041",
                 "namespace": "chebi",
+                "mass_concentration": None,
             },
-            {"name": "potassium nitrate", "id": "CHEBI:63043", "namespace": "chebi"},
+            {
+                "name": "potassium nitrate",
+                "identifier": "CHEBI:63043",
+                "namespace": "chebi",
+                "mass_concentration": None,
+            },
             {
                 "name": "sodium molybdate (anhydrous)",
-                "id": "CHEBI:75215",
+                "identifier": "CHEBI:75215",
                 "namespace": "chebi",
+                "mass_concentration": None,
             },
         ],
-        "measurements": [
+        "fluxomics": [
             {
                 "name": "Citrate synthase",
-                "id": "CS",
+                "identifier": "CS",
                 "namespace": "bigg.reaction",
-                "measurements": [7.2],
-                "type": "reaction",
+                "measurement": 7.2,
+                "uncertainty": 0,
             },
             {
                 "name": "Fructose-bisphosphate aldolase",
-                "id": "FBA",
+                "identifier": "FBA",
                 "namespace": "bigg.reaction",
-                "measurements": [7.9],
-                "type": "reaction",
+                "measurement": 7.9,
+                "uncertainty": 0,
             },
             {
                 "name": "Phosphofructokinase",
-                "id": "PFK",
+                "identifier": "PFK",
                 "namespace": "bigg.reaction",
-                "measurements": [7.9],
-                "type": "reaction",
+                "measurement": 7.9,
+                "uncertainty": 0,
             },
             {
                 "name": "Fumarase",
-                "id": "FUM",
+                "identifier": "FUM",
                 "namespace": "bigg.reaction",
-                "measurements": [6.7],
-                "type": "reaction",
+                "measurement": 6.7,
+                "uncertainty": 0,
             },
             {
                 "name": "Glyceraldehyde-3-phosphate dehydrogenase",
-                "id": "GAPD",
+                "identifier": "GAPD",
                 "namespace": "bigg.reaction",
-                "measurements": [16.8],
-                "type": "reaction",
+                "measurement": 16.8,
+                "uncertainty": 0,
             },
             {
                 "name": "Glucose 6-phosphate dehydrogenase",
-                "id": "G6PDH2r",
+                "identifier": "G6PDH2r",
                 "namespace": "bigg.reaction",
-                "measurements": [4.6],
-                "type": "reaction",
+                "measurement": 4.6,
+                "uncertainty": 0,
             },
             {
                 "name": "Glucose-6-phosphate isomerase",
-                "id": "PGI",
+                "identifier": "PGI",
                 "namespace": "bigg.reaction",
-                "measurements": [5.3],
-                "type": "reaction",
+                "measurement": 5.3,
+                "uncertainty": 0,
             },
             {
                 "name": "D-glucose transport via PEP:Pyr PTS (periplasm)",
-                "id": "GLCptspp",
+                "identifier": "GLCptspp",
                 "namespace": "bigg.reaction",
-                "measurements": [10.0],
-                "type": "reaction",
+                "measurement": 10.0,
+                "uncertainty": 0,
             },
             {
                 "name": "Malic enzyme (NAD)",
-                "id": "ME1",
+                "identifier": "ME1",
                 "namespace": "bigg.reaction",
-                "measurements": [0.3],
-                "type": "reaction",
+                "measurement": 0.3,
+                "uncertainty": 0,
             },
             {
                 "name": "Malic enzyme (NADP)",
-                "id": "ME2",
+                "identifier": "ME2",
                 "namespace": "bigg.reaction",
-                "measurements": [0.3],
-                "type": "reaction",
+                "measurement": 0.3,
+                "uncertainty": 0,
             },
             {
                 "name": "Malate dehydrogenase",
-                "id": "MDH",
+                "identifier": "MDH",
                 "namespace": "bigg.reaction",
-                "measurements": [6.5],
-                "type": "reaction",
+                "measurement": 6.5,
+                "uncertainty": 0,
             },
             {
                 "name": "Pyruvate kinase",
-                "id": "PYK",
+                "identifier": "PYK",
                 "namespace": "bigg.reaction",
-                "measurements": [12.0],
-                "type": "reaction",
+                "measurement": 12.0,
+                "uncertainty": 0,
             },
             {
                 "name": "Phosphoenolpyruvate carboxylase",
-                "id": "PPC",
+                "identifier": "PPC",
                 "namespace": "bigg.reaction",
-                "measurements": [3.0],
-                "type": "reaction",
+                "measurement": 3.0,
+                "uncertainty": 0,
             },
             {
                 "name": "Phosphoenolpyruvate carboxykinase",
-                "id": "PPCK",
+                "identifier": "PPCK",
                 "namespace": "bigg.reaction",
-                "measurements": [3.0],
-                "type": "reaction",
+                "measurement": 3.0,
+                "uncertainty": 0,
             },
             {
                 "name": "Pyruvate dehydrogenase",
-                "id": "PDH",
+                "identifier": "PDH",
                 "namespace": "bigg.reaction",
-                "measurements": [9.4],
-                "type": "reaction",
+                "measurement": 9.4,
+                "uncertainty": 0,
             },
             {
                 "name": "Transketolase",
-                "id": "TKT1",
+                "identifier": "TKT1",
                 "namespace": "bigg.reaction",
-                "measurements": [1.5],
-                "type": "reaction",
+                "measurement": 1.5,
+                "uncertainty": 0,
             },
             {
                 "name": "Transaldolase",
-                "id": "TALA",
+                "identifier": "TALA",
                 "namespace": "bigg.reaction",
-                "measurements": [1.5],
-                "type": "reaction",
+                "measurement": 1.5,
+                "uncertainty": 0,
             },
             {
                 "name": "Transketolase",
-                "id": "TKT2",
+                "identifier": "TKT2",
                 "namespace": "bigg.reaction",
-                "measurements": [1.1],
-                "type": "reaction",
+                "measurement": 1.1,
+                "uncertainty": 0,
             },
         ],
-        "genotype": ["-b3643,-b0062,-b0063,-b0061,-b4350,-b3902,-b3903"],
+        "genotype": "-b3643,-b0062,-b0063,-b0061,-b4350,-b3902,-b3903",
     }
 
     response = client.post(f"/models/{models['iJO1366']}/modify", json=data)
@@ -446,7 +631,7 @@ def test_prokaryomics_md120_bw25113(client, models):
 
 def test_growth_rate_measurement(client, models):
     """Constrain the model with a single growth rate measurement."""
-    data = {"growth_rate": {"measurements": [0.3]}}
+    data = {"growth_rate": {"measurement": 0.3, "uncertainty": 0}}
 
     response = client.post(f"/models/{models['iJO1366']}/modify", json=data)
     assert response.status_code == 200
@@ -457,4 +642,4 @@ def test_growth_rate_measurement(client, models):
     )
     assert response.status_code == 200
     assert response.json["status"] == "optimal"
-    assert response.json["growth_rate"] == pytest.approx(0.285)
+    assert response.json["growth_rate"] == pytest.approx(0.3)

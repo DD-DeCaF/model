@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gnomic
+
 from simulations.ice_client import ICE
 from simulations.modeling.adapter import (
     SALTS,
@@ -19,7 +21,6 @@ from simulations.modeling.adapter import (
     apply_measurements,
     apply_medium,
 )
-from simulations.modeling.gnomic_helpers import full_genotype
 
 
 def test_medium_salts():
@@ -32,10 +33,10 @@ def test_medium_salts():
 def test_medium_adapter(iJO1366):
     iJO1366, biomass_reaction = iJO1366
     medium = [
-        {"id": "CHEBI:63041", "namespace": "chebi"},
-        {"id": "CHEBI:91249", "namespace": "chebi"},
-        {"id": "CHEBI:86244", "namespace": "chebi"},
-        {"id": "CHEBI:131387", "namespace": "chebi"},
+        {"name": "Foo", "identifier": "CHEBI:63041", "namespace": "chebi"},
+        {"name": "Bar", "identifier": "CHEBI:91249", "namespace": "chebi"},
+        {"name": "Baz", "identifier": "CHEBI:86244", "namespace": "chebi"},
+        {"name": "Goo", "identifier": "CHEBI:131387", "namespace": "chebi"},
     ]
     operations, warnings, errors = apply_medium(iJO1366, medium)
     # 30 warnings are expected; 29 unique compounds not found in the model and 1
@@ -64,7 +65,7 @@ def test_genotype_adapter(monkeypatch, iJO1366):
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, "get_reaction_equations", lambda self, genotype: {})
 
-    genotype_changes = full_genotype(["+Aac", "-pta"])
+    genotype_changes = gnomic.Genotype.parse("+Aac,-pta")
     operations, warnings, errors = apply_genotype(iJO1366, genotype_changes)
     assert len(operations) == 1
     assert len(errors) == 0
@@ -72,34 +73,40 @@ def test_genotype_adapter(monkeypatch, iJO1366):
 
 def test_measurements_adapter(iJO1366):
     iJO1366, biomass_reaction = iJO1366
-    measurements = [
+    uptake_secretion_rates = [
         {
-            "type": "compound",
-            "id": "CHEBI:42758",
+            "name": "Foo",
+            "identifier": "CHEBI:42758",
             "namespace": "chebi",
-            "measurements": [-9.0],
+            "measurement": -9.0,
+            "uncertainty": 0,
         },
         {
-            "type": "compound",
-            "id": "CHEBI:16236",
+            "name": "Foo",
+            "identifier": "CHEBI:16236",
             "namespace": "chebi",
-            "measurements": [5.0, 4.8, 5.2, 4.9],
+            "measurement": 4.9,
+            "uncertainty": 0,
+        },
+    ]
+    fluxomics = [
+        {
+            "name": "Foo",
+            "identifier": "PFK",
+            "namespace": "bigg.reaction",
+            "measurement": 4.8,
+            "uncertainty": 0,
         },
         {
-            "type": "reaction",
-            "id": "PFK",
+            "name": "Foo",
+            "identifier": "PGK",
             "namespace": "bigg.reaction",
-            "measurements": [5, 4.8, 7],
-        },
-        {
-            "type": "reaction",
-            "id": "PGK",
-            "namespace": "bigg.reaction",
-            "measurements": [5, 5],
+            "measurement": 5,
+            "uncertainty": 0,
         },
     ]
     operations, warnings, errors = apply_measurements(
-        iJO1366, biomass_reaction, None, measurements
+        iJO1366, biomass_reaction, fluxomics, [], uptake_secretion_rates, [], None
     )
     assert len(operations) == 4
     assert len(errors) == 0
