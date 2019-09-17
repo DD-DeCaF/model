@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 """This module may one day be replaced with http://driven.bio/"""
 
 
-def minimize_distance(model, biomass_reaction, growth_rate, measurements):
+def minimize_distance(model, biomass_reaction, growth_rate, fluxomics):
     """Replaces fluxomics measurements with the minimized distance"""
     index = []
     observations = []
@@ -40,21 +40,19 @@ def minimize_distance(model, biomass_reaction, growth_rate, measurements):
     # Trust the growth rate over the measurements. Meaning, constrain the
     # biomass reaction to the observed values instead of simply including it in
     # the measurements to be minimized.
-    # TODO (Ali Kaafarani): Support for uncertainties or multiple observations
-    if len(growth_rate["measurements"]) != 1:
-        raise NotImplementedError("Cannot handle multiple growth rate measurements yet")
-    # Until uncertainties are specified in the dataset, allow for ~5% deviation
-    lower_bound = growth_rate["measurements"][0] * 0.95
-    upper_bound = growth_rate["measurements"][0] * 1.05
+    if growth_rate["uncertainty"]:
+        lower_bound = growth_rate["measurement"] - growth_rate["uncertainty"]
+        upper_bound = growth_rate["measurement"] + growth_rate["uncertainty"]
+    else:
+        lower_bound = growth_rate["measurement"]
+        upper_bound = growth_rate["measurement"]
     model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
 
-    for measure in [m for m in measurements if m["type"] == "reaction"]:
-        index.append(measure["id"])
-        observations.append(np.nanmean(measure["measurements"]))
-        if len(measure["measurements"]) >= 3:
-            uncertainties.append(np.nanstd(measure["measurements"], ddof=1))
-        else:
-            uncertainties.append(1)
+    for measure in fluxomics:
+        index.append(measure["identifier"])
+        observations.append(measure["measurement"])
+        # TODO: How to implement uncertainty here?
+        uncertainties.append(1)
 
     observations = pd.Series(index=index, data=observations)
     uncertainties = pd.Series(index=index, data=uncertainties)
@@ -62,11 +60,12 @@ def minimize_distance(model, biomass_reaction, growth_rate, measurements):
     solution = adjust_fluxes2model(model, observations, uncertainties)
     for reaction, minimized_distance in solution.fluxes.iteritems():
         if reaction == biomass_reaction:
-            growth_rate["measurements"] = [minimized_distance]
-        for measurement in measurements:
-            if reaction == measurement.get("id"):
-                measurement["measurements"] = [minimized_distance]
-    return growth_rate, measurements
+            growth_rate["measurement"] = minimized_distance
+        for measure in fluxomics:
+            if reaction == measure.get("identifier"):
+                measure["measurement"] = minimized_distance
+                measure["uncertainty"] = 0  # TODO: Confirm that this is correct
+    return growth_rate, fluxomics
 
 
 def adjust_fluxes2model(

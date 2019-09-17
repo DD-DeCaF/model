@@ -16,23 +16,13 @@ import json
 import logging
 from collections import namedtuple
 
-import numpy as np
 from cobra import Configuration, Metabolite, Reaction
 from cobra.io.dict import reaction_to_dict
 from cobra.medium.boundary_types import find_external_compartment
 
-from simulations.exceptions import (
-    CompartmentNotFound,
-    MetaboliteNotFound,
-    PartNotFound,
-    ReactionNotFound,
-)
+from simulations.exceptions import CompartmentNotFound, MetaboliteNotFound, PartNotFound
 from simulations.ice_client import ICE
-from simulations.modeling.cobra_helpers import (
-    find_metabolite,
-    find_reaction,
-    parse_bigg_compartment,
-)
+from simulations.modeling.cobra_helpers import find_metabolite, parse_bigg_compartment
 from simulations.modeling.driven import minimize_distance
 from simulations.modeling.gnomic_helpers import feature_id
 
@@ -76,7 +66,7 @@ def apply_medium(model, medium):
     # Convert the list of dicts to a set of namedtuples to avoid duplicates, as
     # looking up metabolites in the model is a somewhat expensive operation.
     Compound = namedtuple("Compound", ["id", "namespace"])
-    medium = set(Compound(id=c["id"], namespace=c["namespace"]) for c in medium)
+    medium = set(Compound(id=c["identifier"], namespace=c["namespace"]) for c in medium)
 
     # Detect salt compounds and split them into their ions and metals
     for compound in medium.copy():  # Make a copy to be able to mutate the original list
@@ -405,7 +395,15 @@ def apply_genotype(model, genotype_changes):
     return operations, warnings, errors
 
 
-def apply_measurements(model, biomass_reaction, growth_rate, measurements):
+def apply_measurements(
+    model,
+    biomass_reaction,
+    fluxomics,
+    metabolomics,
+    uptake_secretion_rates,
+    molar_yields,
+    growth_rate,
+):
     """
     Apply omics measurements to a metabolic model.
 
@@ -417,10 +415,16 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
     model: cobra.Model
     biomass_reaction: str
         The id of the biomass reaction in the given model.
+    fluxomics: list(dict)
+        List of measurements matching the `Fluxomics` schema.
+    metabolomics: list(dict)
+        List of measurements matching the `Metabolomics` schema.
+    uptake_secretion_rates: list(dict)
+        List of measurements matching the `UptakeSecretionRates` schema.
+    molar_yields: list(dict)
+        List of measurements matching the `MolarYields` schema.
     growth_rate: dict
-        The growth rate, matching the `GrowthRate` schema.
-    measurements: list(dict)
-        The measurements, a list of dicts matching the `Measurement` schema.
+        Growth rate, matching the `GrowthRate` schema.
 
     Returns
     -------
@@ -437,18 +441,25 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
     warnings = []
     errors = []
 
+    def bounds(measurement, uncertainty):
+        """Return resolved bounds based on measurement and uncertainty"""
+        if uncertainty:
+            return (measurement - uncertainty, measurement + uncertainty)
+        else:
+            return (measurement, measurement)
+
     # First, improve the fluxomics dataset by minimizing the distance to a feasible
     # problem. If there is no objective constraint, skip minimization as it can yield
     # unreliable results.
     if growth_rate:
-        growth_rate, measurements = minimize_distance(
-            model, biomass_reaction, growth_rate, measurements
+        growth_rate, fluxomics = minimize_distance(
+            model, biomass_reaction, growth_rate, fluxomics
         )
 
     # Constrain the model with the observed growth rate
     if growth_rate:
         reaction = model.reactions.get_by_id(biomass_reaction)
-        reaction.bounds = _bounds_for_measurements(growth_rate["measurements"])
+        reaction.bounds = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
         operations.append(
             {
                 "operation": "modify",
@@ -458,89 +469,75 @@ def apply_measurements(model, biomass_reaction, growth_rate, measurements):
             }
         )
 
-    # Constrain the model with the observed measurements
-    for scalar in measurements:
-        lower_bound, upper_bound = _bounds_for_measurements(scalar["measurements"])
-
-        if scalar["type"] == "compound":
-            try:
-                metabolite = find_metabolite(
-                    model, scalar["id"], scalar["namespace"], "e"
-                )
-            except MetaboliteNotFound as error:
-                errors.append(str(error))
-            else:
-                exchange_reactions = metabolite.reactions.intersection(model.exchanges)
-                if len(exchange_reactions) != 1:
-                    errors.append(
-                        f"Measured metabolite '{metabolite.id}' has "
-                        f"{len(exchange_reactions)} exchange reactions in the model; "
-                        f"expected 1"
-                    )
-                    continue
-                exchange_reaction = next(iter(exchange_reactions))
-
-                # data is adjusted assuming a forward exchange reaction, x <--
-                # (sign = -1), so if we instead actually have <-- x, then multiply with
-                # -1
-                direction = exchange_reaction.metabolites[metabolite]
-                if direction > 0:
-                    lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
-                exchange_reaction.bounds = lower_bound, upper_bound
-                operations.append(
-                    {
-                        "operation": "modify",
-                        "type": "reaction",
-                        "id": exchange_reaction.id,
-                        "data": reaction_to_dict(exchange_reaction),
-                    }
-                )
-        elif scalar["type"] == "reaction":
-            try:
-                reaction = model.reactions.get_by_id(scalar["id"])
-            except KeyError:
-                errors.append(f"Cannot find reaction '{scalar['id']}' in the model")
-            else:
-                reaction.bounds = lower_bound, upper_bound
-                operations.append(
-                    {
-                        "operation": "modify",
-                        "type": "reaction",
-                        "id": reaction.id,
-                        "data": reaction_to_dict(reaction),
-                    }
-                )
-        elif scalar["type"] == "protein":
-            try:
-                reaction = find_reaction(model, scalar["id"], scalar["namespace"])
-            except ReactionNotFound as error:
-                errors.append(str(error))
-            else:
-                reaction.bounds = 0, upper_bound
-                operations.append(
-                    {
-                        "operation": "modify",
-                        "type": "reaction",
-                        "id": reaction.id,
-                        "data": reaction_to_dict(reaction),
-                    }
-                )
-        else:
-            raise NotImplementedError(
-                f"Measurement type '{scalar['type']}' is not supported"
+    for measure in fluxomics:
+        try:
+            reaction = model.reactions.get_by_id(measure["identifier"])
+        except KeyError:
+            errors.append(
+                f"Cannot find reaction '{reaction['identifier']}' in the model"
             )
+        else:
+            reaction.bounds = bounds(measure["measurement"], measure["uncertainty"])
+            operations.append(
+                {
+                    "operation": "modify",
+                    "type": "reaction",
+                    "id": reaction.id,
+                    "data": reaction_to_dict(reaction),
+                }
+            )
+
+    for metabolite in metabolomics:
+        warning = (
+            f"Cannot apply metabolomics measure for '{metabolite['identifier']}'; "
+            f"feature has not yet been implemented"
+        )
+        warnings.append(warning)
+        logger.warning(warning)
+
+    for uptake_rate in uptake_secretion_rates:
+        try:
+            metabolite = find_metabolite(
+                model, uptake_rate["identifier"], uptake_rate["namespace"], "e"
+            )
+        except MetaboliteNotFound as error:
+            errors.append(str(error))
+        else:
+            exchange_reactions = metabolite.reactions.intersection(model.exchanges)
+            if len(exchange_reactions) != 1:
+                errors.append(
+                    f"Measured metabolite '{metabolite['identifier']}' has "
+                    f"{len(exchange_reactions)} exchange reactions in the model; "
+                    f"expected 1"
+                )
+                continue
+            exchange_reaction = next(iter(exchange_reactions))
+            lower_bound, upper_bound = bounds(
+                uptake_rate["measurement"], uptake_rate["uncertainty"]
+            )
+
+            # data is adjusted assuming a forward exchange reaction, x <--
+            # (sign = -1), so if we instead actually have <-- x, then multiply with
+            # -1
+            direction = exchange_reaction.metabolites[metabolite]
+            if direction > 0:
+                lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
+            exchange_reaction.bounds = lower_bound, upper_bound
+            operations.append(
+                {
+                    "operation": "modify",
+                    "type": "reaction",
+                    "id": exchange_reaction.id,
+                    "data": reaction_to_dict(exchange_reaction),
+                }
+            )
+
+    for molar_yield in molar_yields:
+        warning = (
+            f"Cannot apply molar yield measurement for '"
+            f"{molar_yield['product_identifier']}/{molar_yield['substrate_identifier']}"
+            f"'; feature has not yet been implemented"
+        )
+        warnings.append(warning)
+        logger.warning(warning)
     return operations, warnings, errors
-
-
-def _bounds_for_measurements(measurements):
-    # If there are three or more observations, use the 97% normal distribution range,
-    # i.e., mean +- 1.96. Otherwise, just use the max/min values of the measurements.
-    scalar_data = np.array([v for v in measurements if not np.isnan(v)])
-    if len(scalar_data) > 2:
-        upper_bound = float(np.mean(scalar_data) + 1.96 * np.std(scalar_data, ddof=1))
-        lower_bound = float(np.mean(scalar_data) - 1.96 * np.std(scalar_data, ddof=1))
-        return (lower_bound, upper_bound)
-    else:
-        upper_bound = float(np.max(scalar_data))
-        lower_bound = float(np.min(scalar_data))
-        return (lower_bound, upper_bound)

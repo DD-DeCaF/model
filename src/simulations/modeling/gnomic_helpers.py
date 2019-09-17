@@ -12,23 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gnomic
-
-
-def full_genotype(genotype_changes):
-    """
-    Construct gnomic Genotype object from the list of strings with changes
-
-    :param genotype_changes: list of changes, f.e. ['-tyrA::kanMX+', 'kanMX-']
-    :return:
-    """
-    if not genotype_changes:
-        return gnomic.Genotype([])
-    genotype = gnomic.Genotype.parse(genotype_changes[0])
-    for definition in genotype_changes[1:]:
-        genotype = gnomic.Genotype.parse(definition, parent=genotype)
-    return genotype
-
 
 def feature_id(feature):
     """Return the feature identifier (name or accession id) for the given feature"""

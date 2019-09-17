@@ -14,10 +14,14 @@
 
 """Marshmallow schemas for marshalling the API endpoints."""
 
+import gnomic
 from marshmallow import Schema, fields
-from marshmallow.validate import OneOf
 
-from simulations.modeling.gnomic_helpers import full_genotype
+
+# For all reaction and compound references: `namespace` should match a namespace
+# identifier from miriam[1] and `identifier` should be a valid identifier in that
+# namespace.
+# [1] https://www.ebi.ac.uk/miriam/main/collections
 
 
 class Operation(Schema):
@@ -29,35 +33,59 @@ class Operation(Schema):
 
 class MediumCompound(Schema):
     name = fields.String(required=True)
-    # `id` should be a valid identifier in the namespace defined below.
-    # `namespace` should match a namespace identifier from miriam.
-    # See https://www.ebi.ac.uk/miriam/main/collections
-    id = fields.String(required=True)
+    identifier = fields.String(required=True)
     namespace = fields.String(required=True)
+    mass_concentration = fields.Float(required=True, allow_none=True)
 
 
-class Measurement(Schema):
+class Fluxomics(Schema):
     name = fields.String(required=True)
-    # `id` should be a valid identifier in the namespace defined below.
-    # `namespace` should match a namespace identifier from miriam.
-    # See https://www.ebi.ac.uk/miriam/main/collections
-    id = fields.String(required=True)
+    identifier = fields.String(required=True)
     namespace = fields.String(required=True)
-    measurements = fields.List(fields.Float())
-    type = fields.String(
-        required=True, validate=OneOf(["compound", "reaction", "protein"])
-    )
+    measurement = fields.Float(required=True)
+    uncertainty = fields.Float(required=True)
+
+
+class Metabolomics(Schema):
+    name = fields.String(required=True)
+    identifier = fields.String(required=True)
+    namespace = fields.String(required=True)
+    measurement = fields.Float(required=True)
+    uncertainty = fields.Float(required=True)
+
+
+class UptakeSecretionRates(Schema):
+    name = fields.String(required=True)
+    identifier = fields.String(required=True)
+    namespace = fields.String(required=True)
+    measurement = fields.Float(required=True)
+    uncertainty = fields.Float(required=True)
+
+
+class MolarYields(Schema):
+    product_name = fields.String(required=True)
+    product_identifier = fields.String(required=True)
+    product_namespace = fields.String(required=True)
+    substrate_name = fields.String(required=True)
+    substrate_identifier = fields.String(required=True)
+    substrate_namespace = fields.String(required=True)
+    measurement = fields.Float(required=True)
+    uncertainty = fields.Float(required=True)
 
 
 class GrowthRate(Schema):
-    measurements = fields.List(fields.Float())
+    measurement = fields.Float(required=True)
+    uncertainty = fields.Float(required=True)
 
 
 class ModificationRequest(Schema):
     medium = fields.Nested(MediumCompound, many=True, missing=[])
-    genotype = fields.Function(deserialize=full_genotype, missing=None)
+    genotype = fields.Function(deserialize=gnomic.Genotype.parse, missing=[])
+    fluxomics = fields.Nested(Fluxomics, many=True, missing=[])
+    metabolomics = fields.Nested(Metabolomics, many=True, missing=[])
+    uptake_secretion_rates = fields.Nested(UptakeSecretionRates, many=True, missing=[])
+    molar_yields = fields.Nested(MolarYields, many=True, missing=[])
     growth_rate = fields.Nested(GrowthRate, missing=None)
-    measurements = fields.Nested(Measurement, many=True, missing=[])
 
 
 class SimulationRequest(Schema):

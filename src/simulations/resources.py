@@ -52,7 +52,16 @@ def init_app(app):
 
 
 @use_kwargs(ModificationRequest)
-def model_modify(model_id, medium, genotype, growth_rate, measurements):
+def model_modify(
+    model_id,
+    medium,
+    genotype,
+    fluxomics,
+    metabolomics,
+    uptake_secretion_rates,
+    molar_yields,
+    growth_rate,
+):
     if not request.is_json:
         abort(415, "Non-JSON request content is not supported")
 
@@ -84,9 +93,21 @@ def model_modify(model_id, medium, genotype, growth_rate, measurements):
             warnings.extend(results[1])
             errors.extend(results[2])
 
-        if growth_rate or measurements:
+        if (
+            fluxomics
+            or metabolomics
+            or uptake_secretion_rates
+            or molar_yields
+            or growth_rate
+        ):
             results = apply_measurements(
-                model, model_wrapper.biomass_reaction, growth_rate, measurements
+                model,
+                model_wrapper.biomass_reaction,
+                fluxomics,
+                metabolomics,
+                uptake_secretion_rates,
+                molar_yields,
+                growth_rate,
             )
             operations.extend(results[0])
             warnings.extend(results[1])
