@@ -1,6 +1,8 @@
 Flask
 Flask-Cors
 flask-apispec
+# apispec 3 is currently breaking, so pin to latest 2.x temporarily.
+apispec==2.0.2
 gevent
 # cobrapy 0.16.0 seems to break multiple tests in the test suite. Release notes mention
 # few breaking changes so the failing tests should be investigated before assuming
