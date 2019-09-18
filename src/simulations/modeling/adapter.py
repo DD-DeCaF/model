@@ -474,7 +474,7 @@ def apply_measurements(
             reaction = model.reactions.get_by_id(measure["identifier"])
         except KeyError:
             errors.append(
-                f"Cannot find reaction '{reaction['identifier']}' in the model"
+                f"Cannot find reaction '{measure['identifier']}' in the model"
             )
         else:
             reaction.bounds = bounds(measure["measurement"], measure["uncertainty"])
