@@ -456,6 +456,21 @@ def apply_measurements(
             model, biomass_reaction, growth_rate, fluxomics
         )
 
+    # If an enzyme constrained model with proteomics was supplied, apply them and
+    # ensure growing.
+    if growth_rate and proteomics:
+        if model.ec_model:
+            growth_rate, proteomics = flexibilize_proteomics(
+                model, biomass_reaction, growth_rate, proteomics
+            )
+        else:
+            warning = (
+                f"Cannot apply proteomics measurements for "
+                f"non enzyme-constrained model {model.id}"
+            )
+            warnings.append(warning)
+            logger.warning(warning)
+
     # Constrain the model with the observed growth rate
     if growth_rate:
         reaction = model.reactions.get_by_id(biomass_reaction)
@@ -478,6 +493,26 @@ def apply_measurements(
             )
         else:
             reaction.bounds = bounds(measure["measurement"], measure["uncertainty"])
+            operations.append(
+                {
+                    "operation": "modify",
+                    "type": "reaction",
+                    "id": reaction.id,
+                    "data": reaction_to_dict(reaction),
+                }
+            )
+
+    LB = 0
+    for measure in protemics:
+        try:
+            reaction = model.reactions.get_by_id(measure["identifier"])
+        except KeyError:
+            errors.append(
+                f"Cannot find reaction '{measure['identifier']}' in the model"
+            )
+        else:
+            # measurement already includes the uncertainty in this case
+            reaction.bounds = LB, measure["measurement"]
             operations.append(
                 {
                     "operation": "modify",

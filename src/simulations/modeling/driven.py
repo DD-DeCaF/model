@@ -13,13 +13,16 @@
 # limitations under the License.
 
 import logging
+import re
 
 import numpy as np
 import pandas as pd
 from optlang.symbolics import Zero
+from math import isnan
 
 
 logger = logging.getLogger(__name__)
+prot_pat = re.compile(r"prot_([A-Za-z0-9]+)__91__c__93__")
 
 
 """This module may one day be replaced with http://driven.bio/"""
@@ -165,3 +168,155 @@ def adjust_fluxes2model(
         model.objective = prob.Objective(new_obj, direction="min")
         solution = model.optimize(raise_error=True)
     return solution
+
+
+def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
+    """
+    Replace proteomics measurements with the set of proteomics measures that enables
+    the model to achieve growth.
+
+    Proteins are removed from the set iteratively based on sensitivity analysis.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    biomass_reaction: str
+        The id of the biomass reaction in the goperationsiven model.
+    proteomics: list(dict)
+        List of measurements matching the `Proteomics` schema.
+    growth_rate: dict
+        Growth rate, matching the `GrowthRate` schema.
+
+    Returns
+    -------
+    growth_rate: dict
+    proteomics: list(dict)
+    """
+    # TODO: this whole thing about growth rate could be refactored, since it's exactly
+    # the same as in `minimize_distance`
+    if not growth_rate:
+        raise ValueError(
+            "Expected measurements to contain an objective "
+            "constraint as measured growth rate"
+        )
+
+    if growth_rate["uncertainty"]:
+        lower_bound = growth_rate["measurement"] - growth_rate["uncertainty"]
+        upper_bound = growth_rate["measurement"] + growth_rate["uncertainty"]
+    else:
+        lower_bound = growth_rate["measurement"]
+        upper_bound = growth_rate["measurement"]
+
+    model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
+
+    index, observations = [], []
+
+    for measure in proteomics:
+        index.append(measure["identifier"])
+        # in protein data, upper_bound is the unique constraint, so it contains the uncertainty
+        observations.append(measure["measurement"] + measure["uncertainty"])
+
+    observations = pd.Series(index=index, data=observations)
+
+    solution, new_growth_rate = ensure_proteomics_growing(model, observations)
+    if new_growth_rate:
+        growth_rate["measurement"] = new_growth_rate
+    for reaction, new_measurement in solution.iteritems():
+        for measure in proteomics:
+            if reaction == measure.get("identifier"):
+                measure["measurement"] = new_measurement
+                measure["uncertainty"] = 0  # TODO: Confirm that this is correct
+    return growth_rate, proteomics
+
+
+def limit_proteins(model, measured_mmolgdw):
+    """Apply proteomics measurements to model.
+
+    Apply measurements in the form of measured proteins.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    measured_mmolgdw : pd.Series
+        Protein abundances in g / gDW
+
+    References
+    ----------
+    .. [1] Benjamin J. Sanchez, Cheng Zhang, Avlant Nilsson, Petri-Jaan Lahtvee, Eduard J. Kerkhoven, Jens Nielsen (
+       2017). Improving the phenotype predictions of a yeast genome-scale metabolic model by incorporating enzymatic
+       constraints. [Molecular Systems Biology, 13(8): 935, http://www.dx.doi.org/10.15252/msb.20167411
+    """
+    # update upper_bound
+    for protein_id, measure in measured_mmolgdw.iteritems():
+        try:
+            rxn = model.reactions.get_by_id("prot_{}_exchange".format(protein_id))
+            rxn.annotation["uniprot"] = protein_id
+        except KeyError:
+            pass
+        else:
+            rxn.bounds = 0, measure
+    # flexibilize proteomics so model grows
+    return
+
+
+def ensure_proteomics_growing(model, measured_mmolgdw):
+    """
+    Optimize the model and flexiblize proteins until it grows
+
+    Parameters
+    ----------
+    model: cobra.Model
+    measured_mmolgdw: list(dict)
+        List of measurements matching the `Proteomics` schema.
+
+    Returns
+    -------
+    measured_mmolgdw: list(dict)
+    new_growth_rate: float. False if it wasn't changed
+    """
+    # first, get shadow prices of the unconstrained model
+    solution = model.optimize()
+    ordered_proteins = list(
+        top_protein_shadow_prices(solution, measured_mmolgdw.index, -1).index
+    )
+    # second, constrain the model
+    with model as mod:
+        limit_proteins(mod, measured_mmolgdw)
+        obj_value = mod.slim_optimize()
+    tolerance = 1e-7
+    obj_value = 0 if math.isnan(obj_value) else obj_value
+    new_growth_rate = False
+
+    # while the model can't grow, unconstrain the protein with the higher shadow price
+    while obj_value < tolerance and not measured_mmolgdw.empty:
+        uniprot_id = re.sub(prot_pat, r"\1", ordered_proteins[0])
+        if uniprot_id in measured_mmolgdw:
+            del measured_mmolgdw[uniprot_id]
+        ordered_proteins.pop(0)
+        with model as mod:
+            # this can be change to simply affect the upper_bound
+            # but this way is more clear
+            limit_proteins(mod, measured_mmolgdw)
+            obj_value = mod.slim_optimize()
+        new_growth_rate = obj_value = 0 if math.isnan(obj_value) else obj_value
+
+    return measured_mmolgdw, new_growth_rate
+
+
+def top_protein_shadow_prices(model_solution, set_proteins, top=1):
+    """
+    Retrieves `top` of proteins in `set_proteins` in terms of influence in the objective
+    function (shadow prices).
+
+    Parameters
+    ----------
+    model_solution: cobra.Solution
+        the usual Solution object returned by model.optimize()
+    set_proteins: iterable of strings
+        Uniprot IDs of the proteins in measurements
+    top: int
+        the number of proteins to be returned
+    """
+    set_as_metabolites = {"prot_{}__91__c__93__".format(prot) for prot in set_proteins}
+    shadow_pr = model_solution.shadow_prices
+    return shadow_pr.loc[shadow_pr.index.isin(set_as_metabolites)].sort_values()[:top]

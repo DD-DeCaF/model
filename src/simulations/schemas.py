@@ -54,6 +54,12 @@ class Metabolomics(Schema):
     uncertainty = fields.Float(required=True)
 
 
+class Proteomics(Schema):
+    identifier = fields.String(required=True)  # UniProt code
+    measurement = fields.Float(required=True)  # mmol/gDw
+    uncertainty = fields.Float(required=True)
+
+
 class UptakeSecretionRates(Schema):
     name = fields.String(required=True)
     identifier = fields.String(required=True)
