@@ -503,9 +503,11 @@ def apply_measurements(
             )
 
     LB = 0
-    for measure in protemics:
+    for measure in proteomics:
         try:
-            reaction = model.reactions.get_by_id(measure["identifier"])
+            reaction = model.reactions.get_by_id(
+                "prot_{}_exchange".format(measure["identifier"])
+            )
         except KeyError:
             errors.append(
                 f"Cannot find reaction '{measure['identifier']}' in the model"

@@ -232,13 +232,13 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
 def limit_proteins(model, measured_mmolgdw):
     """Apply proteomics measurements to model.
 
-    Apply measurements in the form of measured proteins.
+    Apply measurements in the form of measured proteins (mmol/gDW).
 
     Parameters
     ----------
     model: cobra.Model
     measured_mmolgdw : pd.Series
-        Protein abundances in g / gDW
+        Protein abundances in mmol / gDW
 
     References
     ----------
