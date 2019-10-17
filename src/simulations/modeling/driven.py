@@ -255,7 +255,6 @@ def limit_proteins(model, measured_mmolgdw):
             pass
         else:
             rxn.bounds = 0, measure
-    # flexibilize proteomics so model grows
     return
 
 
@@ -266,26 +265,27 @@ def ensure_proteomics_growing(model, measured_mmolgdw):
     Parameters
     ----------
     model: cobra.Model
-    measured_mmolgdw: list(dict)
-        List of measurements matching the `Proteomics` schema.
+    measured_mmolgdw: pd.Series
+        Protein abundances in mmol / gDW
 
     Returns
     -------
     measured_mmolgdw: list(dict)
-    new_growth_rate: float. False if it wasn't changed
+    obj_value: float. False if it wasn't changed
     """
     # first, get shadow prices of the unconstrained model
     solution = model.optimize()
     ordered_proteins = list(
-        top_protein_shadow_prices(solution, measured_mmolgdw.index, -1).index
+        top_protein_shadow_prices(
+            solution, measured_mmolgdw.index, len(measured_mmolgdw)
+        ).index
     )
     # second, constrain the model
     with model as mod:
         limit_proteins(mod, measured_mmolgdw)
         obj_value = mod.slim_optimize()
     tolerance = 1e-7
-    obj_value = 0 if math.isnan(obj_value) else obj_value
-    new_growth_rate = False
+    obj_value = False if math.isnan(obj_value) else obj_value
 
     # while the model can't grow, unconstrain the protein with the higher shadow price
     while obj_value < tolerance and not measured_mmolgdw.empty:
@@ -294,13 +294,13 @@ def ensure_proteomics_growing(model, measured_mmolgdw):
             del measured_mmolgdw[uniprot_id]
         ordered_proteins.pop(0)
         with model as mod:
-            # this can be change to simply affect the upper_bound
+            # this can be changed to simply affect the upper_bound
             # but this way is more clear
             limit_proteins(mod, measured_mmolgdw)
             obj_value = mod.slim_optimize()
-        new_growth_rate = obj_value = 0 if math.isnan(obj_value) else obj_value
+        obj_value = False if math.isnan(obj_value) else obj_value
 
-    return measured_mmolgdw, new_growth_rate
+    return measured_mmolgdw, obj_value
 
 
 def top_protein_shadow_prices(model_solution, set_proteins, top=1):
