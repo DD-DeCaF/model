@@ -80,7 +80,7 @@ class GrowthRate(Schema):
 
 class ModificationRequest(Schema):
     medium = fields.Nested(MediumCompound, many=True, missing=[])
-    genotype = fields.Function(deserialize=gnomic.Genotype.parse, missing=[])
+    genotype = fields.Function(deserialize=gnomic.Genotype.parse, missing="")
     fluxomics = fields.Nested(Fluxomics, many=True, missing=[])
     metabolomics = fields.Nested(Metabolomics, many=True, missing=[])
     uptake_secretion_rates = fields.Nested(UptakeSecretionRates, many=True, missing=[])
