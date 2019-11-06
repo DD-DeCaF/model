@@ -18,6 +18,12 @@ network:
 build:
 	docker-compose build
 
+## Recompile requirements and store pinned dependencies with hashes.
+pip-compile:
+	docker run --rm -v `pwd`/requirements:/build \
+		gcr.io/dd-decaf-cfbf6/modeling-base:compiler pip-compile --generate-hashes \
+		--upgrade --output-file /build/requirements.txt /build/requirements.in
+
 ## Update saved models by downloading and annotating reactions / metabolites
 update_models:
 	docker-compose run --rm web python scripts/update_models.py

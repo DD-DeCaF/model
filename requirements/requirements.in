@@ -1,0 +1,16 @@
+# Include input requirements from the base image.
+# NOTE: Can't currently maintain the exact constraints, because we need to
+# override the cobrapy version; see below.
+-r /opt/modeling-requirements.in
+
+# Place any service-specific requirements or constraints here. If an addition
+# here could benefit all our microservices, consider adding them to `wsgi-base`
+# instead.
+gnomic
+tqdm
+prometheus-client
+
+# cobrapy 0.16.0 seems to break multiple tests in the test suite. Release notes mention
+# few breaking changes so the failing tests should be investigated before assuming
+# anything. Meanwhile, pin to previously working version.
+cobra==0.15.4

@@ -3,6 +3,6 @@
 !scripts/
 !src/
 !tests/
+!requirements/
 !gunicorn.py
 !setup.cfg
-!requirements.txt
