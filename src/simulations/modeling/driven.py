@@ -58,7 +58,7 @@ def minimize_distance(model, biomass_reaction, growth_rate, fluxomics):
     uncertainties = pd.Series(index=index, data=uncertainties)
 
     solution = adjust_fluxes2model(model, observations, uncertainties)
-    for reaction, minimized_distance in solution.fluxes.iteritems():
+    for reaction, minimized_distance in solution.fluxes.items():
         if reaction == biomass_reaction:
             growth_rate["measurement"] = minimized_distance
         for measure in fluxomics:
