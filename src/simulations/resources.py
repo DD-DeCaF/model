@@ -68,11 +68,11 @@ def model_modify(
     try:
         model_wrapper = storage.get(model_id)
     except Unauthorized as error:
-        abort(401, error.message)
+        abort(401, error.message)  # noqa: B306
     except Forbidden as error:
-        abort(403, error.message)
+        abort(403, error.message)  # noqa: B306
     except ModelNotFound as error:
-        abort(404, error.message)
+        abort(404, error.message)  # noqa: B306
 
     # Use the context manager to undo all modifications to the shared model instance on
     # completion.
@@ -126,11 +126,11 @@ def model_simulate(model_id, method, objective_id, objective_direction, operatio
     try:
         model_wrapper = storage.get(model_id)
     except Unauthorized as error:
-        abort(401, error.message)
+        abort(401, error.message)  # noqa: B306
     except Forbidden as error:
-        abort(403, error.message)
+        abort(403, error.message)  # noqa: B306
     except ModelNotFound as error:
-        abort(404, error.message)
+        abort(404, error.message)  # noqa: B306
 
     model = model_wrapper.model
 
