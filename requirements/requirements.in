@@ -9,3 +9,8 @@
 gnomic
 tqdm
 prometheus-client
+
+# Newest apispec raises the following exception on startup when registering
+# api documentation:
+# TypeError: None is not a callable object
+apispec==2.0.2
