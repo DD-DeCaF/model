@@ -459,8 +459,8 @@ def apply_measurements(
             model, biomass_reaction, growth_rate, fluxomics
         )
 
-    # If an enzyme constrained model with proteomics was supplied, apply them and
-    # ensure growing.
+    # If an enzyme constrained model with proteomics was supplied, flexibilize the
+    # proteomics data and redefine the growth rate based on simulations.
     if growth_rate and proteomics:
         if model.ec_model:
             growth_rate, proteomics = flexibilize_proteomics(

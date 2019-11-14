@@ -57,7 +57,7 @@ class Metabolomics(Schema):
 class Proteomics(Schema):
     identifier = fields.String(required=True)  # UniProt code
     measurement = fields.Float(required=True)  # mmol/gDw
-    uncertainty = fields.Float(required=True)
+    uncertainty = fields.Float(required=True)  # mmol/gDw
 
 
 class UptakeSecretionRates(Schema):

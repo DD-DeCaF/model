@@ -171,16 +171,15 @@ def adjust_fluxes2model(
 
 def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     """
-    Replace proteomics measurements with the set of proteomics measures that enables
-    the model to achieve growth.
-
-    Proteins are removed from the set iteratively based on sensitivity analysis.
+    Replace proteomics measurements with a set that enables the model to grow. Proteins
+    are removed from the set iteratively based on sensitivity analysis (shadow prices).
 
     Parameters
     ----------
     model: cobra.Model
+        The enzyme-constrained model.
     biomass_reaction: str
-        The id of the biomass reaction in the goperationsiven model.
+        The id of the biomass reaction in the given model.
     proteomics: list(dict)
         List of measurements matching the `Proteomics` schema.
     growth_rate: dict
@@ -189,7 +188,9 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     Returns
     -------
     growth_rate: dict
+        New growth rate (will change if the model couldn't grow at the inputted value).
     proteomics: list(dict)
+        Filtered list of proteomics.
     """
     # TODO: this whole thing about growth rate could be refactored, since it's exactly
     # the same as in `minimize_distance`
@@ -252,32 +253,24 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     return growth_rate, proteomics
 
 
-def limit_proteins(model, measured_mmolgdw):
+def limit_proteins(model, measurements):
     """Apply proteomics measurements to model.
-
-    Apply measurements in the form of measured proteins (mmol/gDW).
 
     Parameters
     ----------
     model: cobra.Model
-    measured_mmolgdw : pd.Series
-        Protein abundances in mmol / gDW
-
-    References
-    ----------
-    .. [1] Benjamin J. Sanchez, Cheng Zhang, Avlant Nilsson, Petri-Jaan Lahtvee, Eduard J. Kerkhoven, Jens Nielsen (
-       2017). Improving the phenotype predictions of a yeast genome-scale metabolic model by incorporating enzymatic
-       constraints. [Molecular Systems Biology, 13(8): 935, http://www.dx.doi.org/10.15252/msb.20167411
+        The enzyme-constrained model.
+    measurements : pd.Series
+        Protein abundances in mmol / gDW.
     """
-    # update upper_bound
-    for protein_id, measure in measured_mmolgdw.iteritems():
+    for protein_id, measure in measurements.iteritems():
         try:
             rxn = model.reactions.get_by_id("prot_{}_exchange".format(protein_id))
-            rxn.annotation["uniprot"] = protein_id
         except KeyError:
             pass
         else:
-            rxn.bounds = 0, measure
+            # update only upper_bound (as enzymes can be unsaturated):
+            rxn.bounds = (0, measure)
     return
 
 
@@ -289,11 +282,16 @@ def top_protein_shadow_prices(solution, proteins, top=1):
     Parameters
     ----------
     solution: cobra.Solution
-        the usual Solution object returned by model.optimize()
+        The usual Solution object returned by model.optimize().
     proteins: iterable of strings
-        Protein IDs of the proteins in measurements
+        Protein IDs of the proteins in measurements.
     top: int
-        the number of proteins to be returned
+        The number of proteins to be returned.
+
+    Returns
+    -------
+    shadow_proteins: pd.Series
+        Ranked shadow prices.
     """
     # TODO: refactor for speed
     shadow_proteins = pd.Series()
