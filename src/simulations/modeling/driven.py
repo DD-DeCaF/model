@@ -192,22 +192,10 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     proteomics: list(dict)
         Filtered list of proteomics.
     """
-    # TODO: this whole thing about growth rate could be refactored, since it's exactly
-    # the same as in `minimize_distance`
-    if not growth_rate:
-        raise ValueError(
-            "Expected measurements to contain an objective "
-            "constraint as measured growth rate"
-        )
 
-    if growth_rate["uncertainty"]:
-        lower_bound = growth_rate["measurement"] - growth_rate["uncertainty"]
-        upper_bound = growth_rate["measurement"] + growth_rate["uncertainty"]
-    else:
-        lower_bound = growth_rate["measurement"]
-        upper_bound = growth_rate["measurement"]
+    # reset growth rate in model:
+    model.reactions.get_by_id(biomass_reaction).bounds = (0, 1000)
 
-    model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
     # compute measurements to constrain with:
     measurements = pd.Series()
     for protein in proteomics:
