@@ -303,20 +303,24 @@ def ensure_proteomics_growing(model, measured_mmolgdw):
     return measured_mmolgdw, obj_value
 
 
-def top_protein_shadow_prices(model_solution, set_proteins, top=1):
+def top_protein_shadow_prices(solution, proteins, top=1):
     """
-    Retrieves `top` of proteins in `set_proteins` in terms of influence in the objective
-    function (shadow prices).
+    Retrieves shadow prices of proteins from solution and ranks them from most
+    to least sensitive in the model.
 
     Parameters
     ----------
-    model_solution: cobra.Solution
+    solution: cobra.Solution
         the usual Solution object returned by model.optimize()
-    set_proteins: iterable of strings
-        Uniprot IDs of the proteins in measurements
+    proteins: iterable of strings
+        Protein IDs of the proteins in measurements
     top: int
         the number of proteins to be returned
     """
-    set_as_metabolites = {"prot_{}__91__c__93__".format(prot) for prot in set_proteins}
-    shadow_pr = model_solution.shadow_prices
-    return shadow_pr.loc[shadow_pr.index.isin(set_as_metabolites)].sort_values()[:top]
+    # TODO: refactor for speed
+    shadow_proteins = pd.Series()
+    for protein in proteins:
+        for key, value in solution.shadow_prices.items():
+            if protein in key:
+                shadow_proteins[protein] = value
+    return shadow_proteins.sort_values()[:top]
