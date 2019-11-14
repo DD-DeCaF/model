@@ -502,7 +502,6 @@ def apply_measurements(
                 }
             )
 
-    LB = 0
     for measure in proteomics:
         try:
             reaction = model.reactions.get_by_id(
@@ -513,8 +512,8 @@ def apply_measurements(
                 f"Cannot find reaction '{measure['identifier']}' in the model"
             )
         else:
-            # measurement already includes the uncertainty in this case
-            reaction.bounds = LB, measure["measurement"]
+            # measurement only modifies the upper bound (enzymes can be unsaturated)
+            reaction.bounds = 0, measure["measurement"] + measure["uncertainty"]
             operations.append(
                 {
                     "operation": "modify",

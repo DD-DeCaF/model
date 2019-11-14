@@ -22,7 +22,6 @@ from math import isnan
 
 
 logger = logging.getLogger(__name__)
-prot_pat = re.compile(r"prot_([A-Za-z0-9]+)__91__c__93__")
 
 
 """This module may one day be replaced with http://driven.bio/"""
@@ -208,24 +207,48 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         upper_bound = growth_rate["measurement"]
 
     model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
+    # compute measurements to constrain with:
+    measurements = pd.Series()
+    for protein in proteomics:
+        protein_id = protein["identifier"]
+        value = protein["measurement"] + protein["uncertainty"]
+        measurements = measurements.append(pd.Series(data=[value], index=[protein_id]))
 
-    index, observations = [], []
+    # constrain the model with all proteins and optimize:
+    limit_proteins(model, measurements)
+    solution = model.optimize()
+    new_growth_rate = solution.objective_value
 
-    for measure in proteomics:
-        index.append(measure["identifier"])
-        # in protein data, upper_bound is the unique constraint, so it contains the uncertainty
-        observations.append(measure["measurement"] + measure["uncertainty"])
+    # while the model cannot grow to the desired level, remove the protein with
+    # the higher shadow price:
+    desired_growth = growth_rate["measurement"]
+    prots_to_remove = []
+    while new_growth_rate < desired_growth and not measurements.empty:
+        # get most influential protein in model:
+        top_protein = top_protein_shadow_prices(solution, measurements.index)
+        top_protein = top_protein.index[0]
 
-    observations = pd.Series(index=index, data=observations)
+        # update data: append protein to list, remove from current dataset and
+        # open the corresponding upper bound:
+        prots_to_remove.append(top_protein)
+        measurements.pop(top_protein)
+        rxn = model.reactions.get_by_id("prot_{}_exchange".format(top_protein))
+        rxn.bounds = (0, 1000)
 
-    solution, new_growth_rate = ensure_proteomics_growing(model, observations)
-    if new_growth_rate:
+        # rinse and repeat:
+        limit_proteins(model, measurements)
+        solution = model.optimize()
+        new_growth_rate = solution.objective_value
+
+    # update growth rate if optimization was not succesful:
+    if new_growth_rate < desired_growth:
         growth_rate["measurement"] = new_growth_rate
-    for reaction, new_measurement in solution.iteritems():
-        for measure in proteomics:
-            if reaction == measure.get("identifier"):
-                measure["measurement"] = new_measurement
-                measure["uncertainty"] = 0  # TODO: Confirm that this is correct
+
+    # update proteomics by removing flexibilized proteins:
+    for protein in prots_to_remove:
+        index = next((index for (index, d) in enumerate(proteomics) if d["identifier"] == protein), None)
+        proteomics.pop(index)
+
     return growth_rate, proteomics
 
 
@@ -256,51 +279,6 @@ def limit_proteins(model, measured_mmolgdw):
         else:
             rxn.bounds = 0, measure
     return
-
-
-def ensure_proteomics_growing(model, measured_mmolgdw):
-    """
-    Optimize the model and flexiblize proteins until it grows
-
-    Parameters
-    ----------
-    model: cobra.Model
-    measured_mmolgdw: pd.Series
-        Protein abundances in mmol / gDW
-
-    Returns
-    -------
-    measured_mmolgdw: list(dict)
-    obj_value: float. False if it wasn't changed
-    """
-    # first, get shadow prices of the unconstrained model
-    solution = model.optimize()
-    ordered_proteins = list(
-        top_protein_shadow_prices(
-            solution, measured_mmolgdw.index, len(measured_mmolgdw)
-        ).index
-    )
-    # second, constrain the model
-    with model as mod:
-        limit_proteins(mod, measured_mmolgdw)
-        obj_value = mod.slim_optimize()
-    tolerance = 1e-7
-    obj_value = False if math.isnan(obj_value) else obj_value
-
-    # while the model can't grow, unconstrain the protein with the higher shadow price
-    while obj_value < tolerance and not measured_mmolgdw.empty:
-        uniprot_id = re.sub(prot_pat, r"\1", ordered_proteins[0])
-        if uniprot_id in measured_mmolgdw:
-            del measured_mmolgdw[uniprot_id]
-        ordered_proteins.pop(0)
-        with model as mod:
-            # this can be changed to simply affect the upper_bound
-            # but this way is more clear
-            limit_proteins(mod, measured_mmolgdw)
-            obj_value = mod.slim_optimize()
-        obj_value = False if math.isnan(obj_value) else obj_value
-
-    return measured_mmolgdw, obj_value
 
 
 def top_protein_shadow_prices(solution, proteins, top=1):
