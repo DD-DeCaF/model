@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import logging
-import re
 
 import numpy as np
 import pandas as pd
 from optlang.symbolics import Zero
-from math import isnan
 
 
 logger = logging.getLogger(__name__)
