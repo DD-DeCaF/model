@@ -275,12 +275,11 @@ def ensure_proteomics_growing(model, measured_mmolgdw):
     """
     # first, get shadow prices of the unconstrained model
     solution = model.optimize()
-    ordered_proteins = [
-        re.sub(prot_pat, r"\1", prot)
-        for prot in top_protein_shadow_prices(
+    ordered_proteins = list(
+        top_protein_shadow_prices(
             solution, measured_mmolgdw.index, len(measured_mmolgdw)
         ).index
-    ]
+    )
     # second, constrain the model
     with model as mod:
         limit_proteins(mod, measured_mmolgdw)
@@ -290,6 +289,7 @@ def ensure_proteomics_growing(model, measured_mmolgdw):
 
     # while the model can't grow, unconstrain the protein with the higher shadow price
     while obj_value < tolerance and not measured_mmolgdw.empty:
+        uniprot_id = re.sub(prot_pat, r"\1", ordered_proteins[0])
         if uniprot_id in measured_mmolgdw:
             del measured_mmolgdw[uniprot_id]
         ordered_proteins.pop(0)
