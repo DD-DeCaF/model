@@ -106,7 +106,7 @@ def test_measurements_adapter(iJO1366):
         },
     ]
     operations, warnings, errors = apply_measurements(
-        iJO1366, biomass_reaction, fluxomics, [], uptake_secretion_rates, [], None
+        iJO1366, biomass_reaction, fluxomics, [], [], uptake_secretion_rates, [], None
     )
     assert len(operations) == 4
     assert len(errors) == 0

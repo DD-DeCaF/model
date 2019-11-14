@@ -23,7 +23,7 @@ from cobra.medium.boundary_types import find_external_compartment
 from simulations.exceptions import CompartmentNotFound, MetaboliteNotFound, PartNotFound
 from simulations.ice_client import ICE
 from simulations.modeling.cobra_helpers import find_metabolite, parse_bigg_compartment
-from simulations.modeling.driven import minimize_distance
+from simulations.modeling.driven import minimize_distance, flexibilize_proteomics
 from simulations.modeling.gnomic_helpers import feature_id
 
 
@@ -400,6 +400,7 @@ def apply_measurements(
     biomass_reaction,
     fluxomics,
     metabolomics,
+    proteomics,
     uptake_secretion_rates,
     molar_yields,
     growth_rate,
@@ -419,6 +420,8 @@ def apply_measurements(
         List of measurements matching the `Fluxomics` schema.
     metabolomics: list(dict)
         List of measurements matching the `Metabolomics` schema.
+    proteomics: list(dict)
+        List of measurements matching the `Proteomics` schema.
     uptake_secretion_rates: list(dict)
         List of measurements matching the `UptakeSecretionRates` schema.
     molar_yields: list(dict)

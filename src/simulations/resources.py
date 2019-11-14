@@ -58,6 +58,7 @@ def model_modify(
     genotype,
     fluxomics,
     metabolomics,
+    proteomics,
     uptake_secretion_rates,
     molar_yields,
     growth_rate,
@@ -96,6 +97,7 @@ def model_modify(
         if (
             fluxomics
             or metabolomics
+            or proteomics
             or uptake_secretion_rates
             or molar_yields
             or growth_rate
@@ -104,6 +106,7 @@ def model_modify(
                 model,
                 model_wrapper.biomass_reaction,
                 fluxomics,
+                proteomics,
                 metabolomics,
                 uptake_secretion_rates,
                 molar_yields,
