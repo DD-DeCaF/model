@@ -206,9 +206,9 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
 
     # while the model cannot grow to the desired level, remove the protein with
     # the highest shadow price:
-    desired_growth = growth_rate["measurement"]
+    minimal_growth, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
     prots_to_remove = []
-    while new_growth_rate < desired_growth and not prot_df.empty:
+    while new_growth_rate < minimal_growth and not prot_df.empty:
         # get most influential protein in model:
         top_protein = top_shadow_prices(solution, list(prot_df["met_id"]))
         top_protein = top_protein.index[0]
@@ -226,9 +226,12 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
             break
         new_growth_rate = solution.objective_value
 
-    # update growth rate if optimization was not succesful:
-    if new_growth_rate < desired_growth:
-        growth_rate["measurement"] = new_growth_rate
+    # update growth rate if optimization was not successful:
+    if new_growth_rate < minimal_growth:
+        if growth_rate["uncertainty"]:
+            growth_rate["measurement"] = new_growth_rate + growth_rate["uncertainty"]
+        else:
+            growth_rate["measurement"] = new_growth_rate
 
     # update proteomics by removing flexibilized proteins:
     for protein in prots_to_remove:
