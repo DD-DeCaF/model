@@ -194,36 +194,38 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     # reset growth rate in model:
     model.reactions.get_by_id(biomass_reaction).bounds = (0, 1000)
 
-    # compute measurements to constrain with:
-    measurements = pd.Series()
+    # build a table with protein ids, met ids in model and values to constrain with:
+    prot_df = pd.DataFrame()
     for protein in proteomics:
         protein_id = protein["identifier"]
         value = protein["measurement"] + protein["uncertainty"]
-        measurements = measurements.append(pd.Series(data=[value], index=[protein_id]))
+        for met in model.metabolites:
+            if protein_id in met.id:
+                new_row = pd.DataFrame(data={"met_id": met.id, "value": value}, index=[protein_id])
+                prot_df = prot_df.append(new_row)
 
     # constrain the model with all proteins and optimize:
-    limit_proteins(model, measurements)
+    limit_proteins(model, prot_df["value"])
     solution = model.optimize()
     new_growth_rate = solution.objective_value
 
     # while the model cannot grow to the desired level, remove the protein with
-    # the higher shadow price:
+    # the highest shadow price:
     desired_growth = growth_rate["measurement"]
     prots_to_remove = []
-    while new_growth_rate < desired_growth and not measurements.empty:
+    while new_growth_rate < desired_growth and not prot_df.empty:
         # get most influential protein in model:
-        top_protein = top_protein_shadow_prices(solution, measurements.index)
+        top_protein = top_shadow_prices(solution, list(prot_df["met_id"]))
         top_protein = top_protein.index[0]
+        top_protein = prot_df.index[prot_df["met_id"] == top_protein][0]
 
-        # update data: append protein to list, remove from current dataset and
-        # open the corresponding upper bound:
+        # update data: append protein to list, remove from current dataframe and
+        # increase the corresponding upper bound to +1000:
         prots_to_remove.append(top_protein)
-        measurements.pop(top_protein)
-        rxn = model.reactions.get_by_id("prot_{}_exchange".format(top_protein))
-        rxn.bounds = (0, 1000)
+        prot_df = prot_df.drop(labels=top_protein)
+        limit_proteins(model, pd.Series(data=[1000], index=[top_protein]))
 
-        # rinse and repeat:
-        limit_proteins(model, measurements)
+        # re-compute solution:
         solution = model.optimize()
         new_growth_rate = solution.objective_value
 
@@ -260,29 +262,25 @@ def limit_proteins(model, measurements):
     return
 
 
-def top_protein_shadow_prices(solution, proteins, top=1):
+def top_shadow_prices(solution, met_ids, top=1):
     """
-    Retrieves shadow prices of proteins from solution and ranks them from most
-    to least sensitive in the model.
+    Retrieves shadow prices for a list of metabolites from the solution and ranks
+    them from most to least sensitive in the model.
 
     Parameters
     ----------
     solution: cobra.Solution
         The usual Solution object returned by model.optimize().
-    proteins: iterable of strings
-        Protein IDs of the proteins in measurements.
+    met_ids: iterable of strings
+        Subset of metabolite IDs from the model.
     top: int
-        The number of proteins to be returned.
+        The number of metabolites to be returned.
 
     Returns
     -------
-    shadow_proteins: pd.Series
-        Ranked shadow prices.
+    shadow_pr: pd.Series
+        Top shadow prices, ranked.
     """
-    # TODO: refactor for speed
-    shadow_proteins = pd.Series()
-    for protein in proteins:
-        for key, value in solution.shadow_prices.items():
-            if protein in key:
-                shadow_proteins[protein] = value
-    return shadow_proteins.sort_values()[:top]
+    shadow_pr = solution.shadow_prices
+    shadow_pr = shadow_pr.loc[shadow_pr.index.isin(met_ids)]
+    return shadow_pr.sort_values()[:top]
