@@ -40,13 +40,8 @@ def minimize_distance(model, biomass_reaction, growth_rate, fluxomics):
     # Trust the growth rate over the measurements. Meaning, constrain the
     # biomass reaction to the observed values instead of simply including it in
     # the measurements to be minimized.
-    if growth_rate["uncertainty"]:
-        lower_bound = growth_rate["measurement"] - growth_rate["uncertainty"]
-        upper_bound = growth_rate["measurement"] + growth_rate["uncertainty"]
-    else:
-        lower_bound = growth_rate["measurement"]
-        upper_bound = growth_rate["measurement"]
-    model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
+    lb, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
+    model.reactions.get_by_id(biomass_reaction).bounds = (lb, ub)
 
     for measure in fluxomics:
         index.append(measure["identifier"])
@@ -198,10 +193,10 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     prot_df = pd.DataFrame()
     for protein in proteomics:
         protein_id = protein["identifier"]
-        value = protein["measurement"] + protein["uncertainty"]
+        lb, ub = bounds(protein["measurement"], protein["uncertainty"])
         for met in model.metabolites:
             if protein_id in met.id:
-                new_row = pd.DataFrame(data={"met_id": met.id, "value": value}, index=[protein_id])
+                new_row = pd.DataFrame(data={"met_id": met.id, "value": ub}, index=[protein_id])
                 prot_df = prot_df.append(new_row)
 
     # constrain the model with all proteins and optimize:
@@ -286,3 +281,11 @@ def top_shadow_prices(solution, met_ids, top=1):
     shadow_pr = solution.shadow_prices
     shadow_pr = shadow_pr.loc[shadow_pr.index.isin(met_ids)]
     return shadow_pr.sort_values()[:top]
+
+
+def bounds(measurement, uncertainty):
+    """Return resolved bounds based on measurement and uncertainty"""
+    if uncertainty:
+        return measurement - uncertainty, measurement + uncertainty
+    else:
+        return measurement, measurement
