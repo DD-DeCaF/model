@@ -227,6 +227,8 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
 
         # re-compute solution:
         solution = model.optimize()
+        if solution.objective_value == new_growth_rate:     # the algorithm is stuck
+            break
         new_growth_rate = solution.objective_value
 
     # update growth rate if optimization was not succesful:
