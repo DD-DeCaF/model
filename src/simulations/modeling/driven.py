@@ -196,7 +196,9 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         lb, ub = bounds(protein["measurement"], protein["uncertainty"])
         for met in model.metabolites:
             if protein_id in met.id:
-                new_row = pd.DataFrame(data={"met_id": met.id, "value": ub}, index=[protein_id])
+                new_row = pd.DataFrame(
+                    data={"met_id": met.id, "value": ub}, index=[protein_id]
+                )
                 prot_df = prot_df.append(new_row)
 
     # constrain the model with all proteins and optimize:
@@ -222,7 +224,7 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
 
         # re-compute solution:
         solution = model.optimize()
-        if solution.objective_value == new_growth_rate:     # the algorithm is stuck
+        if solution.objective_value == new_growth_rate:  # the algorithm is stuck
             break
         new_growth_rate = solution.objective_value
 
@@ -235,7 +237,14 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
 
     # update proteomics by removing flexibilized proteins:
     for protein in prots_to_remove:
-        index = next((index for (index, d) in enumerate(proteomics) if d["identifier"] == protein), None)
+        index = next(
+            (
+                index
+                for (index, d) in enumerate(proteomics)
+                if d["identifier"] == protein
+            ),
+            None,
+        )
         proteomics.pop(index)
 
     return growth_rate, proteomics
