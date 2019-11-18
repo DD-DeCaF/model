@@ -23,7 +23,7 @@ from cobra.medium.boundary_types import find_external_compartment
 from simulations.exceptions import CompartmentNotFound, MetaboliteNotFound, PartNotFound
 from simulations.ice_client import ICE
 from simulations.modeling.cobra_helpers import find_metabolite, parse_bigg_compartment
-from simulations.modeling.driven import minimize_distance, flexibilize_proteomics
+from simulations.modeling.driven import flexibilize_proteomics, minimize_distance
 from simulations.modeling.gnomic_helpers import feature_id
 
 

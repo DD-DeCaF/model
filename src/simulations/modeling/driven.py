@@ -260,7 +260,7 @@ def limit_proteins(model, measurements):
     measurements : pd.Series
         Protein abundances in mmol / gDW.
     """
-    for protein_id, measure in measurements.iteritems():
+    for protein_id, measure in measurements.items():
         try:
             rxn = model.reactions.get_by_id("prot_{}_exchange".format(protein_id))
         except KeyError:
