@@ -32,3 +32,9 @@ Specify environment variables in a `.env` file. See `docker-compose.yml` for the
 * `ICE_USERNAME` ICE username
 * `ICE_PASSWORD` ICE password
 * `ID_MAPPER_API` URL to the ID mapper service
+
+### Updating Python dependencies
+
+To compile a new requirements file and then re-build the service with the new requirements, run:
+
+    make pip-compile build

@@ -1,0 +1,16 @@
+# Include input requirements from the base image.
+# NOTE: Can't currently maintain the exact constraints, because we need to
+# override the cobrapy version; see below.
+-r /opt/modeling-requirements.in
+
+# Place any service-specific requirements or constraints here. If an addition
+# here could benefit all our microservices, consider adding them to `wsgi-base`
+# instead.
+gnomic
+tqdm
+prometheus-client
+
+# Newest apispec raises the following exception on startup when registering
+# api documentation:
+# TypeError: None is not a callable object
+apispec==2.0.2
