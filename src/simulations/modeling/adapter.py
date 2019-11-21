@@ -516,7 +516,8 @@ def apply_measurements(
             )
         else:
             # measurement only modifies the upper bound (enzymes can be unsaturated)
-            reaction.bounds = 0, measure["measurement"] + measure["uncertainty"]
+            lb, ub = bounds(measure["measurement"], measure["uncertainty"])
+            reaction.bounds = 0, ub
             operations.append(
                 {
                     "operation": "modify",
