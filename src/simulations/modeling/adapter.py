@@ -505,6 +505,14 @@ def apply_measurements(
                 }
             )
 
+    for metabolite in metabolomics:
+        warning = (
+            f"Cannot apply metabolomics measure for '{metabolite['identifier']}'; "
+            f"feature has not yet been implemented"
+        )
+        warnings.append(warning)
+        logger.warning(warning)
+
     for measure in proteomics:
         try:
             reaction = model.reactions.get_by_id(
@@ -526,14 +534,6 @@ def apply_measurements(
                     "data": reaction_to_dict(reaction),
                 }
             )
-
-    for metabolite in metabolomics:
-        warning = (
-            f"Cannot apply metabolomics measure for '{metabolite['identifier']}'; "
-            f"feature has not yet been implemented"
-        )
-        warnings.append(warning)
-        logger.warning(warning)
 
     for uptake_rate in uptake_secretion_rates:
         try:
