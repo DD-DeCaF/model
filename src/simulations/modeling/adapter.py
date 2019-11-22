@@ -508,7 +508,7 @@ def apply_measurements(
     for measure in proteomics:
         try:
             reaction = model.reactions.get_by_id(
-                "prot_{}_exchange".format(measure["identifier"])
+                f"prot_'{measure['identifier']}'_exchange"
             )
         except KeyError:
             errors.append(

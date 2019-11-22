@@ -194,12 +194,11 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     for protein in proteomics:
         protein_id = protein["identifier"]
         lb, ub = bounds(protein["measurement"], protein["uncertainty"])
-        for met in model.metabolites:
-            if protein_id in met.id:
-                new_row = pd.DataFrame(
-                    data={"met_id": met.id, "value": ub}, index=[protein_id]
-                )
-                prot_df = prot_df.append(new_row)
+        for met in model.metabolites.query(lambda m: protein_id in m.id):
+            new_row = pd.DataFrame(
+                data={"met_id": met.id, "value": ub}, index=[protein_id]
+            )
+            prot_df = prot_df.append(new_row)
 
     # constrain the model with all proteins and optimize:
     limit_proteins(model, prot_df["value"])
@@ -240,12 +239,12 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         index = next(
             (
                 index
-                for (index, d) in enumerate(proteomics)
-                if d["identifier"] == protein
+                for (index, dic) in enumerate(proteomics)
+                if dic["identifier"] == protein
             ),
             None,
         )
-        proteomics.pop(index)
+        del proteomics[index]
 
     return growth_rate, proteomics
 
@@ -262,7 +261,7 @@ def limit_proteins(model, measurements):
     """
     for protein_id, measure in measurements.items():
         try:
-            rxn = model.reactions.get_by_id("prot_{}_exchange".format(protein_id))
+            rxn = model.reactions.get_by_id(f"prot_{protein_id}_exchange")
         except KeyError:
             pass
         else:
