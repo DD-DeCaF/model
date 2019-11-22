@@ -519,9 +519,9 @@ def apply_measurements(
                 f"prot_'{measure['identifier']}'_exchange"
             )
         except KeyError:
-            errors.append(
-                f"Cannot find reaction '{measure['identifier']}' in the model"
-            )
+            warning = f"Cannot find protein '{measure['identifier']}' in the model"
+            warnings.append(warning)
+            logger.warning(warning)
         else:
             # measurement only modifies the upper bound (enzymes can be unsaturated)
             lb, ub = bounds(measure["measurement"], measure["uncertainty"])
