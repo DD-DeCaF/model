@@ -461,18 +461,10 @@ def apply_measurements(
 
     # If an enzyme constrained model with proteomics was supplied, flexibilize the
     # proteomics data and redefine the growth rate based on simulations.
-    if growth_rate and proteomics:
-        if model.ec_model:
-            growth_rate, proteomics = flexibilize_proteomics(
-                model, biomass_reaction, growth_rate, proteomics
-            )
-        else:
-            warning = (
-                f"Cannot apply proteomics measurements for "
-                f"non enzyme-constrained model {model.id}"
-            )
-            warnings.append(warning)
-            logger.warning(warning)
+    if growth_rate and proteomics and model.ec_model:
+        growth_rate, proteomics = flexibilize_proteomics(
+            model, biomass_reaction, growth_rate, proteomics
+        )
 
     # Constrain the model with the observed growth rate
     if growth_rate:
@@ -514,26 +506,35 @@ def apply_measurements(
         logger.warning(warning)
 
     for measure in proteomics:
-        try:
-            reaction = model.reactions.get_by_id(
-                f"prot_'{measure['identifier']}'_exchange"
+        if model.ec_model:
+            try:
+                reaction = model.reactions.get_by_id(
+                    f"prot_'{measure['identifier']}'_exchange"
+                )
+            except KeyError:
+                warning = f"Cannot find protein '{measure['identifier']}' in the model"
+                warnings.append(warning)
+                logger.warning(warning)
+            else:
+                # measurement only modifies the upper bound (enzymes can be unsaturated)
+                lb, ub = bounds(measure["measurement"], measure["uncertainty"])
+                reaction.bounds = 0, ub
+                operations.append(
+                    {
+                        "operation": "modify",
+                        "type": "reaction",
+                        "id": reaction.id,
+                        "data": reaction_to_dict(reaction),
+                    }
+                )
+        else:
+            warning = (
+                f"Cannot apply proteomics measurements for "
+                f"non enzyme-constrained model {model.id}"
             )
-        except KeyError:
-            warning = f"Cannot find protein '{measure['identifier']}' in the model"
             warnings.append(warning)
             logger.warning(warning)
-        else:
-            # measurement only modifies the upper bound (enzymes can be unsaturated)
-            lb, ub = bounds(measure["measurement"], measure["uncertainty"])
-            reaction.bounds = 0, ub
-            operations.append(
-                {
-                    "operation": "modify",
-                    "type": "reaction",
-                    "id": reaction.id,
-                    "data": reaction_to_dict(reaction),
-                }
-            )
+            break
 
     for uptake_rate in uptake_secretion_rates:
         try:
