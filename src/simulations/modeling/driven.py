@@ -173,10 +173,10 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         The enzyme-constrained model.
     biomass_reaction: str
         The id of the biomass reaction in the given model.
-    proteomics: list(dict)
-        List of measurements matching the `Proteomics` schema.
     growth_rate: dict
         Growth rate, matching the `GrowthRate` schema.
+    proteomics: list(dict)
+        List of measurements matching the `Proteomics` schema.
 
     Returns
     -------

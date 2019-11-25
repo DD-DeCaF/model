@@ -512,7 +512,7 @@ def apply_measurements(
         if is_ec_model:
             try:
                 reaction = model.reactions.get_by_id(
-                    f"prot_'{measure['identifier']}'_exchange"
+                    f"prot_{measure['identifier']}_exchange"
                 )
             except KeyError:
                 warning = f"Cannot find protein '{measure['identifier']}' in the model"
