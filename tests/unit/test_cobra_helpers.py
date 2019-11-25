@@ -19,7 +19,7 @@ from simulations.modeling.cobra_helpers import find_metabolite
 
 
 def test_existing_metabolite(iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
     metabolite_chebi = find_metabolite(iJO1366, "CHEBI:17790", "chebi", "e")
     metabolite_bigg = find_metabolite(iJO1366, "meoh", "bigg.metabolite", "e")
     assert metabolite_chebi == metabolite_bigg

@@ -105,6 +105,7 @@ def model_modify(
             results = apply_measurements(
                 model,
                 model_wrapper.biomass_reaction,
+                model_wrapper.is_ec_model,
                 fluxomics,
                 metabolomics,
                 proteomics,

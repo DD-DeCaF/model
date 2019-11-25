@@ -37,6 +37,7 @@ class MockResponseSuccess:
             "project_id": None,
             "organism_id": 2,
             "default_biomass_reaction": "baz",
+            "ec_model": False,
         }
 
     def raise_for_status(self):

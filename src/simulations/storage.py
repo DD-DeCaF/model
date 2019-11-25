@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class ModelWrapper:
     """A wrapper for a cobrapy model with some additional metadata."""
 
-    def __init__(self, model, project_id, organism_id, biomass_reaction):
+    def __init__(self, model, project_id, organism_id, biomass_reaction, is_ec_model):
         """
         Parameters
         ----------
@@ -45,6 +45,8 @@ class ModelWrapper:
             https://api.dd-decaf.eu/warehouse/organisms.
         biomass_reaction: str
             A string referencing the default biomass reaction in the given model.
+        is_ec_model: bool
+            A boolean indicating if the model is enzyme-constrained.
         """
         self.model = model
         # Use the cplex solver for performance
@@ -52,6 +54,7 @@ class ModelWrapper:
         self.project_id = project_id
         self.organism_id = organism_id
         self.biomass_reaction = biomass_reaction
+        self.is_ec_model = is_ec_model
 
 
 # Keep all loaded models in memory in this dictionary, keyed by our internal
@@ -112,4 +115,5 @@ def _load_model(model_id):
         model_data["project_id"],
         model_data["organism_id"],
         model_data["default_biomass_reaction"],
+        model_data["ec_model"],
     )

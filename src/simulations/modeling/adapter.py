@@ -398,6 +398,7 @@ def apply_genotype(model, genotype_changes):
 def apply_measurements(
     model,
     biomass_reaction,
+    is_ec_model,
     fluxomics,
     metabolomics,
     proteomics,
@@ -416,6 +417,8 @@ def apply_measurements(
     model: cobra.Model
     biomass_reaction: str
         The id of the biomass reaction in the given model.
+    is_ec_model: bool
+        A boolean indicating if the model is enzyme-constrained.
     fluxomics: list(dict)
         List of measurements matching the `Fluxomics` schema.
     metabolomics: list(dict)
@@ -461,7 +464,7 @@ def apply_measurements(
 
     # If an enzyme constrained model with proteomics was supplied, flexibilize the
     # proteomics data and redefine the growth rate based on simulations.
-    if growth_rate and proteomics and model.ec_model:
+    if growth_rate and proteomics and is_ec_model:
         growth_rate, proteomics = flexibilize_proteomics(
             model, biomass_reaction, growth_rate, proteomics
         )
@@ -506,7 +509,7 @@ def apply_measurements(
         logger.warning(warning)
 
     for measure in proteomics:
-        if model.ec_model:
+        if is_ec_model:
             try:
                 reaction = model.reactions.get_by_id(
                     f"prot_'{measure['identifier']}'_exchange"

@@ -20,7 +20,7 @@ from simulations.modeling.driven import adjust_fluxes2model, minimize_distance
 
 
 def test_minimize_distance_no_growth_rate(iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
     with pytest.raises(ValueError):
         measurements = [
             {
@@ -34,7 +34,7 @@ def test_minimize_distance_no_growth_rate(iJO1366):
 
 
 def test_adjust_fluxes2model(iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
 
     # Since there is not a general flux direction of the system imposed (via
     # biomass or other constraint), we artificially increase the lb of the

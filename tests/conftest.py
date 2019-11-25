@@ -52,15 +52,15 @@ def models():
 
     model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
     storage._MODELS[model_keys["e_coli_core"]] = storage.ModelWrapper(
-        model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM"
+        model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
     model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
     storage._MODELS[model_keys["e_coli_core_proprietary"]] = storage.ModelWrapper(
-        model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM"
+        model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
     model = read_sbml_model("tests/data/iJO1366.sbml.gz")
     storage._MODELS[model_keys["iJO1366"]] = storage.ModelWrapper(
-        model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M"
+        model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M", False
     )
     return model_keys
 
@@ -74,7 +74,7 @@ def e_coli_core(models):
     """
     wrapper = storage._MODELS[models["e_coli_core"]]
     with wrapper.model as model:
-        yield model, wrapper.biomass_reaction
+        yield model, wrapper.biomass_reaction, wrapper.is_ec_model
 
 
 @pytest.fixture(scope="function")
@@ -85,4 +85,4 @@ def iJO1366(models):
     """
     wrapper = storage._MODELS[models["iJO1366"]]
     with wrapper.model as model:
-        yield model, wrapper.biomass_reaction
+        yield model, wrapper.biomass_reaction, wrapper.is_ec_model

@@ -31,7 +31,7 @@ def test_medium_salts():
 
 
 def test_medium_adapter(iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
     medium = [
         {"name": "Foo", "identifier": "CHEBI:63041", "namespace": "chebi"},
         {"name": "Bar", "identifier": "CHEBI:91249", "namespace": "chebi"},
@@ -60,7 +60,7 @@ def test_medium_adapter(iJO1366):
 
 
 def test_genotype_adapter(monkeypatch, iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
 
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, "get_reaction_equations", lambda self, genotype: {})
@@ -72,7 +72,7 @@ def test_genotype_adapter(monkeypatch, iJO1366):
 
 
 def test_measurements_adapter(iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
     uptake_secretion_rates = [
         {
             "name": "Foo",
@@ -106,7 +106,15 @@ def test_measurements_adapter(iJO1366):
         },
     ]
     operations, warnings, errors = apply_measurements(
-        iJO1366, biomass_reaction, fluxomics, [], [], uptake_secretion_rates, [], None
+        iJO1366,
+        biomass_reaction,
+        is_ec_model,
+        fluxomics,
+        [],
+        [],
+        uptake_secretion_rates,
+        [],
+        None,
     )
     assert len(operations) == 4
     assert len(errors) == 0
