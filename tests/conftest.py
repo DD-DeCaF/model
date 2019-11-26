@@ -55,15 +55,15 @@ def models():
         "eciML1515": 4,
     }
 
-    model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
+    model = read_sbml_model("tests/data/e_coli_core.xml.gz")
     storage._MODELS[model_keys["e_coli_core"]] = storage.ModelWrapper(
         model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
-    model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
+    model = read_sbml_model("tests/data/e_coli_core.xml.gz")
     storage._MODELS[model_keys["e_coli_core_proprietary"]] = storage.ModelWrapper(
         model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
-    model = read_sbml_model("tests/data/iJO1366.sbml.gz")
+    model = read_sbml_model("tests/data/iJO1366.xml.gz")
     storage._MODELS[model_keys["iJO1366"]] = storage.ModelWrapper(
         model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M", False
     )
