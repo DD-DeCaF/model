@@ -159,8 +159,8 @@ def test_proteomics_adapter(eciML1515):
         [],
         growth_rate,
     )
-    # 2 operations (1 proteomics + growth rate) + 1 warning (1 skipped protein) are
-    # expected:
+    # 2 operations (1 proteomics + growth rate) + 3 warnings (1 skipped protein + 2
+    # removed proteins) are expected:
     assert len(operations) == 2
-    assert len(warnings) == 1
+    assert len(warnings) == 3
     assert len(errors) == 0

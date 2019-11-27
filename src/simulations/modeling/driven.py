@@ -184,6 +184,8 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         New growth rate (will change if the model couldn't grow at the inputted value).
     proteomics: list(dict)
         Filtered list of proteomics.
+    warnings: list(str)
+        List of warnings with all flexibilized proteins.
     """
 
     # reset growth rate in model:
@@ -209,6 +211,7 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     # the highest shadow price:
     minimal_growth, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
     prots_to_remove = []
+    warnings = []
     while new_growth_rate < minimal_growth and not prot_df.empty:
         # get most influential protein in model:
         top_protein = top_shadow_prices(solution, list(prot_df["met_id"]))
@@ -220,6 +223,11 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         prots_to_remove.append(top_protein)
         prot_df = prot_df.drop(labels=top_protein)
         limit_proteins(model, pd.Series(data=[1000], index=[top_protein]))
+        warning = (
+            f"Removed protein '{top_protein}' from the proteomics data for feasible "
+            f"simulations"
+        )
+        warnings.append(warning)
 
         # re-compute solution:
         solution = model.optimize()
@@ -246,7 +254,7 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         )
         del proteomics[index]
 
-    return growth_rate, proteomics
+    return growth_rate, proteomics, warnings
 
 
 def limit_proteins(model, measurements):
