@@ -71,7 +71,7 @@ def test_genotype_adapter(monkeypatch, iJO1366):
     assert len(errors) == 0
 
 
-def test_measurements_adapter(iJO1366, eciML1515):
+def test_measurements_adapter(iJO1366):
     iJO1366, biomass_reaction, is_ec_model = iJO1366
     uptake_secretion_rates = [
         {
@@ -105,7 +105,26 @@ def test_measurements_adapter(iJO1366, eciML1515):
             "uncertainty": 0,
         },
     ]
-    # Made up proteomics data:
+    proteomics = {"identifier": "P0A8V2", "measurement": 5.03e-6, "uncertainty": 0}
+    operations, warnings, errors = apply_measurements(
+        iJO1366,
+        biomass_reaction,
+        is_ec_model,
+        fluxomics,
+        [],
+        proteomics,
+        uptake_secretion_rates,
+        [],
+        None,
+    )
+    # 4 operations (2 rates + 2 fluxomics) + 1 warning (not an ecModel) are expected:
+    assert len(operations) == 4
+    assert len(warnings) == 1
+    assert len(errors) == 0
+
+
+def test_proteomics_adapter(eciML1515):
+    eciML1515, biomass_reaction, is_ec_model = eciML1515
     proteomics = [
         {
             "identifier": "P0A8V2",  # protein not in model (should be skipped)
@@ -128,23 +147,6 @@ def test_measurements_adapter(iJO1366, eciML1515):
             "uncertainty": 0,
         },
     ]
-    operations, warnings, errors = apply_measurements(
-        iJO1366,
-        biomass_reaction,
-        is_ec_model,
-        fluxomics,
-        [],
-        proteomics,
-        uptake_secretion_rates,
-        [],
-        None,
-    )
-    # 4 operations (2 rates + 2 fluxomics) + 1 warning (not an ecModel) are expected:
-    assert len(operations) == 4
-    assert len(warnings) == 1
-    assert len(errors) == 0
-
-    eciML1515, biomass_reaction, is_ec_model = eciML1515
     growth_rate = {"measurement": 0.1, "uncertainty": 0.01}
     operations, warnings, errors = apply_measurements(
         eciML1515,
