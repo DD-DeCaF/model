@@ -54,6 +54,12 @@ class Metabolomics(Schema):
     uncertainty = fields.Float(required=True)
 
 
+class Proteomics(Schema):
+    identifier = fields.String(required=True)  # UniProt code
+    measurement = fields.Float(required=True)  # mmol/gDw
+    uncertainty = fields.Float(required=True)  # mmol/gDw
+
+
 class UptakeSecretionRates(Schema):
     name = fields.String(required=True)
     identifier = fields.String(required=True)
@@ -83,6 +89,7 @@ class ModificationRequest(Schema):
     genotype = fields.Function(deserialize=gnomic.Genotype.parse, missing="")
     fluxomics = fields.Nested(Fluxomics, many=True, missing=[])
     metabolomics = fields.Nested(Metabolomics, many=True, missing=[])
+    proteomics = fields.Nested(Proteomics, many=True, missing=[])
     uptake_secretion_rates = fields.Nested(UptakeSecretionRates, many=True, missing=[])
     molar_yields = fields.Nested(MolarYields, many=True, missing=[])
     growth_rate = fields.Nested(GrowthRate, missing=None)

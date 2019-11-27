@@ -23,7 +23,7 @@ from cobra.medium.boundary_types import find_external_compartment
 from simulations.exceptions import CompartmentNotFound, MetaboliteNotFound, PartNotFound
 from simulations.ice_client import ICE
 from simulations.modeling.cobra_helpers import find_metabolite, parse_bigg_compartment
-from simulations.modeling.driven import minimize_distance
+from simulations.modeling.driven import flexibilize_proteomics, minimize_distance
 from simulations.modeling.gnomic_helpers import feature_id
 
 
@@ -398,8 +398,10 @@ def apply_genotype(model, genotype_changes):
 def apply_measurements(
     model,
     biomass_reaction,
+    is_ec_model,
     fluxomics,
     metabolomics,
+    proteomics,
     uptake_secretion_rates,
     molar_yields,
     growth_rate,
@@ -415,10 +417,14 @@ def apply_measurements(
     model: cobra.Model
     biomass_reaction: str
         The id of the biomass reaction in the given model.
+    is_ec_model: bool
+        A boolean indicating if the model is enzyme-constrained.
     fluxomics: list(dict)
         List of measurements matching the `Fluxomics` schema.
     metabolomics: list(dict)
         List of measurements matching the `Metabolomics` schema.
+    proteomics: list(dict)
+        List of measurements matching the `Proteomics` schema.
     uptake_secretion_rates: list(dict)
         List of measurements matching the `UptakeSecretionRates` schema.
     molar_yields: list(dict)
@@ -455,6 +461,16 @@ def apply_measurements(
         growth_rate, fluxomics = minimize_distance(
             model, biomass_reaction, growth_rate, fluxomics
         )
+
+    # If an enzyme constrained model with proteomics was supplied, flexibilize the
+    # proteomics data and redefine the growth rate based on simulations.
+    if growth_rate and proteomics and is_ec_model:
+        growth_rate, proteomics, prot_warnings = flexibilize_proteomics(
+            model, biomass_reaction, growth_rate, proteomics
+        )
+        for warning in prot_warnings:
+            warnings.append(warning)
+            logger.warning(warning)
 
     # Constrain the model with the observed growth rate
     if growth_rate:
@@ -494,6 +510,37 @@ def apply_measurements(
         )
         warnings.append(warning)
         logger.warning(warning)
+
+    for measure in proteomics:
+        if is_ec_model:
+            try:
+                reaction = model.reactions.get_by_id(
+                    f"prot_{measure['identifier']}_exchange"
+                )
+            except KeyError:
+                warning = f"Cannot find protein '{measure['identifier']}' in the model"
+                warnings.append(warning)
+                logger.warning(warning)
+            else:
+                # measurement only modifies the upper bound (enzymes can be unsaturated)
+                lb, ub = bounds(measure["measurement"], measure["uncertainty"])
+                reaction.bounds = 0, ub
+                operations.append(
+                    {
+                        "operation": "modify",
+                        "type": "reaction",
+                        "id": reaction.id,
+                        "data": reaction_to_dict(reaction),
+                    }
+                )
+        else:
+            warning = (
+                f"Cannot apply proteomics measurements for "
+                f"non enzyme-constrained model {model.id}"
+            )
+            warnings.append(warning)
+            logger.warning(warning)
+            break
 
     for uptake_rate in uptake_secretion_rates:
         try:

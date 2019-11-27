@@ -20,7 +20,7 @@ from simulations.modeling.simulations import METHODS, simulate
 @pytest.mark.skip(reason="TMY results is currently not implemented")
 @pytest.mark.parametrize("objective", ["bigg:akg"])
 def test_tmy_result(e_coli_core, objective):
-    e_coli_core, biomass_reaction = e_coli_core
+    e_coli_core, biomass_reaction, is_ec_model = e_coli_core
     to_return = ["fluxes", "tmy", "model", "growth-rate", "removed-reactions"]
     result = simulate(
         e_coli_core, biomass_reaction, "fba", None, None, [objective], to_return
@@ -30,7 +30,7 @@ def test_tmy_result(e_coli_core, objective):
 
 @pytest.mark.parametrize("method", METHODS)
 def test_simulation_methods(e_coli_core, method):
-    e_coli_core, biomass_reaction = e_coli_core
+    e_coli_core, biomass_reaction, is_ec_model = e_coli_core
     for method in METHODS:
         fluxes, growth_rate = simulate(
             e_coli_core, biomass_reaction, method, None, None

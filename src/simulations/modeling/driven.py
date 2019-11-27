@@ -40,13 +40,8 @@ def minimize_distance(model, biomass_reaction, growth_rate, fluxomics):
     # Trust the growth rate over the measurements. Meaning, constrain the
     # biomass reaction to the observed values instead of simply including it in
     # the measurements to be minimized.
-    if growth_rate["uncertainty"]:
-        lower_bound = growth_rate["measurement"] - growth_rate["uncertainty"]
-        upper_bound = growth_rate["measurement"] + growth_rate["uncertainty"]
-    else:
-        lower_bound = growth_rate["measurement"]
-        upper_bound = growth_rate["measurement"]
-    model.reactions.get_by_id(biomass_reaction).bounds = (lower_bound, upper_bound)
+    lb, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
+    model.reactions.get_by_id(biomass_reaction).bounds = (lb, ub)
 
     for measure in fluxomics:
         index.append(measure["identifier"])
@@ -165,3 +160,151 @@ def adjust_fluxes2model(
         model.objective = prob.Objective(new_obj, direction="min")
         solution = model.optimize(raise_error=True)
     return solution
+
+
+def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
+    """
+    Replace proteomics measurements with a set that enables the model to grow. Proteins
+    are removed from the set iteratively based on sensitivity analysis (shadow prices).
+
+    Parameters
+    ----------
+    model: cobra.Model
+        The enzyme-constrained model.
+    biomass_reaction: str
+        The id of the biomass reaction in the given model.
+    growth_rate: dict
+        Growth rate, matching the `GrowthRate` schema.
+    proteomics: list(dict)
+        List of measurements matching the `Proteomics` schema.
+
+    Returns
+    -------
+    growth_rate: dict
+        New growth rate (will change if the model couldn't grow at the inputted value).
+    proteomics: list(dict)
+        Filtered list of proteomics.
+    warnings: list(str)
+        List of warnings with all flexibilized proteins.
+    """
+
+    # reset growth rate in model:
+    model.reactions.get_by_id(biomass_reaction).bounds = (0, 1000)
+
+    # build a table with protein ids, met ids in model and values to constrain with:
+    prot_df = pd.DataFrame()
+    for protein in proteomics:
+        protein_id = protein["identifier"]
+        lb, ub = bounds(protein["measurement"], protein["uncertainty"])
+        for met in model.metabolites.query(lambda m: protein_id in m.id):
+            new_row = pd.DataFrame(
+                data={"met_id": met.id, "value": ub}, index=[protein_id]
+            )
+            prot_df = prot_df.append(new_row)
+
+    # constrain the model with all proteins and optimize:
+    limit_proteins(model, prot_df["value"])
+    solution = model.optimize()
+    new_growth_rate = solution.objective_value
+
+    # while the model cannot grow to the desired level, remove the protein with
+    # the highest shadow price:
+    minimal_growth, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
+    prots_to_remove = []
+    warnings = []
+    while new_growth_rate < minimal_growth and not prot_df.empty:
+        # get most influential protein in model:
+        top_protein = top_shadow_prices(solution, list(prot_df["met_id"]))
+        top_protein = top_protein.index[0]
+        top_protein = prot_df.index[prot_df["met_id"] == top_protein][0]
+
+        # update data: append protein to list, remove from current dataframe and
+        # increase the corresponding upper bound to +1000:
+        prots_to_remove.append(top_protein)
+        prot_df = prot_df.drop(labels=top_protein)
+        limit_proteins(model, pd.Series(data=[1000], index=[top_protein]))
+        warning = (
+            f"Removed protein '{top_protein}' from the proteomics data for feasible "
+            f"simulations"
+        )
+        warnings.append(warning)
+
+        # re-compute solution:
+        solution = model.optimize()
+        if solution.objective_value == new_growth_rate:  # the algorithm is stuck
+            break
+        new_growth_rate = solution.objective_value
+
+    # update growth rate if optimization was not successful:
+    if new_growth_rate < minimal_growth:
+        if growth_rate["uncertainty"]:
+            growth_rate["measurement"] = new_growth_rate + growth_rate["uncertainty"]
+        else:
+            growth_rate["measurement"] = new_growth_rate
+
+    # update proteomics by removing flexibilized proteins:
+    for protein in prots_to_remove:
+        index = next(
+            (
+                index
+                for (index, dic) in enumerate(proteomics)
+                if dic["identifier"] == protein
+            ),
+            None,
+        )
+        del proteomics[index]
+
+    return growth_rate, proteomics, warnings
+
+
+def limit_proteins(model, measurements):
+    """Apply proteomics measurements to model.
+
+    Parameters
+    ----------
+    model: cobra.Model
+        The enzyme-constrained model.
+    measurements : pd.Series
+        Protein abundances in mmol / gDW.
+    """
+    for protein_id, measure in measurements.items():
+        try:
+            rxn = model.reactions.get_by_id(f"prot_{protein_id}_exchange")
+        except KeyError:
+            pass
+        else:
+            # update only upper_bound (as enzymes can be unsaturated):
+            rxn.bounds = (0, measure)
+    return
+
+
+def top_shadow_prices(solution, met_ids, top=1):
+    """
+    Retrieves shadow prices for a list of metabolites from the solution and ranks
+    them from most to least sensitive in the model.
+
+    Parameters
+    ----------
+    solution: cobra.Solution
+        The usual Solution object returned by model.optimize().
+    met_ids: iterable of strings
+        Subset of metabolite IDs from the model.
+    top: int
+        The number of metabolites to be returned.
+
+    Returns
+    -------
+    shadow_pr: pd.Series
+        Top shadow prices, ranked.
+    """
+    shadow_pr = solution.shadow_prices
+    shadow_pr = shadow_pr.loc[shadow_pr.index.isin(met_ids)]
+    return shadow_pr.sort_values()[:top]
+
+
+def bounds(measurement, uncertainty):
+    """Return resolved bounds based on measurement and uncertainty"""
+    if uncertainty:
+        return measurement - uncertainty, measurement + uncertainty
+    else:
+        return measurement, measurement

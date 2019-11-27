@@ -48,19 +48,28 @@ def models():
     id. For unit tests, consider using the function-scoped fixtures below to be able to
     make revertable modifications to the models.
     """
-    model_keys = {"e_coli_core": 1, "e_coli_core_proprietary": 2, "iJO1366": 3}
+    model_keys = {
+        "e_coli_core": 1,
+        "e_coli_core_proprietary": 2,
+        "iJO1366": 3,
+        "eciML1515": 4,
+    }
 
-    model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
+    model = read_sbml_model("tests/data/e_coli_core.xml.gz")
     storage._MODELS[model_keys["e_coli_core"]] = storage.ModelWrapper(
-        model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM"
+        model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
-    model = read_sbml_model("tests/data/e_coli_core.sbml.gz")
+    model = read_sbml_model("tests/data/e_coli_core.xml.gz")
     storage._MODELS[model_keys["e_coli_core_proprietary"]] = storage.ModelWrapper(
-        model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM"
+        model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
-    model = read_sbml_model("tests/data/iJO1366.sbml.gz")
+    model = read_sbml_model("tests/data/iJO1366.xml.gz")
     storage._MODELS[model_keys["iJO1366"]] = storage.ModelWrapper(
-        model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M"
+        model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M", False
+    )
+    model = read_sbml_model("tests/data/eciML1515.xml.gz")
+    storage._MODELS[model_keys["eciML1515"]] = storage.ModelWrapper(
+        model, None, "Escherichia coli", "BIOMASS_Ec_iML1515_core_75p37M", True
     )
     return model_keys
 
@@ -74,7 +83,7 @@ def e_coli_core(models):
     """
     wrapper = storage._MODELS[models["e_coli_core"]]
     with wrapper.model as model:
-        yield model, wrapper.biomass_reaction
+        yield model, wrapper.biomass_reaction, wrapper.is_ec_model
 
 
 @pytest.fixture(scope="function")
@@ -85,4 +94,17 @@ def iJO1366(models):
     """
     wrapper = storage._MODELS[models["iJO1366"]]
     with wrapper.model as model:
-        yield model, wrapper.biomass_reaction
+        yield model, wrapper.biomass_reaction, wrapper.is_ec_model
+
+
+@pytest.fixture(scope="function")
+def eciML1515(models):
+    """
+    Provide the eciML1515 model in a context manager, so that modifications are not
+    persisted beyond the scope of the test function. This is an enzyme-constrained
+    model, so it should only be used for testing enzyme-constrained related functions
+    (e.g. direct integration of proteomics data).
+    """
+    wrapper = storage._MODELS[models["eciML1515"]]
+    with wrapper.model as model:
+        yield model, wrapper.biomass_reaction, wrapper.is_ec_model

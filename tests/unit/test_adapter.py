@@ -31,7 +31,7 @@ def test_medium_salts():
 
 
 def test_medium_adapter(iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
     medium = [
         {"name": "Foo", "identifier": "CHEBI:63041", "namespace": "chebi"},
         {"name": "Bar", "identifier": "CHEBI:91249", "namespace": "chebi"},
@@ -60,7 +60,7 @@ def test_medium_adapter(iJO1366):
 
 
 def test_genotype_adapter(monkeypatch, iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
 
     # Disable GPR queries for efficiency
     monkeypatch.setattr(ICE, "get_reaction_equations", lambda self, genotype: {})
@@ -72,7 +72,7 @@ def test_genotype_adapter(monkeypatch, iJO1366):
 
 
 def test_measurements_adapter(iJO1366):
-    iJO1366, biomass_reaction = iJO1366
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
     uptake_secretion_rates = [
         {
             "name": "Foo",
@@ -105,8 +105,62 @@ def test_measurements_adapter(iJO1366):
             "uncertainty": 0,
         },
     ]
+    proteomics = {"identifier": "P0A8V2", "measurement": 5.03e-6, "uncertainty": 0}
     operations, warnings, errors = apply_measurements(
-        iJO1366, biomass_reaction, fluxomics, [], uptake_secretion_rates, [], None
+        iJO1366,
+        biomass_reaction,
+        is_ec_model,
+        fluxomics,
+        [],
+        proteomics,
+        uptake_secretion_rates,
+        [],
+        None,
     )
+    # 4 operations (2 rates + 2 fluxomics) + 1 warning (not an ecModel) are expected:
     assert len(operations) == 4
+    assert len(warnings) == 1
+    assert len(errors) == 0
+
+
+def test_proteomics_adapter(eciML1515):
+    eciML1515, biomass_reaction, is_ec_model = eciML1515
+    proteomics = [
+        {
+            "identifier": "P0A8V2",  # protein not in model (should be skipped)
+            "measurement": 5.03e-6,
+            "uncertainty": 0,
+        },
+        {
+            "identifier": "P0AFG8",
+            "measurement": 8.2e-3,  # very high value (should be kept)
+            "uncertainty": 8.2e-6,
+        },
+        {
+            "identifier": "P15254",
+            "measurement": 6.54e-8,  # very low value (should be removed)
+            "uncertainty": 0,
+        },
+        {
+            "identifier": "P0A6C5",
+            "measurement": 5.93e-8,  # very low value (should be removed)
+            "uncertainty": 0,
+        },
+    ]
+    growth_rate = {"measurement": 0.1, "uncertainty": 0.01}
+    operations, warnings, errors = apply_measurements(
+        eciML1515,
+        biomass_reaction,
+        is_ec_model,
+        [],
+        [],
+        proteomics,
+        [],
+        [],
+        growth_rate,
+    )
+    # 2 operations (1 proteomics + growth rate) + 3 warnings (1 skipped protein + 2
+    # removed proteins) are expected:
+    assert len(operations) == 2
+    assert len(warnings) == 3
     assert len(errors) == 0
