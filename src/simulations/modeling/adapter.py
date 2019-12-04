@@ -130,7 +130,7 @@ def apply_medium(model, medium):
             )
         except MetaboliteNotFound:
             warning = (
-                f"Cannot add medium compund '{compound.id}' - metabolite not found in "
+                f"Cannot add medium compound '{compound.id}' - metabolite not found in "
                 f"extracellular compartment '{extracellular}'"
             )
             warnings.append(warning)
@@ -542,10 +542,10 @@ def apply_measurements(
             logger.warning(warning)
             break
 
-    for uptake_rate in uptake_secretion_rates:
+    for rate in uptake_secretion_rates:
         try:
             metabolite = find_metabolite(
-                model, uptake_rate["identifier"], uptake_rate["namespace"], "e"
+                model, rate["identifier"], rate["namespace"], "e"
             )
         except MetaboliteNotFound as error:
             errors.append(str(error))
@@ -559,13 +559,10 @@ def apply_measurements(
                 )
                 continue
             exchange_reaction = next(iter(exchange_reactions))
-            lower_bound, upper_bound = bounds(
-                uptake_rate["measurement"], uptake_rate["uncertainty"]
-            )
+            lower_bound, upper_bound = bounds(rate["measurement"], rate["uncertainty"])
 
-            # data is adjusted assuming a forward exchange reaction, x <--
-            # (sign = -1), so if we instead actually have <-- x, then multiply with
-            # -1
+            # data is adjusted assuming a forward exchange reaction, i.e. x -->
+            # (sign = -1), so if we instead actually have --> x, then multiply with -1
             direction = exchange_reaction.metabolites[metabolite]
             if direction > 0:
                 lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
