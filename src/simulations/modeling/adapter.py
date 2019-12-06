@@ -34,7 +34,7 @@ with open("data/salts.json") as file_:
     SALTS = json.load(file_)
 
 
-def apply_medium(model, medium):
+def apply_medium(model, is_ec_model, medium):
     """
     Apply a medium to a metabolic model.
 
@@ -45,6 +45,8 @@ def apply_medium(model, medium):
     Parameters
     ----------
     model: cobra.Model
+    is_ec_model: bool
+        A boolean indicating if the model is enzyme-constrained.
     medium: list(dict)
         The medium definition, a list of dicts matching the `MediumCompound`
         schema.
@@ -139,6 +141,8 @@ def apply_medium(model, medium):
             exchange_reactions = extracellular_metabolite.reactions.intersection(
                 model.exchanges
             )
+            if is_ec_model and len(exchange_reactions) == 2:
+                exchange_reactions = get_ec_exchange_reaction(exchange_reactions, True)
             if len(exchange_reactions) != 1:
                 errors.append(
                     f"Medium compound metabolite '{extracellular_metabolite.id}' has "
@@ -551,6 +555,10 @@ def apply_measurements(
             errors.append(str(error))
         else:
             exchange_reactions = metabolite.reactions.intersection(model.exchanges)
+            if is_ec_model and len(exchange_reactions) == 2:
+                exchange_reactions = get_ec_exchange_reaction(
+                    exchange_reactions, rate["measurement"] < 0
+                )
             if len(exchange_reactions) != 1:
                 errors.append(
                     f"Measured metabolite '{metabolite['identifier']}' has "
@@ -585,3 +593,31 @@ def apply_measurements(
         warnings.append(warning)
         logger.warning(warning)
     return operations, warnings, errors
+
+
+def get_ec_exchange_reaction(exchange_reactions, consumption):
+    """
+        Finds the corresponding exchange reaction in the ecModel to modify.
+
+        Parameters
+        ----------
+        exchange_reactions: set(cobra.Reaction)
+            ecModels by construction have 2 exchange reactions: one for consumption
+            (with formula --> X, i.e. only 1 product) and one for production (with
+            formula X -->, i.e. only 1 reactant).
+        consumption: bool
+            True if the consumption exchange reaction is needed and False if the
+            production exchange reaction is needed instead.
+
+        Returns
+        -------
+        ec_exchange_reaction: cobra.Reaction
+            The desired exchange reaction.
+        """
+    ec_exchange_reaction = []
+    for reaction in exchange_reactions:
+        if (reaction.products and consumption) or (
+            reaction.reactants and not consumption
+        ):
+            ec_exchange_reaction.append(reaction)
+    return ec_exchange_reaction

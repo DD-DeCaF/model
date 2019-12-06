@@ -38,7 +38,7 @@ def test_medium_adapter(iJO1366):
         {"name": "Baz", "identifier": "CHEBI:86244", "namespace": "chebi"},
         {"name": "Goo", "identifier": "CHEBI:131387", "namespace": "chebi"},
     ]
-    operations, warnings, errors = apply_medium(iJO1366, medium)
+    operations, warnings, errors = apply_medium(iJO1366, is_ec_model, medium)
     # 30 warnings are expected; 29 unique compounds not found in the model and 1
     # unmapped ion from the salts mapping
     assert len(warnings) == 30
