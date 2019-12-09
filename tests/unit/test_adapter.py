@@ -59,6 +59,28 @@ def test_medium_adapter(iJO1366):
     )
 
 
+def test_medium_adapter_ec_model(eciML1515):
+    eciML1515, biomass_reaction, is_ec_model = eciML1515
+    medium = [
+        {"name": "glc", "identifier": "MNXM41", "namespace": "metanetx.chemical"},
+        {"name": "nh4", "identifier": "MNXM15", "namespace": "metanetx.chemical"},
+        {"name": "o2", "identifier": "MNXM4", "namespace": "metanetx.chemical"},
+    ]
+    operations, warnings, errors = apply_medium(eciML1515, is_ec_model, medium)
+    # 2 warnings are expected: trace metals (CHEBI:25517 and CHEBI:25368) not found in
+    # model, as eciML1515 does not have CHEBI ids.
+    assert len(warnings) == 2
+    assert len(errors) == 0
+    assert set(eciML1515.medium) == {
+        "EX_glc__D_e_REV",
+        "EX_nh4_e_REV",
+        "EX_o2_e_REV",
+    }
+    assert eciML1515.reactions.EX_glc__D_e_REV.upper_bound == +10
+    assert eciML1515.reactions.EX_nh4_e_REV.upper_bound == +1000
+    assert eciML1515.reactions.EX_o2_e_REV.upper_bound == +1000
+
+
 def test_genotype_adapter(monkeypatch, iJO1366):
     iJO1366, biomass_reaction, is_ec_model = iJO1366
 
@@ -123,7 +145,7 @@ def test_measurements_adapter(iJO1366):
     assert len(errors) == 0
 
 
-def test_proteomics_adapter(eciML1515):
+def test_measurements_adapter_ec_model(eciML1515):
     eciML1515, biomass_reaction, is_ec_model = eciML1515
     proteomics = [
         {
@@ -147,6 +169,22 @@ def test_proteomics_adapter(eciML1515):
             "uncertainty": 0,
         },
     ]
+    uptake_secretion_rates = [
+        {
+            "name": "glucose",
+            "identifier": "MNXM41",
+            "namespace": "metanetx.chemical",
+            "measurement": -9.8,
+            "uncertainty": 0,
+        },
+        {
+            "name": "ethanol",
+            "identifier": "MNXM303",
+            "namespace": "metanetx.chemical",
+            "measurement": 0.5,
+            "uncertainty": 0,
+        },
+    ]
     growth_rate = {"measurement": 0.1, "uncertainty": 0.01}
     operations, warnings, errors = apply_measurements(
         eciML1515,
@@ -155,12 +193,12 @@ def test_proteomics_adapter(eciML1515):
         [],
         [],
         proteomics,
-        [],
+        uptake_secretion_rates,
         [],
         growth_rate,
     )
-    # 2 operations (1 proteomics + growth rate) + 3 warnings (1 skipped protein + 2
-    # removed proteins) are expected:
-    assert len(operations) == 2
+    # 2 operations (1 protein + 1 uptake + 1 secretion + growth rate) + 3 warnings
+    # (1 skipped protein + 2 removed proteins) are expected:
+    assert len(operations) == 4
     assert len(warnings) == 3
     assert len(errors) == 0
