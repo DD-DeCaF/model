@@ -197,7 +197,7 @@ def test_measurements_adapter_ec_model(eciML1515):
         [],
         growth_rate,
     )
-    # 2 operations (1 protein + 1 uptake + 1 secretion + growth rate) + 3 warnings
+    # 4 operations (1 protein + 1 uptake + 1 secretion + growth rate) + 3 warnings
     # (1 skipped protein + 2 removed proteins) are expected:
     assert len(operations) == 4
     assert len(warnings) == 3
