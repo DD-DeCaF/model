@@ -83,7 +83,7 @@ def model_modify(
         warnings = []
         errors = []
         if medium:
-            results = apply_medium(model, medium)
+            results = apply_medium(model, model_wrapper.is_ec_model, medium)
             operations.extend(results[0])
             warnings.extend(results[1])
             errors.extend(results[2])
