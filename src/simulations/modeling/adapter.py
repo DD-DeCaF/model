@@ -22,7 +22,11 @@ from cobra.medium.boundary_types import find_external_compartment
 
 from simulations.exceptions import CompartmentNotFound, MetaboliteNotFound, PartNotFound
 from simulations.ice_client import ICE
-from simulations.modeling.cobra_helpers import find_metabolite, parse_bigg_compartment
+from simulations.modeling.cobra_helpers import (
+    find_metabolite,
+    get_exchange_reaction,
+    parse_bigg_compartment,
+)
 from simulations.modeling.driven import flexibilize_proteomics, minimize_distance
 from simulations.modeling.gnomic_helpers import feature_id
 
@@ -138,19 +142,9 @@ def apply_medium(model, is_ec_model, medium):
             warnings.append(warning)
             logger.warning(warning)
         else:
-            exchange_reactions = extracellular_metabolite.reactions.intersection(
-                model.exchanges
+            exchange_reaction = get_exchange_reaction(
+                extracellular_metabolite, is_ec_model, consumption=True
             )
-            if is_ec_model and len(exchange_reactions) == 2:
-                exchange_reactions = get_ec_exchange_reaction(exchange_reactions, True)
-            if len(exchange_reactions) != 1:
-                errors.append(
-                    f"Medium compound metabolite '{extracellular_metabolite.id}' has "
-                    f"{len(exchange_reactions)} exchange reactions in the model; "
-                    f"expected 1"
-                )
-                continue
-            exchange_reaction = next(iter(exchange_reactions))
 
             # If someone already figured out the uptake rate for the compound, it's
             # likely more accurate than our assumptions, so keep it
@@ -554,19 +548,9 @@ def apply_measurements(
         except MetaboliteNotFound as error:
             errors.append(str(error))
         else:
-            exchange_reactions = metabolite.reactions.intersection(model.exchanges)
-            if is_ec_model and len(exchange_reactions) == 2:
-                exchange_reactions = get_ec_exchange_reaction(
-                    exchange_reactions, rate["measurement"] < 0
-                )
-            if len(exchange_reactions) != 1:
-                errors.append(
-                    f"Measured metabolite '{metabolite['identifier']}' has "
-                    f"{len(exchange_reactions)} exchange reactions in the model; "
-                    f"expected 1"
-                )
-                continue
-            exchange_reaction = next(iter(exchange_reactions))
+            exchange_reaction = get_exchange_reaction(
+                metabolite, is_ec_model, consumption=rate["measurement"] < 0
+            )
             lower_bound, upper_bound = bounds(rate["measurement"], rate["uncertainty"])
 
             # data is adjusted assuming a forward exchange reaction, i.e. x -->
@@ -593,31 +577,3 @@ def apply_measurements(
         warnings.append(warning)
         logger.warning(warning)
     return operations, warnings, errors
-
-
-def get_ec_exchange_reaction(exchange_reactions, consumption):
-    """
-        Finds the corresponding exchange reaction in the ecModel to modify.
-
-        Parameters
-        ----------
-        exchange_reactions: set(cobra.Reaction)
-            ecModels by construction have 2 exchange reactions: one for consumption
-            (with formula --> X, i.e. only 1 product) and one for production (with
-            formula X -->, i.e. only 1 reactant).
-        consumption: bool
-            True if the consumption exchange reaction is needed and False if the
-            production exchange reaction is needed instead.
-
-        Returns
-        -------
-        ec_exchange_reaction: cobra.Reaction
-            The desired exchange reaction.
-        """
-    ec_exchange_reaction = []
-    for reaction in exchange_reactions:
-        if (reaction.products and consumption) or (
-            reaction.reactants and not consumption
-        ):
-            ec_exchange_reaction.append(reaction)
-    return ec_exchange_reaction

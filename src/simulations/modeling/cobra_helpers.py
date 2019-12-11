@@ -205,3 +205,60 @@ def parse_bigg_compartment(metabolite_id, model):
             compartment_id,
         )
     return metabolite_id, compartment_id
+
+
+def get_exchange_reaction(metabolite, is_ec_model=False, consumption=None):
+    """
+    Return a metabolite's exchange reaction.
+
+    Also supports ecModels. ecModels by construction have 2 exchange reactions:
+    one for consumption (with formula --> X, i.e. only 1 product) and one for
+    production (with formula X -->, i.e. only 1 reactant). For these cases, you
+    must specify the consumption parameter in order to receive the desired
+    exchange reaction.
+
+    Parameters
+    ----------
+    metabolite: cobra.Metabolite
+        The metabolite for which to find the exchange reaction. It must recide
+        in the extracellular compartment.
+    is_ec_model: bool (default False)
+        Whether the model is enzyme-constrained. If true, the consumption
+        parameter must also be specified
+    consumption: bool (default None)
+        True if the consumption exchange reaction is needed and False if the
+        production exchange reaction is needed instead.
+
+    Returns
+    -------
+    cobra.Reaction
+        The desired exchange reaction.
+
+    Raises
+    ------
+    TypeError
+        If is_ec_model is True and consumption is not specified.
+    ValueError
+        If the given metabolite does not have a single corresponding exchange
+        reaction.
+    """
+    model = metabolite.model
+    exchange_reactions = metabolite.reactions.intersection(model.exchanges)
+    if is_ec_model:
+        # For ecModels, as described above we expect two exchange reactions, so
+        # filter the list based on whether the caller desires consumption or
+        # secretion.
+        if type(consumption) != bool:
+            raise TypeError("Consumption must be specified for ecModels")
+        exchange_reactions = [
+            reaction
+            for reaction in exchange_reactions
+            if (reaction.products and consumption)
+            or (reaction.reactants and not consumption)
+        ]
+    if len(exchange_reactions) != 1:
+        raise ValueError(
+            f"The given metabolite has {len(exchange_reactions)} exchange "
+            "reactions; expected 1"
+        )
+    return next(iter(exchange_reactions))
