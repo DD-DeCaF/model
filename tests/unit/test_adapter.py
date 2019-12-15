@@ -184,6 +184,13 @@ def test_measurements_adapter_ec_model(eciML1515):
             "measurement": 0.5,
             "uncertainty": 0,
         },
+        {
+            "name": "not a match",
+            "identifier": "asdfgh",
+            "namespace": "metanetx.chemical",
+            "measurement": 1,
+            "uncertainty": 0,
+        },
     ]
     growth_rate = {"measurement": 0.1, "uncertainty": 0.01}
     operations, warnings, errors = apply_measurements(
@@ -198,7 +205,7 @@ def test_measurements_adapter_ec_model(eciML1515):
         growth_rate,
     )
     # 4 operations (1 protein + 1 uptake + 1 secretion + growth rate) + 3 warnings
-    # (1 skipped protein + 2 removed proteins) are expected:
+    # (1 skipped protein + 2 removed proteins) + 1 error (unmatched rate) are expected:
     assert len(operations) == 4
     assert len(warnings) == 3
-    assert len(errors) == 0
+    assert len(errors) == 1
