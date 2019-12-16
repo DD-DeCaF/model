@@ -555,9 +555,12 @@ def apply_measurements(
 
             # data is adjusted assuming a forward exchange reaction, i.e. x -->
             # (sign = -1), so if we instead actually have --> x, then multiply with -1
+            # and flip lower bound and upper bound, to properly adjust for uncertainty,
+            # e.g. if measurement = 3 and uncertainty = 0.3, then:
+            # lb, ub = -1*(3 + 0.3), -1*(3 - 0.3) = -3.3, -2.7
             direction = exchange_reaction.metabolites[metabolite]
             if direction > 0:
-                lower_bound, upper_bound = -1 * lower_bound, -1 * upper_bound
+                lower_bound, upper_bound = -1 * upper_bound, -1 * lower_bound
             exchange_reaction.bounds = lower_bound, upper_bound
             operations.append(
                 {

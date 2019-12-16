@@ -175,7 +175,7 @@ def test_measurements_adapter_ec_model(eciML1515):
             "identifier": "MNXM41",
             "namespace": "metanetx.chemical",
             "measurement": -9.8,
-            "uncertainty": 0,
+            "uncertainty": 0.3,
         },
         {
             "name": "ethanol",
