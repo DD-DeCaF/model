@@ -145,6 +145,44 @@ def test_measurements_adapter(iJO1366):
     assert len(errors) == 0
 
 
+def test_measurements_adapter_errors(iJO1366):
+    # record unmatched metabolites and reactions as errors
+    iJO1366, biomass_reaction, is_ec_model = iJO1366
+    uptake_secretion_rates = [
+        {
+            "name": "not a match",
+            "identifier": "CHEBI:123456789",  # non-existing id
+            "namespace": "chebi",
+            "measurement": 4.9,
+            "uncertainty": 0,
+        },
+    ]
+    fluxomics = [
+        {
+            "name": "not a match",
+            "identifier": "ASDFGHJKL",  # non-existing id
+            "namespace": "bigg.reaction",
+            "measurement": 5,
+            "uncertainty": 0,
+        },
+    ]
+    operations, warnings, errors = apply_measurements(
+        iJO1366,
+        biomass_reaction,
+        is_ec_model,
+        fluxomics,
+        [],
+        [],
+        uptake_secretion_rates,
+        [],
+        None,
+    )
+    # 2 errors (metabolite not found + reaction not found) are expected:
+    assert len(operations) == 0
+    assert len(warnings) == 0
+    assert len(errors) == 2
+
+
 def test_measurements_adapter_ec_model(eciML1515):
     # successfully flexibilize -> apply kinetics + growth rate + only 1 protein
     eciML1515, biomass_reaction, is_ec_model = eciML1515
