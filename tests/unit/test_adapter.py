@@ -146,13 +146,9 @@ def test_measurements_adapter(iJO1366):
 
 
 def test_measurements_adapter_ec_model(eciML1515):
+    # successfully flexibilize -> apply kinetics + growth rate + only 1 protein
     eciML1515, biomass_reaction, is_ec_model = eciML1515
     proteomics = [
-        {
-            "identifier": "P0A8V2",  # protein not in model (should be skipped)
-            "measurement": 5.03e-6,
-            "uncertainty": 0,
-        },
         {
             "identifier": "P0AFG8",
             "measurement": 8.2e-3,  # very high value (should be kept)
@@ -161,11 +157,6 @@ def test_measurements_adapter_ec_model(eciML1515):
         {
             "identifier": "P15254",
             "measurement": 6.54e-8,  # very low value (should be removed)
-            "uncertainty": 0,
-        },
-        {
-            "identifier": "P0A6C5",
-            "measurement": 5.93e-8,  # very low value (should be removed)
             "uncertainty": 0,
         },
     ]
@@ -184,13 +175,6 @@ def test_measurements_adapter_ec_model(eciML1515):
             "measurement": 0.5,
             "uncertainty": 0,
         },
-        {
-            "name": "not a match",
-            "identifier": "asdfgh",
-            "namespace": "metanetx.chemical",
-            "measurement": 1,
-            "uncertainty": 0,
-        },
     ]
     growth_rate = {"measurement": 0.1, "uncertainty": 0.01}
     operations, warnings, errors = apply_measurements(
@@ -204,8 +188,32 @@ def test_measurements_adapter_ec_model(eciML1515):
         [],
         growth_rate,
     )
-    # 4 operations (1 protein + 1 uptake + 1 secretion + growth rate) + 3 warnings
-    # (1 skipped protein + 2 removed proteins) + 1 error (unmatched rate) are expected:
+    # 4 operations (1 protein + 1 uptake + 1 secretion + growth rate) + 1 warning
+    # (removed protein due to flexibilization) are expected:
     assert len(operations) == 4
-    assert len(warnings) == 3
-    assert len(errors) == 1
+    assert len(warnings) == 1
+    assert len(errors) == 0
+
+
+def test_measurements_adapter_ec_model_skip(eciML1515):
+    # skip flexibilization (no growth rate provided) + skip unmatched protein
+    eciML1515, biomass_reaction, is_ec_model = eciML1515
+    proteomics = [
+        {
+            "identifier": "P15254",
+            "measurement": 6.54e-8,  # protein in model (should be kept)
+            "uncertainty": 0,
+        },
+        {
+            "identifier": "P0A8V2",  # protein not in model (should be skipped)
+            "measurement": 5.03e-6,
+            "uncertainty": 0,
+        },
+    ]
+    operations, warnings, errors = apply_measurements(
+        eciML1515, biomass_reaction, is_ec_model, [], [], proteomics, [], [], []
+    )
+    # 1 operation (kept protein) + 1 warning (skipped protein) are expected:
+    assert len(operations) == 1
+    assert len(warnings) == 1
+    assert len(errors) == 0
