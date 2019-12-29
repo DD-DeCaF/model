@@ -195,15 +195,16 @@ def flexibilize_proteomics(
         List of warnings with all flexibilized proteins.
     """
 
+    warnings = []
     for rate in uptake_secretion_rates:
         try:
             metabolite = find_metabolite(
                 model, rate["identifier"], rate["namespace"], "e"
             )
         except MetaboliteNotFound:
-            # This error will already be raised by the adapter, so does not need to be
-            # logged twice:
-            continue
+            # This simulation will not be completed as the adapter will return an error,
+            # so the flexibilization can be interrupted:
+            return growth_rate, proteomics, warnings
         else:
             exchange_reaction = get_exchange_reaction(
                 metabolite, True, consumption=rate["measurement"] < 0
@@ -237,7 +238,6 @@ def flexibilize_proteomics(
     # the highest shadow price:
     minimal_growth, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
     prots_to_remove = []
-    warnings = []
     while new_growth_rate < minimal_growth and not prot_df.empty:
         # get most influential protein in model:
         top_protein = top_shadow_prices(solution, list(prot_df["met_id"]))
