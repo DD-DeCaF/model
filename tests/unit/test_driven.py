@@ -16,7 +16,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from simulations.modeling.driven import adjust_fluxes2model, minimize_distance
+from simulations.modeling.driven import (
+    adjust_fluxes2model,
+    flexibilize_proteomics,
+    minimize_distance,
+)
 
 
 def test_minimize_distance_no_growth_rate(iJO1366):
@@ -223,3 +227,65 @@ def test_adjust_fluxes2model(iJO1366):
 
     assert expected_distance == pytest.approx(solution.objective_value)
     assert expected_distance == pytest.approx(calculated_distance)
+
+
+def test_flexibilize_proteins(eciML1515):
+    # successfully flexibilize -> modify proteomics
+    eciML1515, biomass_reaction, is_ec_model = eciML1515
+    proteomics = [
+        {
+            "identifier": "P0AFG8",
+            "measurement": 8.2e-3,  # very high value (should be kept)
+            "uncertainty": 8.2e-6,
+        },
+        {
+            "identifier": "P15254",
+            "measurement": 6.54e-8,  # very low value (should be removed)
+            "uncertainty": 0,
+        },
+        {
+            "identifier": "P0A6C5",
+            "measurement": 5.93e-8,  # very low value (should be removed)
+            "uncertainty": 0,
+        },
+    ]
+    growth_rate = {"measurement": 0.1, "uncertainty": 0.01}
+    growth_rate, proteomics, warnings = flexibilize_proteomics(
+        eciML1515, biomass_reaction, growth_rate, proteomics, []
+    )
+    # 2 proteins should be removed from the dataset, leaving them as warnings:
+    assert len(proteomics) == 1
+    assert len(warnings) == 2
+
+
+def test_flexibilize_proteins_skip(eciML1515):
+    # skip flexibilization due to unmatched rate -> keep proteomics unaltered
+    eciML1515, biomass_reaction, is_ec_model = eciML1515
+    proteomics = [
+        {
+            "identifier": "P0AFG8",  # very high value (should be kept)
+            "measurement": 8.2e-3,
+            "uncertainty": 8.2e-6,
+        },
+        {
+            "identifier": "P15254",  # very low value (should be removed)
+            "measurement": 6.54e-8,
+            "uncertainty": 0,
+        },
+    ]
+    uptake_secretion_rates = [
+        {
+            "name": "not a match",
+            "identifier": "asdfgh",  # will return error and not flexibilize
+            "namespace": "metanetx.chemical",
+            "measurement": 1,
+            "uncertainty": 0,
+        }
+    ]
+    growth_rate = {"measurement": 0.1, "uncertainty": 0.01}
+    growth_rate, proteomics, warnings = flexibilize_proteomics(
+        eciML1515, biomass_reaction, growth_rate, proteomics, uptake_secretion_rates
+    )
+    # no flexibilization should have occurred:
+    assert len(proteomics) == 2
+    assert len(warnings) == 0

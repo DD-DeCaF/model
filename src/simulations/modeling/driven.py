@@ -18,6 +18,9 @@ import numpy as np
 import pandas as pd
 from optlang.symbolics import Zero
 
+from simulations.exceptions import MetaboliteNotFound
+from simulations.modeling.cobra_helpers import find_metabolite, get_exchange_reaction
+
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +165,9 @@ def adjust_fluxes2model(
     return solution
 
 
-def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
+def flexibilize_proteomics(
+    model, biomass_reaction, growth_rate, proteomics, uptake_secretion_rates
+):
     """
     Replace proteomics measurements with a set that enables the model to grow. Proteins
     are removed from the set iteratively based on sensitivity analysis (shadow prices).
@@ -177,6 +182,8 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
         Growth rate, matching the `GrowthRate` schema.
     proteomics: list(dict)
         List of measurements matching the `Proteomics` schema.
+    uptake_secretion_rates: list(dict)
+        List of measurements matching the `UptakeSecretionRates` schema.
 
     Returns
     -------
@@ -187,6 +194,26 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     warnings: list(str)
         List of warnings with all flexibilized proteins.
     """
+
+    warnings = []
+    for rate in uptake_secretion_rates:
+        try:
+            metabolite = find_metabolite(
+                model, rate["identifier"], rate["namespace"], "e"
+            )
+        except MetaboliteNotFound:
+            # This simulation will not be completed as the adapter will return an error,
+            # so the flexibilization can be interrupted:
+            return growth_rate, proteomics, warnings
+        else:
+            exchange_reaction = get_exchange_reaction(
+                metabolite, True, consumption=rate["measurement"] < 0
+            )
+            # All exchange reactions in an ec_model have only positive fluxes, so we can
+            # simply assign the absolute value of the measurement:
+            exchange_reaction.bounds = bounds(
+                abs(rate["measurement"]), rate["uncertainty"]
+            )
 
     # reset growth rate in model:
     model.reactions.get_by_id(biomass_reaction).bounds = (0, 1000)
@@ -211,7 +238,6 @@ def flexibilize_proteomics(model, biomass_reaction, growth_rate, proteomics):
     # the highest shadow price:
     minimal_growth, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
     prots_to_remove = []
-    warnings = []
     while new_growth_rate < minimal_growth and not prot_df.empty:
         # get most influential protein in model:
         top_protein = top_shadow_prices(solution, list(prot_df["met_id"]))

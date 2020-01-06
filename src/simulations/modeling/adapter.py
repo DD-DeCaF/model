@@ -464,7 +464,7 @@ def apply_measurements(
     # proteomics data and redefine the growth rate based on simulations.
     if growth_rate and proteomics and is_ec_model:
         growth_rate, proteomics, prot_warnings = flexibilize_proteomics(
-            model, biomass_reaction, growth_rate, proteomics
+            model, biomass_reaction, growth_rate, proteomics, uptake_secretion_rates
         )
         for warning in prot_warnings:
             warnings.append(warning)
