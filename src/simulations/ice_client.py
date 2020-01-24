@@ -32,7 +32,7 @@ class ICE(metaclass=Singleton):
 
     def __init__(self):
         """On instantiation, request and store a session id for later use."""
-        if os.environ["ENVIRONMENT"] in ("production", "staging", "testing"):
+        if os.environ["ENVIRONMENT"] in ("production", "staging"):
             self._update_session_id()
         else:
             # To speed up development, don't set a valid session id on init but rely on
