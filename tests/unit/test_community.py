@@ -17,6 +17,7 @@ import pytest
 from simulations.modeling.community import simulate
 
 
+@pytest.mark.slow
 def test_community_simulation(e_coli_core, iJO1366):
     e_coli_core, biomass_reaction, is_ec_model = e_coli_core
     iJO1366, biomass_reaction, is_ec_model = iJO1366
