@@ -234,9 +234,13 @@ def flexibilize_proteomics(
     solution = model.optimize()
     new_growth_rate = solution.objective_value
 
+    # define the minimal growth required by the flexibilization based on the lower bound
+    # of the growth rate, plus an extra 5%  to ensure feasible simulations later on:
+    minimal_growth, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
+    minimal_growth *= 1.05
+
     # while the model cannot grow to the desired level, remove the protein with
     # the highest shadow price:
-    minimal_growth, ub = bounds(growth_rate["measurement"], growth_rate["uncertainty"])
     prots_to_remove = []
     while new_growth_rate < minimal_growth and not prot_df.empty:
         # get most influential protein in model:
