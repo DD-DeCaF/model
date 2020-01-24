@@ -101,3 +101,9 @@ class SimulationRequest(Schema):
     objective_id = fields.String(missing=None)
     objective_direction = fields.String(missing=None)
     operations = fields.Nested(Operation, many=True, missing=[])
+
+
+class CommunitySimulationRequest(Schema):
+    model_ids = fields.List(fields.Integer(), required=True)
+    # TODO: Consider using nested MediumCompounds here.
+    medium = fields.List(fields.String(), required=True)

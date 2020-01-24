@@ -23,6 +23,7 @@ from prometheus_client.multiprocess import MultiProcessCollector
 
 from simulations import storage
 from simulations.exceptions import Forbidden, ModelNotFound, Unauthorized
+from simulations.modeling import community
 from simulations.modeling.adapter import (
     apply_genotype,
     apply_measurements,
@@ -30,7 +31,11 @@ from simulations.modeling.adapter import (
 )
 from simulations.modeling.operations import apply_operations
 from simulations.modeling.simulations import simulate
-from simulations.schemas import ModificationRequest, SimulationRequest
+from simulations.schemas import (
+    CommunitySimulationRequest,
+    ModificationRequest,
+    SimulationRequest,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -45,6 +50,9 @@ def init_app(app):
         "/models/<int:model_id>/modify", view_func=model_modify, methods=["POST"]
     )
     app.add_url_rule("/simulate", view_func=model_simulate, methods=["POST"])
+    app.add_url_rule(
+        "/community/simulate", view_func=model_community_simulate, methods=["POST"]
+    )
 
     docs = FlaskApiSpec(app)
     docs.register(model_modify, endpoint=model_modify.__name__)
@@ -160,6 +168,21 @@ def model_simulate(model_id, method, objective_id, objective_direction, operatio
                     "growth_rate": growth_rate,
                 }
             )
+
+
+@use_kwargs(CommunitySimulationRequest)
+def model_community_simulate(model_ids, medium):
+    try:
+        model_wrappers = [storage.get(model_id) for model_id in model_ids]
+    except Unauthorized as error:
+        abort(401, error.message)  # noqa: B306
+    except Forbidden as error:
+        abort(403, error.message)  # noqa: B306
+    except ModelNotFound as error:
+        abort(404, error.message)  # noqa: B306
+
+    models = [wrapper.model for wrapper in model_wrappers]
+    return community.simulate(models, medium)
 
 
 def metrics():
