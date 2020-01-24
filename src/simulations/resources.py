@@ -57,6 +57,7 @@ def init_app(app):
     docs = FlaskApiSpec(app)
     docs.register(model_modify, endpoint=model_modify.__name__)
     docs.register(model_simulate, endpoint=model_simulate.__name__)
+    docs.register(model_community_simulate, endpoint=model_community_simulate.__name__)
 
 
 @use_kwargs(ModificationRequest)
