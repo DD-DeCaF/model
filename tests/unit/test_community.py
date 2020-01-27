@@ -15,6 +15,7 @@
 import pytest
 
 from simulations.modeling.community import METHODS, simulate
+from simulations.storage import ModelWrapper
 
 
 @pytest.mark.slow
@@ -22,7 +23,24 @@ from simulations.modeling.community import METHODS, simulate
 def test_community_simulation(e_coli_core, iJO1366, method):
     e_coli_core, biomass_reaction, is_ec_model = e_coli_core
     iJO1366, biomass_reaction, is_ec_model = iJO1366
-    result = simulate([e_coli_core, iJO1366], [], method)
+    # Create fake wrappers
+    wrappers = [
+        ModelWrapper(
+            model=e_coli_core,
+            project_id=None,
+            organism_id=None,
+            biomass_reaction=None,
+            is_ec_model=False,
+        ),
+        ModelWrapper(
+            model=iJO1366,
+            project_id=None,
+            organism_id=None,
+            biomass_reaction=None,
+            is_ec_model=False,
+        ),
+    ]
+    result = simulate(wrappers, [], method)
     assert result["growth_rate"] == pytest.approx(0)
     assert result["abundance"]["e_coli_core"] == pytest.approx(0.967027244770635)
     assert result["abundance"]["iJO1366"] == pytest.approx(0.03297275522936505)
