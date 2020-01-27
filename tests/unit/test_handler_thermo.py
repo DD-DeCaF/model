@@ -28,23 +28,23 @@ def thermo_model(iJO1366):
 def test_handlerThermo_consistency(iJO1366):
     """Check if FBA isn't altered after the conversion."""
     iJO1366, biomass_reaction, is_ec_model = iJO1366
-    fba_solution = iJO1366.optimize()
+    fba_solution = iJO1366.optimize().fluxes
     tmodel = HandlerThermo(iJO1366)
     tmodel._convert()
-    assert (tmodel.optimize() == fba_solution).all()
+    assert (tmodel.optimize().fluxes == fba_solution).all()
 
 
 def test_tmfa(iJO1366, tmodel):
     """Check if it affects the solution."""
     iJO1366, biomass_reaction, is_ec_model = iJO1366
-    fba_solution = iJO1366.optimize()
-    thermo_solution = tmodel.tmfa()
+    fba_solution = iJO1366.optimize().fluxes
+    thermo_solution = tmodel.tmfa().fluxes
     assert (thermo_solution != fba_solution).any()
 
 
 def test_metabolomics(tmodel):
     """Check if it affects the TMFA solution."""
-    solution_before = tmodel.tmfa()
+    solution_before = tmodel.tmfa().fluxes
     metabolomics = [
         {
             "name": "D-Glucose",
@@ -55,5 +55,5 @@ def test_metabolomics(tmodel):
         }
     ]
     tmodel._apply_metabolomics(metabolomics)
-    solution_metabolomics = tmodel.tmfa()
+    solution_metabolomics = tmodel.tmfa().fluxes
     assert (solution_before != solution_metabolomics).any()
