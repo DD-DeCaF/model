@@ -26,6 +26,7 @@ def test_community_simulation(e_coli_core, iJO1366, method):
     # Create fake wrappers
     wrappers = [
         ModelWrapper(
+            id=1,
             model=e_coli_core,
             project_id=None,
             organism_id=None,
@@ -33,6 +34,7 @@ def test_community_simulation(e_coli_core, iJO1366, method):
             is_ec_model=False,
         ),
         ModelWrapper(
+            id=2,
             model=iJO1366,
             project_id=None,
             organism_id=None,
