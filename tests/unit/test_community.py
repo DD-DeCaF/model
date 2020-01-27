@@ -44,7 +44,7 @@ def test_community_simulation(e_coli_core, iJO1366, method):
     ]
     result = simulate(wrappers, [], method)
     assert result["growth_rate"] == pytest.approx(0)
-    abundance = next(r for r in result["abundance"] if r["id"] == "e_coli_core")
+    abundance = next(r for r in result["abundance"] if r["id"] == 1)
     assert abundance["value"] == pytest.approx(0.967027244770635)
-    abundance = next(r for r in result["abundance"] if r["id"] == "iJO1366")
+    abundance = next(r for r in result["abundance"] if r["id"] == 2)
     assert abundance["value"] == pytest.approx(0.03297275522936505)
