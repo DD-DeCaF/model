@@ -49,7 +49,9 @@ def simulate(wrappers, medium, method):
         # minimal.
         with tempfile.NamedTemporaryFile() as file_:
             cobra.io.write_sbml_model(model, file_.name)
-            rf_models.append(reframed.load_cbmodel(file_.name))
+            # TODO: Consider accepting the flavor argument as a parameter
+            # instead of always assuming BiGG.
+            rf_models.append(reframed.load_cbmodel(file_.name, flavor="bigg"))
 
     logger.debug("Merging individual models to a community")
     community = reframed.Community("community", rf_models)
