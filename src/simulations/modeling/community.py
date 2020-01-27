@@ -68,8 +68,22 @@ def simulate(wrappers, medium, method):
         solution = reframed.SteadierCom(community)
 
     logger.debug(f"Formatting solution response")
+    # Convert the iterables to dictionaries for easier handling on the frontend
+    abundance = [
+        {"id": model_id, "value": abundance}
+        for model_id, abundance in solution.abundance.items()
+    ]
+    cross_feeding = [
+        {
+            "from": cross_feeding[0],
+            "to": cross_feeding[1],
+            "metabolite": cross_feeding[2],
+            "value": cross_feeding[3],
+        }
+        for cross_feeding in solution.cross_feeding()
+    ]
     return {
         "growth_rate": solution.growth,
-        "abundance": solution.abundance,
-        "cross_feeding": solution.cross_feeding(),
+        "abundance": abundance,
+        "cross_feeding": cross_feeding,
     }
