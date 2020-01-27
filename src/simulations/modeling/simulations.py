@@ -20,7 +20,7 @@ from cobra.flux_analysis import flux_variability_analysis, pfba
 
 logger = logging.getLogger(__name__)
 
-METHODS = ["fba", "pfba", "fva", "pfba-fva"]
+METHODS = ["fba", "pfba", "fva", "pfba-fva", "tmfa"]
 
 
 def simulate(model, biomass_reaction, method, objective_id, objective_direction):
