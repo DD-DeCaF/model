@@ -172,7 +172,7 @@ def model_simulate(model_id, method, objective_id, objective_direction, operatio
 
 
 @use_kwargs(CommunitySimulationRequest)
-def model_community_simulate(model_ids, medium):
+def model_community_simulate(model_ids, medium, method):
     try:
         model_wrappers = [storage.get(model_id) for model_id in model_ids]
     except Unauthorized as error:
@@ -183,7 +183,7 @@ def model_community_simulate(model_ids, medium):
         abort(404, error.message)  # noqa: B306
 
     models = [wrapper.model for wrapper in model_wrappers]
-    return community.simulate(models, medium)
+    return community.simulate(models, medium, method)
 
 
 def metrics():

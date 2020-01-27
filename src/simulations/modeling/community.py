@@ -21,8 +21,10 @@ import reframed
 
 logger = logging.getLogger(__name__)
 
+METHODS = ["steadycom", "steadiercom"]
 
-def simulate(models, medium):
+
+def simulate(models, medium, method):
     """
     Run a SteadyCom community simulation.
 
@@ -33,7 +35,12 @@ def simulate(models, medium):
     medium: list(str)
         A list of compound names. Exchange reaction identifiers are assumed to
         be formatted according to: "EX_{compound}_e"
+    method: str
+        The community simulation method. Currently accepted strings:
+        "steadycom" or "steadiercom".
     """
+    if method not in METHODS:
+        raise ValueError(f"Unsupported community simulation method '{method}'")
     logger.debug("Converting cobrapy models to reframed models")
     rf_models = []
     for model in models:
@@ -53,8 +60,12 @@ def simulate(models, medium):
     )
     environment.apply(community.merged_model, inplace=True)
 
-    logger.info(f"Simulating community model with SteadyCom")
-    solution = reframed.SteadyCom(community)
+    if method == "steadycom":
+        logger.info(f"Simulating community model with SteadyCom")
+        solution = reframed.SteadyCom(community)
+    elif method == "steadiercom":
+        logger.info(f"Simulating community model with SteadyCom")
+        solution = reframed.SteadierCom(community)
 
     logger.debug(f"Formatting solution response")
     return {

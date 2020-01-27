@@ -15,7 +15,9 @@
 """Marshmallow schemas for marshalling the API endpoints."""
 
 import gnomic
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, validate
+
+from simulations.modeling.community import METHODS
 
 
 # For all reaction and compound references: `namespace` should match a namespace
@@ -107,3 +109,4 @@ class CommunitySimulationRequest(Schema):
     model_ids = fields.List(fields.Integer(), required=True)
     # TODO: Consider using nested MediumCompounds here.
     medium = fields.List(fields.String(), required=True)
+    method = fields.String(validate=validate.OneOf(METHODS), required=True)
