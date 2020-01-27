@@ -182,8 +182,7 @@ def model_community_simulate(model_ids, medium, method):
     except ModelNotFound as error:
         abort(404, error.message)  # noqa: B306
 
-    models = [wrapper.model for wrapper in model_wrappers]
-    return community.simulate(models, medium, method)
+    return community.simulate(model_wrappers, medium, method)
 
 
 def metrics():

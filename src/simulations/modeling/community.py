@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 METHODS = ["steadycom", "steadiercom"]
 
 
-def simulate(models, medium, method):
+def simulate(wrappers, medium, method):
     """
     Run a SteadyCom community simulation.
 
     Parameters
     ----------
-    models: list(cobra.Model)
-        A list of cobrapy model instances.
+    wrappers: list(storage.ModelWrapper)
+        A list of model wrappers containing cobrapy model instances.
     medium: list(str)
         A list of compound names. Exchange reaction identifiers are assumed to
         be formatted according to: "EX_{compound}_e"
@@ -43,7 +43,7 @@ def simulate(models, medium, method):
         raise ValueError(f"Unsupported community simulation method '{method}'")
     logger.debug("Converting cobrapy models to reframed models")
     rf_models = []
-    for model in models:
+    for model in [wrapper.model for wrapper in wrappers]:
         # The most funcational approach (albeit slow) seems to be to write and
         # reload SBML. reframed's cobrapy integration is currently pretty
         # minimal.
