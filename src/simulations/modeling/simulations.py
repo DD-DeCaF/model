@@ -46,11 +46,17 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
             solution = flux_variability_analysis(
                 model, fraction_of_optimum=1, pfba_factor=1.05
             )
+        elif method == "tmfa":
+            try:
+                solution = model.tmfa()
+            except AttributeError:
+                raise OptimizationError("Metabolomics must be provided to"
+                                        "perform TMFA.")
     except OptimizationError as error:
         logger.info(f"Optimization Error: {error}")
         raise
     else:
-        if method in ("fba", "pfba"):
+        if method in ("fba", "pfba", "tmfa"):
             flux_distribution = solution.fluxes.to_dict()
             growth_rate = flux_distribution[biomass_reaction]
         elif method in ("fva", "pfba-fva"):
