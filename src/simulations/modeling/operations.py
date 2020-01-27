@@ -100,5 +100,4 @@ def _knockout_gene(model, id):
 
 def _apply_metabolomics(model, metabolomics):
     logger.debug(f"Creating thermodynamic model from '{model.id}'")
-    model = HandlerThermo(model)
-    model._apply_metabolomics(metabolomics)
+    model = HandlerThermo(model, metabolomics)

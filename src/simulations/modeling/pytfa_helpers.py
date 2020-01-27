@@ -13,11 +13,13 @@
 # limitations under the License.
 
 import logging
-# from os.path import dirname, join
+import json
 
-from pytfa.thermo.equilibrator import build_thermo_from_equilibrator
+from os.path import dirname, join
+
+# from pytfa.thermo.equilibrator import build_thermo_from_equilibrator
 from pytfa import ThermoModel
-# from pytfa.io import load_thermoDB
+from pytfa.io import load_thermoDB
 from pytfa.optim import relax_dgo
 
 from math import log
@@ -36,10 +38,13 @@ class HandlerThermo:
     is supplied but the simulations method is not TMFA.
     """
 
-    def __init__(self, model):
+    def __init__(self, model, metabolomics=None):
         # TODO: check if the solver is properly handled by the package.
         self.cobra_model = model
         self.thermo_model = None
+        # required as attribute since they are applied after
+        # the conversion is produced (just called if .tmfa() is called)
+        self.metabolomics = metabolomics
 
     def __getattr__(self, item):
         """Expose `cobra.Model` API."""
@@ -48,17 +53,22 @@ class HandlerThermo:
     def _convert(self):
         """Extracts thermodynamic data from equilibrator to then create the
         Thermodynamic model."""
-        thermo_data = build_thermo_from_equilibrator(self.cobra_model)
-        # thermo_data = load_thermoDB(
-        #     join(dirname(__file__), "../../../data/thermo_data.thermodb")
-        # )
-        tmodel = ThermoModel(thermo_data, self.model)
+        # thermo_data = build_thermo_from_equilibrator(self.cobra_model)
+        thermo_data = load_thermoDB(
+            join(dirname(__file__), "../../../data/thermo_data.thermodb")
+        )
+        tmodel = ThermoModel(thermo_data, self.cobra_model)
+        # while not input from user, use some default data from iJ1366
+        with open(
+            join(dirname(__file__), "../../../data/compartment_data.json")
+        ) as default_comp:
+            tmodel.compartments = json.load(default_comp)
         # create the variables and the constraints for the TMFA LP problem
         tmodel.prepare()
         tmodel.convert()
         self.thermo_model = tmodel
 
-    def apply_metabolomics(self, metabolomics):
+    def apply_metabolomics(self):
         """Apply metabolomics measurements to the TMFA problem.
 
         It is important to note that uncertinty provided by the user is
@@ -67,7 +77,7 @@ class HandlerThermo:
         logger.debug(
             f"Aplying metabolomics data to ThermoModel '{self.cobra_model.id}'"
         )
-        for measure in metabolomics:
+        for measure in self.metabolomics:
             met = measure["identifier"]
             conc = measure["measurement"]
             the_conc_var = self.thermo_model.log_concentration.get_by_id(met)
