@@ -45,7 +45,7 @@ def test_tmfa(iJO1366, tmodel):
 def test_metabolomics(tmodel):
     """Check if it affects the TMFA solution."""
     solution_before = tmodel.tmfa().fluxes
-    metabolomics = [
+    tmodel.metabolomics = [
         {
             "name": "D-Glucose",
             "identifier": "glc__D",
@@ -54,6 +54,5 @@ def test_metabolomics(tmodel):
             "uncertainty": 0.01,
         }
     ]
-    tmodel._apply_metabolomics(metabolomics)
     solution_metabolomics = tmodel.tmfa().fluxes
     assert (solution_before != solution_metabolomics).any()
