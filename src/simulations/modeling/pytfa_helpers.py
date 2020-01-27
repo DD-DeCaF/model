@@ -13,13 +13,15 @@
 # limitations under the License.
 
 import logging
-import json
 
 from os.path import dirname, join
-
 # from pytfa.thermo.equilibrator import build_thermo_from_equilibrator
 from pytfa import ThermoModel
-from pytfa.io import load_thermoDB
+from pytfa.io import (
+    load_thermoDB,
+    apply_compartment_data,
+    read_compartment_data,
+)
 from pytfa.optim import relax_dgo
 
 from math import log
@@ -58,11 +60,14 @@ class HandlerThermo:
             join(dirname(__file__), "../../../data/thermo_data.thermodb")
         )
         tmodel = ThermoModel(thermo_data, self.cobra_model)
+        tmodel.solver = "optlang-glpk"
         # while not input from user, use some default data from iJ1366
-        with open(
-            join(dirname(__file__), "../../../data/compartment_data.json")
-        ) as default_comp:
-            tmodel.compartments = json.load(default_comp)
+        apply_compartment_data(
+            tmodel,
+            read_compartment_data(
+                join(dirname(__file__), "../../../data/compartment_data.json")
+            ),
+        )
         # create the variables and the constraints for the TMFA LP problem
         tmodel.prepare()
         tmodel.convert()
