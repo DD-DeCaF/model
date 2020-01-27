@@ -68,15 +68,22 @@ def simulate(wrappers, medium, method):
         solution = reframed.SteadierCom(community)
 
     logger.debug(f"Formatting solution response")
+
+    def model_id(original_id):
+        """Map the models original name back to our platform internal DB IDs."""
+        return next(
+            wrapper.id for wrapper in wrappers if wrapper.model.id == original_id
+        )
+
     # Convert the iterables to dictionaries for easier handling on the frontend
     abundance = [
-        {"id": model_id, "value": abundance}
-        for model_id, abundance in solution.abundance.items()
+        {"id": model_id(original_id), "value": abundance}
+        for original_id, abundance in solution.abundance.items()
     ]
     cross_feeding = [
         {
-            "from": cross_feeding[0],
-            "to": cross_feeding[1],
+            "from": model_id(cross_feeding[0]),
+            "to": model_id(cross_feeding[1]),
             "metabolite": cross_feeding[2],
             "value": cross_feeding[3],
         }
