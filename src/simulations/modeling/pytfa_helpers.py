@@ -60,7 +60,6 @@ class HandlerThermo:
             join(dirname(__file__), "../../../data/thermo_data.thermodb")
         )
         tmodel = ThermoModel(thermo_data, self.cobra_model)
-        tmodel.solver = "optlang-glpk"
         # while not input from user, use some default data from iJ1366
         apply_compartment_data(
             tmodel,
@@ -70,7 +69,7 @@ class HandlerThermo:
         )
         # create the variables and the constraints for the TMFA LP problem
         tmodel.prepare()
-        tmodel.convert()
+        tmodel.convert(add_displacement=True)
         self.thermo_model = tmodel
 
     def apply_metabolomics(self):
