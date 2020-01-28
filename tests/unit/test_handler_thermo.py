@@ -18,26 +18,26 @@ from simulations.modeling.pytfa_helpers import HandlerThermo
 
 
 @pytest.fixture(scope="function")
-def thermo_model(iJO1366):
-    iJO1366, biomass_reaction, is_ec_model = iJO1366
-    tmodel = HandlerThermo(iJO1366)
+def thermo_model(e_coli_core):
+    e_coli_core, biomass_reaction, is_ec_model = e_coli_core
+    tmodel = HandlerThermo(e_coli_core)
     tmodel._convert()
     return tmodel
 
 
-def test_handlerThermo_consistency(iJO1366):
+def test_handlerThermo_consistency(e_coli_core):
     """Check if FBA isn't altered after the conversion."""
-    iJO1366, biomass_reaction, is_ec_model = iJO1366
-    fba_solution = iJO1366.optimize().fluxes
-    tmodel = HandlerThermo(iJO1366)
+    e_coli_core, biomass_reaction, is_ec_model = e_coli_core
+    fba_solution = e_coli_core.optimize().fluxes
+    tmodel = HandlerThermo(e_coli_core)
     tmodel._convert()
     assert (tmodel.optimize().fluxes == fba_solution).all()
 
 
-def test_tmfa(iJO1366, tmodel):
+def test_tmfa(e_coli_core, tmodel):
     """Check if it affects the solution."""
-    iJO1366, biomass_reaction, is_ec_model = iJO1366
-    fba_solution = iJO1366.optimize().fluxes
+    e_coli_core, biomass_reaction, is_ec_model = e_coli_core
+    fba_solution = e_coli_core.optimize().fluxes
     thermo_solution = tmodel.tmfa().fluxes
     assert (thermo_solution != fba_solution).any()
 
