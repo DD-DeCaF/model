@@ -13,18 +13,18 @@
 # limitations under the License.
 
 import logging
-
+from math import log
 from os.path import dirname, join
+
 # from pytfa.thermo.equilibrator import build_thermo_from_equilibrator
 from pytfa import ThermoModel
 from pytfa.io import (
-    load_thermoDB,
     apply_compartment_data,
+    load_thermoDB,
     read_compartment_data,
 )
 from pytfa.optim import relax_dgo
 
-from math import log
 
 logger = logging.getLogger(__name__)
 

@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 METHODS = ["fba", "pfba", "fva", "pfba-fva", "tmfa"]
 
 
-def simulate(model, biomass_reaction, method, objective_id, objective_direction):
+def simulate(
+    model, biomass_reaction, method, objective_id, objective_direction
+):
     if method not in METHODS:
         raise ValueError(f"Unsupported simulation method '{method}'")
 
@@ -50,8 +52,9 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
             try:
                 solution = model.tmfa()
             except AttributeError:
-                raise OptimizationError("Metabolomics must be provided to"
-                                        "perform TMFA.")
+                raise OptimizationError(
+                    "Metabolomics must be provided to" "perform TMFA."
+                )
     except OptimizationError as error:
         logger.info(f"Optimization Error: {error}")
         raise
@@ -61,7 +64,8 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
             growth_rate = flux_distribution[biomass_reaction]
         elif method in ("fva", "pfba-fva"):
             df = solution.rename(
-                index=str, columns={"maximum": "upper_bound", "minimum": "lower_bound"}
+                index=str,
+                columns={"maximum": "upper_bound", "minimum": "lower_bound"},
             )
             for key in ["lower_bound", "upper_bound"]:
                 df[key] = df[key].astype("float")
