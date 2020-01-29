@@ -38,6 +38,9 @@ blessings==1.7 \
 blinker==1.4 \
     --hash=sha256:471aee25f3992bd325afa3772f1063dbdbbca947a041b8b89466dc00d606f8b6 \
     # via raven
+bokeh==1.4.0 \
+    --hash=sha256:c60d38a41a777b8147ee4134e6142cea8026b5eebf48149e370c44689869dce7 \
+    # via pytfa
 cameo==0.11.15 \
     --hash=sha256:898594715552de4560f584a3047ba2dea15aa054d8a3664b70d181a1d5ccd096 \
     --hash=sha256:faadecb5b01aa3342d9b9cbb2cfad2ed2a40ed2938452fa299122a99a3398bd3
@@ -131,9 +134,9 @@ escher==1.7.3 \
 et-xmlfile==1.0.1 \
     --hash=sha256:614d9722d572f6246302c4491846d2c393c199cfa4edc9af593437691683335b \
     # via openpyxl
-flake8-bugbear==20.1.2 \
-    --hash=sha256:09a12ebe427279cf7aa9445114a68d83a6f0ffccdd4105368d6e85373541eb8f \
-    --hash=sha256:bc4a35972342256abddf84591fbb82f7360981db1b71e39a8ba0400e906239cf
+flake8-bugbear==20.1.3 \
+    --hash=sha256:3f11243dc710486449fac3be776ac2723786ed544fc0734f6134935ded82a1e9 \
+    --hash=sha256:cc73c885e2c605dc89073afc16e308bba987098a9507023aa24590bd06ebd786
 flake8-docstrings==1.5.0 \
     --hash=sha256:3d5a31c7ec6b7367ea6506a87ec293b94a0a46c0bce2bb4975b7f1d09b6f3717 \
     --hash=sha256:a256ba91bc52307bef1de59e2a009c3cf61c3d0952dbe035d6ff7208940c2edc
@@ -256,7 +259,7 @@ jedi==0.15.2 \
 jinja2==2.10.3 \
     --hash=sha256:74320bb91f31270f9551d46522e33af46a80c3d619f4a4bf42b3164d30b5911f \
     --hash=sha256:9fe95f19286cfefaa917656583d020be14e7859c6b0252588391e47db34527de \
-    # via escher, flask, nbconvert, notebook
+    # via bokeh, escher, flask, nbconvert, notebook
 jsonschema==3.2.0 \
     --hash=sha256:4e5b3cf8216f577bee9ce139cbe72eca3ea4f292ec60928ff24758ce626cd163 \
     --hash=sha256:c8a85b28d377cc7737e46e2d9f2b4f44ee3c0e1deac6bf46ddefc7187d30797a \
@@ -353,7 +356,7 @@ networkx==1.9.1 \
     --hash=sha256:209edb0e94d1761714e7cd0a3ab940b1d17f5288839fc421826641a24f671946 \
     --hash=sha256:6380eb38d0b5770d7e50813c8a48ff7c373b2187b4220339c1adce803df01c59 \
     --hash=sha256:6cd7747f85d3b50c4c0555184e02ec1bc7ce27358d9ca7e77231565ee047a2fe \
-    # via cameo
+    # via cameo, pytfa
 notebook==6.0.3 \
     --hash=sha256:3edc616c684214292994a3af05eaea4cc043f6b4247d830f3a2f209fa7639a80 \
     --hash=sha256:47a9092975c9e7965ada00b9a20f0cf637d001db60d241d479f53c0be117ad48 \
@@ -409,21 +412,21 @@ numpy==1.18.1 \
     --hash=sha256:e422c3152921cece8b6a2fb6b0b4d73b6579bd20ae075e7d15143e711f3ca2ca \
     --hash=sha256:e840f552a509e3380b0f0ec977e8124d0dc34dc0e68289ca28f4d7c1d0d79474 \
     --hash=sha256:f3d0a94ad151870978fb93538e95411c83899c9dc63e6fb65542f769568ecfa5 \
-    # via cameo, cobra, numexpr, pandas, reframed, scipy
+    # via bokeh, cameo, cobra, numexpr, pandas, reframed, scipy
 openpyxl==3.0.3 \
     --hash=sha256:547a9fc6aafcf44abe358b89ed4438d077e9d92e4f182c87e2dc294186dc4b64 \
     # via cameo
 optlang==1.4.4 \
     --hash=sha256:3cff64dae1ebe8eaef6291c2d1b4f459d58f97ee73b4757e7584d764eb4a0031 \
     --hash=sha256:78ea36751832176d4819f29c4d2bc5a8ead2c15a3f5dcd5b67ab99e69fc155dc \
-    # via cameo, cobra
+    # via cameo, cobra, pytfa
 ordered-set==3.1.1 \
     --hash=sha256:a7bfa858748c73b096e43db14eb23e2bc714a503f990c89fac8fab9b0ee79724 \
     # via cameo
 packaging==20.0 \
     --hash=sha256:aec3fdbb8bc9e4bb65f0634b9f551ced63983a529d6a8931817d52fdd0816ddb \
     --hash=sha256:fe1d8331dfa7cc0a883b49d75fc76380b2ab2734b220fbb87d774e4fd4b851f8 \
-    # via dparse, pytest, safety
+    # via bokeh, dparse, pytest, safety
 palettable==3.3.0 \
     --hash=sha256:72feca71cf7d79830cd6d9181b02edf227b867d503bec953cf9fa91bf44896bd \
     --hash=sha256:c3bf3f548fc228e86bd3d16928bbf8d621c1d1098791ceab446d0e3a5e1298d1 \
@@ -468,6 +471,30 @@ pickleshare==0.7.5 \
     --hash=sha256:87683d47965c1da65cdacaf31c8441d12b8044cdec9aca500cd78fc2c683afca \
     --hash=sha256:9649af414d74d4df115d5d718f82acb59c9d418196b7b4290ed47a12ce62df56 \
     # via ipython
+pillow==7.0.0 \
+    --hash=sha256:0a628977ac2e01ca96aaae247ec2bd38e729631ddf2221b4b715446fd45505be \
+    --hash=sha256:4d9ed9a64095e031435af120d3c910148067087541131e82b3e8db302f4c8946 \
+    --hash=sha256:54ebae163e8412aff0b9df1e88adab65788f5f5b58e625dc5c7f51eaf14a6837 \
+    --hash=sha256:5bfef0b1cdde9f33881c913af14e43db69815c7e8df429ceda4c70a5e529210f \
+    --hash=sha256:5f3546ceb08089cedb9e8ff7e3f6a7042bb5b37c2a95d392fb027c3e53a2da00 \
+    --hash=sha256:5f7ae9126d16194f114435ebb79cc536b5682002a4fa57fa7bb2cbcde65f2f4d \
+    --hash=sha256:62a889aeb0a79e50ecf5af272e9e3c164148f4bd9636cc6bcfa182a52c8b0533 \
+    --hash=sha256:7406f5a9b2fd966e79e6abdaf700585a4522e98d6559ce37fc52e5c955fade0a \
+    --hash=sha256:8453f914f4e5a3d828281a6628cf517832abfa13ff50679a4848926dac7c0358 \
+    --hash=sha256:87269cc6ce1e3dee11f23fa515e4249ae678dbbe2704598a51cee76c52e19cda \
+    --hash=sha256:875358310ed7abd5320f21dd97351d62de4929b0426cdb1eaa904b64ac36b435 \
+    --hash=sha256:8ac6ce7ff3892e5deaab7abaec763538ffd011f74dc1801d93d3c5fc541feee2 \
+    --hash=sha256:91b710e3353aea6fc758cdb7136d9bbdcb26b53cefe43e2cba953ac3ee1d3313 \
+    --hash=sha256:9d2ba4ed13af381233e2d810ff3bab84ef9f18430a9b336ab69eaf3cd24299ff \
+    --hash=sha256:a62ec5e13e227399be73303ff301f2865bf68657d15ea50b038d25fc41097317 \
+    --hash=sha256:ab76e5580b0ed647a8d8d2d2daee170e8e9f8aad225ede314f684e297e3643c2 \
+    --hash=sha256:bf4003aa538af3f4205c5fac56eacaa67a6dd81e454ffd9e9f055fff9f1bc614 \
+    --hash=sha256:bf598d2e37cf8edb1a2f26ed3fb255191f5232badea4003c16301cb94ac5bdd0 \
+    --hash=sha256:c18f70dc27cc5d236f10e7834236aff60aadc71346a5bc1f4f83a4b3abee6386 \
+    --hash=sha256:c5ed816632204a2fc9486d784d8e0d0ae754347aba99c811458d69fcdfd2a2f9 \
+    --hash=sha256:dc058b7833184970d1248135b8b0ab702e6daa833be14035179f2acb78ff5636 \
+    --hash=sha256:ff3797f2f16bf9d17d53257612da84dd0758db33935777149b3334c01ff68865 \
+    # via bokeh
 pipdeptree==0.13.2 \
     --hash=sha256:78942d3e6a88af1cea41e04d1c29ff5fbf4dda438aa8d8938ed88db22871cca3 \
     --hash=sha256:98178657b9c952be6d49e639bcf39bc8d0e1b93781b4c518a99e6599852d46e5 \
@@ -524,10 +551,12 @@ pytest-cov==2.8.1 \
 pytest==4.6.9 \
     --hash=sha256:19e8f75eac01dd3f211edd465b39efbcbdc8fc5f7866d7dd49fedb30d8adf339 \
     --hash=sha256:c77a5f30a90e0ce24db9eaa14ddfd38d4afb5ea159309bdd2dae55b931bc9324
+pytfa==0.9.1 \
+    --hash=sha256:6958e9462d40ce048a1ef1f2f598f944218089f8215061b26f360a7884b37fa6
 python-dateutil==2.8.1 \
     --hash=sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c \
     --hash=sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a \
-    # via jupyter-client, pandas
+    # via bokeh, jupyter-client, pandas
 python-jose==3.1.0 \
     --hash=sha256:1ac4caf4bfebd5a70cf5bd82702ed850db69b0b6e1d0ae7368e5f99ac01c9571 \
     --hash=sha256:8484b7fdb6962e9d242cce7680469ecf92bda95d10bbcbbeb560cacdff3abfce
@@ -609,7 +638,7 @@ pyyaml==5.3 \
     --hash=sha256:dbbb2379c19ed6042e8f11f2a2c66d39cceb8aeace421bfc29d085d93eda3689 \
     --hash=sha256:e3a057b7a64f1222b56e47bcff5e4b94c4f61faac04c7c4ecb1985e18caa3994 \
     --hash=sha256:e9f45bd5b92c7974e59bcd2dcc8631a6b6cc380a904725fce7bc08872e691615 \
-    # via dparse
+    # via bokeh, dparse
 pyzmq==18.1.1 \
     --hash=sha256:01b588911714a6696283de3904f564c550c9e12e8b4995e173f1011755e01086 \
     --hash=sha256:0573b9790aa26faff33fba40f25763657271d26f64bffb55a957a3d4165d6098 \
@@ -727,7 +756,7 @@ scipy==1.4.1 \
     --hash=sha256:dba8306f6da99e37ea08c08fef6e274b5bf8567bb094d1dbe86a20e532aca088 \
     --hash=sha256:dc60bb302f48acf6da8ca4444cfa17d52c63c5415302a9ee77b3b21618090521 \
     --hash=sha256:dee1bbf3a6c8f73b6b218cb28eed8dd13347ea2f87d572ce19b289d6fd3fbc59 \
-    # via cameo, reframed
+    # via cameo, pytfa, reframed
 send2trash==1.5.0 \
     --hash=sha256:60001cc07d707fe247c94f74ca6ac0d3255aabcb930529690897ca2a39db28b2 \
     --hash=sha256:f1691922577b6fa12821234aeb57599d887c4900b9ca537948d2dac34aea888b \
@@ -735,7 +764,7 @@ send2trash==1.5.0 \
 six==1.14.0 \
     --hash=sha256:236bdbdce46e6e6a3d61a337c0f8b763ca1e8717c03b369e87a7ec7ce1319c0a \
     --hash=sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c \
-    # via bleach, blessings, cameo, cobra, dparse, ecdsa, flask-apispec, flask-cors, gnomic, iprogress, jsonschema, optlang, packaging, pyrsistent, pytest, python-dateutil, python-jose, traitlets
+    # via bleach, blessings, bokeh, cameo, cobra, dparse, ecdsa, flask-apispec, flask-cors, gnomic, iprogress, jsonschema, optlang, packaging, pyrsistent, pytest, python-dateutil, python-jose, traitlets
 snowballstemmer==2.0.0 \
     --hash=sha256:209f257d7533fdb3cb73bdbd24f436239ca3b2fa67d56f6ff88e86be08cc5ef0 \
     --hash=sha256:df3bac3df4c2c01363f3dd2cfa78cce2840a79b9f1c2d2de9ce8d31683992f52 \
@@ -799,7 +828,7 @@ tornado==6.0.3 \
     --hash=sha256:abbe53a39734ef4aba061fca54e30c6b4639d3e1f59653f0da37a0003de148c7 \
     --hash=sha256:c845db36ba616912074c5b1ee897f8e0124df269468f25e4fe21fe72f6edd7a9 \
     --hash=sha256:c9399267c926a4e7c418baa5cbe91c7d1cf362d505a1ef898fde44a07c9dd8a5 \
-    # via ipykernel, jupyter-client, notebook, terminado
+    # via bokeh, ipykernel, jupyter-client, notebook, terminado
 tqdm==4.41.1 \
     --hash=sha256:4789ccbb6fc122b5a6a85d512e4e41fc5acad77216533a6f2b8ce51e0f265c23 \
     --hash=sha256:efab950cf7cc1e4d8ee50b2bb9c8e4a89f8307b49e0b2c9cfef3ec4ca26655eb
@@ -838,18 +867,18 @@ wcwidth==0.1.8 \
     --hash=sha256:8fd29383f539be45b20bd4df0dc29c20ba48654a41e661925e612311e9f3c603 \
     --hash=sha256:f28b3e8a6483e5d49e7f8949ac1a78314e740333ae305b4ba5defd3e74fb37a8 \
     # via prompt-toolkit, pytest
-webargs==5.5.2 \
-    --hash=sha256:3beca296598067cec24a0b6f91c0afcc19b6e3c4d84ab026b931669628bb47b4 \
-    --hash=sha256:3f9dc15de183d356c9a0acc159c100ea0506c0c240c1e6f1d8b308c5fed4dbbd \
-    --hash=sha256:fa4ad3ad9b38bedd26c619264fdc50d7ae014b49186736bca851e5b5228f2a1b \
+webargs==5.5.3 \
+    --hash=sha256:4f04918864c7602886335d8099f9b8960ee698b6b914f022736ed50be6b71235 \
+    --hash=sha256:871642a2e0c62f21d5b78f357750ac7a87e6bc734c972f633aa5fb6204fbf29a \
+    --hash=sha256:fc81c9f9d391acfbce406a319217319fd8b2fd862f7fdb5319ad06944f36ed25 \
     # via flask-apispec
 webencodings==0.5.1 \
     --hash=sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78 \
     --hash=sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923 \
     # via bleach
-werkzeug==0.16.0 \
-    --hash=sha256:7280924747b5733b246fe23972186c6b348f9ae29724135a6dfc1e53cea433e7 \
-    --hash=sha256:e5f4a1f98b52b18a93da705a7458e55afb26f32bff83ff5d19189f92462d65c4 \
+werkzeug==0.16.1 \
+    --hash=sha256:1e0dedc2acb1f46827daa2e399c1485c8fa17c0d8e70b6b875b4e7f54bf408d2 \
+    --hash=sha256:b353856d37dec59d6511359f97f6a4b2468442e454bd1c98298ddce53cac1f04 \
     # via flask
 widgetsnbextension==3.5.1 \
     --hash=sha256:079f87d87270bce047512400efd70238820751a11d2d8cb137a5a5bdbaf255c7 \
