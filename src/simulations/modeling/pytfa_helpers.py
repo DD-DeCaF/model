@@ -18,15 +18,24 @@ from os.path import dirname, join
 
 # from pytfa.thermo.equilibrator import build_thermo_from_equilibrator
 from pytfa import ThermoModel
-from pytfa.io import (
-    apply_compartment_data,
-    load_thermoDB,
-    read_compartment_data,
-)
+from pytfa.io import apply_compartment_data, load_thermoDB, read_compartment_data
 from pytfa.optim import relax_dgo
 
 
 logger = logging.getLogger(__name__)
+
+
+def hack_annotation(model, from_namespace="chebi"):
+    """Add a 'seed_id' entry in the annotation attribute of every metabolite.
+
+    This is required because metabolite data without this entry are ignored by
+    pytfa when using a thermoDB.
+    """
+    for metabolite in model.metabolites:
+        # the thermoDB was translated so it contains the first chebi ID in
+        # MetaNetX, which should be the first also in the models
+        # the alternative is to buld a proper SQL db or add all the synonyms
+        metabolite.annotation["seed_id"] = metabolite.annotation["chebi"][0]
 
 
 class HandlerThermo:
@@ -57,8 +66,9 @@ class HandlerThermo:
         Thermodynamic model."""
         # thermo_data = build_thermo_from_equilibrator(self.cobra_model)
         thermo_data = load_thermoDB(
-            join(dirname(__file__), "../../../data/thermo_data.thermodb")
+            join(dirname(__file__), "../../../data/thermo_data_chebi.thermodb")
         )
+        hack_annotation(self.cobra_model)
         tmodel = ThermoModel(thermo_data, self.cobra_model)
         # while not input from user, use some default data from iJ1366
         apply_compartment_data(
