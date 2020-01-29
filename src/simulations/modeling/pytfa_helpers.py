@@ -97,8 +97,8 @@ class HandlerThermo:
             the_conc_var = self.thermo_model.log_concentration.get_by_id(met)
             # Do not forget the variables in the model are logs !
             # uncertainty is very relevant in TMFA
-            the_conc_var.ub = log(conc + measure["uncertainty"])
-            the_conc_var.lb = log(conc - measure["uncertainty"])
+            the_conc_var.variable.ub = log(conc + measure["uncertainty"])
+            the_conc_var.variable.lb = log(conc - measure["uncertainty"])
 
     def tmfa(self):
         """Fallback to pytfa.ThermoModel `.optimize()` method.
@@ -108,8 +108,8 @@ class HandlerThermo:
         logger.debug(f"Computing TMFA from ThermoModel {self.cobra_model}")
         if self.thermo_model is None:
             self._convert()
-            if self.metabolomics:
-                self.apply_metabolomics()
+        if self.metabolomics:
+            self.apply_metabolomics()
         return self.thermo_model.optimize()
 
     def safe_tmfa(self):
@@ -131,8 +131,6 @@ class HandlerThermo:
         if solution.value < self.tolerance:
             # this check should be done (and it is done) in the pytfa side;
             # however it does the relaxation anyways.
-            self.thermo_model = relax_dgo(self.thermo_model.build_relaxation())[
-                0
-            ]
+            self.thermo_model = relax_dgo(self.thermo_model.build_relaxation())[0]
             solution = self.tmfa()
         return solution

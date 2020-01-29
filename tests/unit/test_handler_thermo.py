@@ -46,13 +46,22 @@ def test_metabolomics(tmodel):
     """Check if it affects the TMFA solution."""
     solution_before = tmodel.tmfa().fluxes
     tmodel.metabolomics = [
-        {
-            "name": "D-Glucose",
-            "identifier": "glc__D",
-            "namespace": "bigg.metabolite",
-            "measurement": 0.2,
-            "uncertainty": 0.01,
-        }
+        [
+            {
+                "name": "ATP",
+                "identifier": "atp_c",
+                "namespace": "bigg.metabolite",
+                "measurement": 1e-5,
+                "uncertainty": 1e-7,
+            },
+            {
+                "name": "ADP",
+                "identifier": "adp_c",
+                "namespace": "bigg.metabolite",
+                "measurement": 1e-5,
+                "uncertainty": 1e-7,
+            },
+        ]
     ]
     solution_metabolomics = tmodel.tmfa().fluxes
     assert (solution_before != solution_metabolomics).any()
