@@ -26,6 +26,7 @@ class MockResponseSuccess:
 
     def json(self):
         return {
+            "id": 1,
             "model_serialized": {
                 "version": "1",
                 "id": "foo",

@@ -29,10 +29,14 @@ logger = logging.getLogger(__name__)
 class ModelWrapper:
     """A wrapper for a cobrapy model with some additional metadata."""
 
-    def __init__(self, model, project_id, organism_id, biomass_reaction, is_ec_model):
+    def __init__(
+        self, id, model, project_id, organism_id, biomass_reaction, is_ec_model
+    ):
         """
         Parameters
         ----------
+        id: int
+            The platform-specific database id of the model.
         model: cobra.Model
             A cobrapy model instance.
         project_id: int
@@ -48,6 +52,7 @@ class ModelWrapper:
         is_ec_model: bool
             A boolean indicating if the model is enzyme-constrained.
         """
+        self.id = id
         self.model = model
         # Use the cplex solver for performance
         self.model.solver = "cplex"
@@ -111,6 +116,7 @@ def _load_model(model_id):
     logger.debug(f"Deserializing received model with cobrapy")
     model_data = response.json()
     _MODELS[model_id] = ModelWrapper(
+        model_data["id"],
         model_from_dict(model_data["model_serialized"]),
         model_data["project_id"],
         model_data["organism_id"],

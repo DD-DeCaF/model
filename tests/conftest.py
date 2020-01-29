@@ -57,19 +57,19 @@ def models():
 
     model = read_sbml_model("tests/data/e_coli_core.xml.gz")
     storage._MODELS[model_keys["e_coli_core"]] = storage.ModelWrapper(
-        model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
+        1, model, None, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
     model = read_sbml_model("tests/data/e_coli_core.xml.gz")
     storage._MODELS[model_keys["e_coli_core_proprietary"]] = storage.ModelWrapper(
-        model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
+        2, model, 1, "Escherichia coli", "BIOMASS_Ecoli_core_w_GAM", False
     )
     model = read_sbml_model("tests/data/iJO1366.xml.gz")
     storage._MODELS[model_keys["iJO1366"]] = storage.ModelWrapper(
-        model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M", False
+        3, model, None, "Escherichia coli", "BIOMASS_Ec_iJO1366_core_53p95M", False
     )
     model = read_sbml_model("tests/data/eciML1515.xml.gz")
     storage._MODELS[model_keys["eciML1515"]] = storage.ModelWrapper(
-        model, None, "Escherichia coli", "BIOMASS_Ec_iML1515_core_75p37M", True
+        4, model, None, "Escherichia coli", "BIOMASS_Ec_iML1515_core_75p37M", True
     )
     return model_keys
 

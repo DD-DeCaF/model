@@ -9,6 +9,7 @@
 gnomic
 tqdm
 prometheus-client
+reframed
 
 # Newest apispec raises the following exception on startup when registering
 # api documentation:
