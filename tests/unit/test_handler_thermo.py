@@ -18,7 +18,7 @@ from simulations.modeling.pytfa_helpers import HandlerThermo
 
 
 @pytest.fixture(scope="function")
-def thermo_model(e_coli_core):
+def tmodel(e_coli_core):
     e_coli_core, biomass_reaction, is_ec_model = e_coli_core
     tmodel = HandlerThermo(e_coli_core)
     tmodel._convert()
