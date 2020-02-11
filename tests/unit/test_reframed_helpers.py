@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 from simulations.modeling.reframed_helpers import generate_transactions
 
 
@@ -34,14 +32,10 @@ def test_generate_transactions_uptake():
     assert (result[2][4] + result[3][4]) == exchanges_mock_more_uptake[
         ("B", "M1")
     ]
-    assert (result[0][4] +
-            result[2][4] +
-            result[4][4]) == -exchanges_mock_more_uptake[
+    assert (result[0][4] + result[2][4] + result[4][4]) == -exchanges_mock_more_uptake[
         ("C", "M1")
     ]
-    assert (result[1][4] +
-            result[3][4] +
-            result[5][4]) == -exchanges_mock_more_uptake[
+    assert (result[1][4] + result[3][4] + result[5][4]) == -exchanges_mock_more_uptake[
         ("D", "M1")
     ]
 
