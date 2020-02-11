@@ -41,7 +41,9 @@ def create_metabolite_id2name_mapping(external_metabolite_ids, community):
     for metabolite_id in external_metabolite_ids:
         for org in community.organisms:
             try:
-                ids_to_names[metabolite_id] = community.organisms[org].metabolites[metabolite_id].name
+                ids_to_names[metabolite_id] = (
+                    community.organisms[org].metabolites[metabolite_id].name
+                )
                 break
             except KeyError:
                 continue
@@ -51,7 +53,8 @@ def create_metabolite_id2name_mapping(external_metabolite_ids, community):
 def generate_transactions(metabolite_id2name_dict, exchanges, abstol=1e-6):
     """
         Return a list of tuples with each tuple indicating metabolite
-        transactions as (from_org_id, to_org_id, metabolite_id, metabolite_name, flux).
+        transactions as (from_org_id, to_org_id, metabolite_id,
+        metabolite_name, flux).
 
         Parameters
         ----------
@@ -59,37 +62,74 @@ def generate_transactions(metabolite_id2name_dict, exchanges, abstol=1e-6):
             A mapping of all external metabolite IDs to the corresponding
             metabolite names.
         exchanges: dict
-            Mapping between a tuple of (org_id, metabolite_id) and the corresponding flux.
-            A negative flux means uptake and a positive flux means secretion of the corresponding metabolite by the corresponding organism.
+            Mapping between a tuple of (org_id, metabolite_id) and the
+            corresponding flux.
+            A negative flux means uptake and a positive flux means secretion of
+            the corresponding metabolite by the corresponding organism.
 
         Returns
         -------
         list
             A list of tuples with each tuple indicating metabolite
-            transactions as (from_org_id, to_org_id, metabolite_id, metabolite_name, flux).
+            transactions as (from_org_id, to_org_id, metabolite_id,
+            metabolite_name, flux).
         """
     transactions = []
 
     for m_id, m_name in metabolite_id2name_dict.items():
-        fluxes_out_total = {org: abs(rate) for (org, met), rate in exchanges.items() if met == m_id and rate > abstol}
-        fluxes_in_total = {org: abs(rate) for (org, met), rate in exchanges.items() if met == m_id and -rate > abstol}
-        total = max(sum(fluxes_out_total.values()), sum(fluxes_in_total.values()))
-        cross = [(org1, org2, m_id, m_name, rate1 * rate2 / total) for org1, rate1 in fluxes_out_total.items() for org2, rate2 in fluxes_in_total.items()]
+        fluxes_out_total = {
+            org: abs(rate)
+            for (org, met), rate in exchanges.items()
+            if met == m_id and rate > abstol
+        }
+        fluxes_in_total = {
+            org: abs(rate)
+            for (org, met), rate in exchanges.items()
+            if met == m_id and -rate > abstol
+        }
+        total = max(
+            sum(fluxes_out_total.values()), sum(fluxes_in_total.values())
+        )
+        cross = [
+            (org1, org2, m_id, m_name, rate1 * rate2 / total)
+            for org1, rate1 in fluxes_out_total.items()
+            for org2, rate2 in fluxes_in_total.items()
+        ]
         transactions.extend(cross)
-        # Calculating if shared fluxes make up the total flux or if there is a rest that is either...
+        # Calculating if shared fluxes make up the total flux or if there is
+        # a rest that is either...
         fluxes_out_shared = {}
         fluxes_in_shared = {}
         for transaction in cross:
-        # ...secreted into the medium.
+            # ...secreted into the medium.
             fluxes_out_shared.setdefault(transaction[0], 0)
             fluxes_out_shared[transaction[0]] += transaction[4]
-        # ...taken up from the medium.
+            # ...taken up from the medium.
             fluxes_in_shared.setdefault(transaction[1], 0)
             fluxes_in_shared[transaction[1]] += transaction[4]
-        secretion_to_medium = [(org, "medium", m_id, m_name, abs(fluxes_out_shared[org] - fluxes_out_total[org])) for org in fluxes_out_shared.keys() if ((fluxes_out_shared[org] - fluxes_out_total[org]) != 0)]
-        uptake_from_medium = [("medium", org, m_id, m_name, abs(fluxes_in_shared[org] - fluxes_in_total[org])) for org in fluxes_in_shared.keys() if ((fluxes_in_shared[org] - fluxes_in_total[org]) != 0)]
+        secretion_to_medium = [
+            (
+                org,
+                "medium",
+                m_id,
+                m_name,
+                abs(fluxes_out_shared[org] - fluxes_out_total[org]),
+            )
+            for org in fluxes_out_shared.keys()
+            if ((fluxes_out_shared[org] - fluxes_out_total[org]) != 0)
+        ]
+        uptake_from_medium = [
+            (
+                "medium",
+                org,
+                m_id,
+                m_name,
+                abs(fluxes_in_shared[org] - fluxes_in_total[org]),
+            )
+            for org in fluxes_in_shared.keys()
+            if ((fluxes_in_shared[org] - fluxes_in_total[org]) != 0)
+        ]
         transactions.extend(secretion_to_medium)
         transactions.extend(uptake_from_medium)
-
 
     return [trans for trans in transactions if trans[4] > abstol]

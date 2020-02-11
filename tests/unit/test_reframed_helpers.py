@@ -19,34 +19,53 @@ from simulations.modeling.reframed_helpers import generate_transactions
 
 def test_generate_transactions_uptake():
     # Create mock exchanges
-    id2name = {'M1': 'Metabolite 1'}
-    exchanges_mock_more_uptake = {('A', 'M1'): 10, ('B', 'M1'): 5,
-                                  ('C', 'M1'): -15, ('D', 'M1'): -5}
+    id2name = {"M1": "Metabolite 1"}
+    exchanges_mock_more_uptake = {
+        ("A", "M1"): 10,
+        ("B", "M1"): 5,
+        ("C", "M1"): -15,
+        ("D", "M1"): -5,
+    }
 
     result = generate_transactions(id2name, exchanges_mock_more_uptake)
-    assert result[0][4]+result[1][4] == exchanges_mock_more_uptake[
-        ('A', 'M1')];
-    assert result[2][4] + result[3][4] == exchanges_mock_more_uptake[
-        ('B', 'M1')];
-    assert result[0][4]+result[2][4]+result[4][4] == - \
-        exchanges_mock_more_uptake[('C', 'M1')];
-    assert result[1][4]+result[3][4]+result[5][4] == - \
-        exchanges_mock_more_uptake[('D', 'M1')];
+    assert (result[0][4] + result[1][4]) == exchanges_mock_more_uptake[
+        ("A", "M1")
+    ]
+    assert (result[2][4] + result[3][4]) == exchanges_mock_more_uptake[
+        ("B", "M1")
+    ]
+    assert (result[0][4] +
+            result[2][4] +
+            result[4][4]) == -exchanges_mock_more_uptake[
+        ("C", "M1")
+    ]
+    assert (result[1][4] +
+            result[3][4] +
+            result[5][4]) == -exchanges_mock_more_uptake[
+        ("D", "M1")
+    ]
 
 
 def test_generate_transactions_secretion():
     # Create mock exchanges
-    id2name = {'M1': 'Metabolite 1'}
-    exchanges_mock_more_secretion = {('A', 'M1'): 20, ('B', 'M1'): 30,
-                                     ('C', 'M1'): -15, ('D', 'M1'): -5}
+    id2name = {"M1": "Metabolite 1"}
+    exchanges_mock_more_secretion = {
+        ("A", "M1"): 20,
+        ("B", "M1"): 30,
+        ("C", "M1"): -15,
+        ("D", "M1"): -5,
+    }
 
     result = generate_transactions(id2name, exchanges_mock_more_secretion)
-    assert result[0][4] + result[1][4] + result[4][4] == exchanges_mock_more_secretion[
-        ('A', 'M1')];
-    assert result[2[4] + result[3][4] + result[5][4] == \
-           exchanges_mock_more_secretion[
-               ('B', 'M1')];
-    assert result[0][4] + result[2][4] == - \
-    exchanges_mock_more_secretion[('C', 'M1')];
-    assert result[1][4] + result[3][4] == - \
-    exchanges_mock_more_secretion[('D', 'M1')];
+    assert (
+        result[0][4] + result[1][4] + result[4][4]
+    ) == exchanges_mock_more_secretion[("A", "M1")]
+    assert (
+        result[2][4] + result[3][4] + result[5][4]
+    ) == exchanges_mock_more_secretion[("B", "M1")]
+    assert (result[0][4] + result[2][4]) == -exchanges_mock_more_secretion[
+        ("C", "M1")
+    ]
+    assert (result[1][4] + result[3][4]) == -exchanges_mock_more_secretion[
+        ("D", "M1")
+    ]
