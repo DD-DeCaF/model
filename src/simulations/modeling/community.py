@@ -18,6 +18,10 @@ import tempfile
 import cobra
 import reframed
 
+from simulations.modeling.reframed_helpers import (
+    create_metabolite_id2name_mapping, generate_transactions
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +81,11 @@ def simulate(wrappers, medium, method):
             wrapper.id for wrapper in wrappers if wrapper.model.id == original_id
         )
 
+    # Calculate transactions (cross-feeding, uptake and secretion)
+    external_metabolite_ids = solution.community.merged_model.get_external_metabolites()
+    metabolite_id2name_dict = create_metabolite_id2name_mapping(external_metabolite_ids, community)
+    transactions = generate_transactions(metabolite_id2name_dict, solution.exchange_map)
+
     # Convert the iterables to dictionaries for easier handling on the frontend
     abundance = [
         {"id": model_id(original_id), "value": abundance}
@@ -86,10 +95,11 @@ def simulate(wrappers, medium, method):
         {
             "from": model_id(cross_feeding[0]),
             "to": model_id(cross_feeding[1]),
-            "metabolite": cross_feeding[2],
-            "value": cross_feeding[3],
+            "metabolite_id": cross_feeding[2],
+            "metabolite_name": cross_feeding[3],
+            "value": cross_feeding[4],
         }
-        for cross_feeding in solution.cross_feeding()
+        for cross_feeding in transactions
     ]
     return {
         "growth_rate": solution.growth,
