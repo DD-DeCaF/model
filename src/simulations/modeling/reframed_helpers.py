@@ -87,9 +87,7 @@ def generate_transactions(metabolite_id2name_dict, exchanges, abstol=1e-6):
             for (org, met), rate in exchanges.items()
             if met == m_id and -rate > abstol
         }
-        total = max(
-            sum(fluxes_out_total.values()), sum(fluxes_in_total.values())
-        )
+        total = max(sum(fluxes_out_total.values()), sum(fluxes_in_total.values()))
         cross = [
             (org1, org2, m_id, m_name, rate1 * rate2 / total)
             for org1, rate1 in fluxes_out_total.items()
