@@ -18,7 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def create_metabolite_id2name_mapping(community):
+def create_metabolite_id2name_mapping(external_metabolite_ids, community):
     """
         Return a dictionary mapping metabolite IDs to names.
 
@@ -48,7 +48,7 @@ def create_metabolite_id2name_mapping(community):
     return ids_to_names
 
 
-def cross_feeding(metabolite_id2name_dict, exchanges, abstol=1e-6):
+def generate_transactions(metabolite_id2name_dict, exchanges, abstol=1e-6):
     """
         Return a list of tuples with each tuple indicating metabolite
         transactions as (from_org_id, to_org_id, metabolite_id, metabolite_name, flux).
