@@ -83,9 +83,7 @@ def simulate(wrappers, medium, method):
         )
 
     # Calculate transactions (cross-feeding, uptake and secretion)
-    logger.debug(
-        f"Calculating transactions (cross-feeding, uptake and secretion)"
-    )
+    logger.debug(f"Calculating transactions (cross-feeding, uptake and secretion)")
     ex_met_ids = solution.community.merged_model.get_external_metabolites()
     met_id2name = create_metabolite_id2name_mapping(ex_met_ids, community)
     transactions = generate_transactions(met_id2name, solution.exchange_map)
@@ -97,30 +95,36 @@ def simulate(wrappers, medium, method):
     ]
     cross_feeding = []
     for transaction in transactions:
-        if transaction[0] == 'medium':
-            cross_feeding.append({
-                "from": 'medium',
-                "to": model_id(transaction[1]),
-                "metabolite_id": transaction[2],
-                "metabolite_name": transaction[3],
-                "value": transaction[4]
-            })
-        elif transaction[1] == 'medium':
-            cross_feeding.append({
-                "from": model_id(transaction[0]),
-                "to": 'medium',
-                "metabolite_id": transaction[2],
-                "metabolite_name": transaction[3],
-                "value": transaction[4]
-            })
+        if transaction[0] == "medium":
+            cross_feeding.append(
+                {
+                    "from": "medium",
+                    "to": model_id(transaction[1]),
+                    "metabolite_id": transaction[2],
+                    "metabolite_name": transaction[3],
+                    "value": transaction[4],
+                }
+            )
+        elif transaction[1] == "medium":
+            cross_feeding.append(
+                {
+                    "from": model_id(transaction[0]),
+                    "to": "medium",
+                    "metabolite_id": transaction[2],
+                    "metabolite_name": transaction[3],
+                    "value": transaction[4],
+                }
+            )
         else:
-            cross_feeding.append({
-                "from": model_id(transaction[0]),
-                "to": model_id(transaction[1]),
-                "metabolite_id": transaction[2],
-                "metabolite_name": transaction[3],
-                "value": transaction[4]
-            })
+            cross_feeding.append(
+                {
+                    "from": model_id(transaction[0]),
+                    "to": model_id(transaction[1]),
+                    "metabolite_id": transaction[2],
+                    "metabolite_name": transaction[3],
+                    "value": transaction[4],
+                }
+            )
     return {
         "growth_rate": solution.growth,
         "abundance": abundance,
