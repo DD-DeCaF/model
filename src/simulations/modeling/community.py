@@ -19,7 +19,8 @@ import cobra
 import reframed
 
 from simulations.modeling.reframed_helpers import (
-    create_metabolite_id2name_mapping, generate_transactions
+    create_metabolite_id2name_mapping,
+    generate_transactions,
 )
 
 
@@ -82,9 +83,9 @@ def simulate(wrappers, medium, method):
         )
 
     # Calculate transactions (cross-feeding, uptake and secretion)
-    external_metabolite_ids = solution.community.merged_model.get_external_metabolites()
-    metabolite_id2name_dict = create_metabolite_id2name_mapping(external_metabolite_ids, community)
-    transactions = generate_transactions(metabolite_id2name_dict, solution.exchange_map)
+    ex_met_ids = solution.community.merged_model.get_external_metabolites()
+    met_id2name = create_metabolite_id2name_mapping(ex_met_ids, community)
+    transactions = generate_transactions(met_id2name, solution.exchange_map)
 
     # Convert the iterables to dictionaries for easier handling on the frontend
     abundance = [
