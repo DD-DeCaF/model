@@ -95,16 +95,32 @@ def simulate(wrappers, medium, method):
         {"id": model_id(original_id), "value": abundance}
         for original_id, abundance in solution.abundance.items()
     ]
-    cross_feeding = [
-        {
-            "from": model_id(transaction[0]),
-            "to": model_id(transaction[1]),
-            "metabolite_id": transaction[2],
-            "metabolite_name": transaction[3],
-            "value": transaction[4],
-        }
-        for transaction in transactions
-    ]
+    cross_feeding = []
+    for transaction in transactions:
+        if transaction[0] == 'medium':
+            cross_feeding.append({
+                "from": 'medium',
+                "to": model_id(transaction[1]),
+                "metabolite_id": transaction[2],
+                "metabolite_name": transaction[3],
+                "value": transaction[4]
+            })
+        elif transaction[1] == 'medium':
+            cross_feeding.append({
+                "from": model_id(transaction[0]),
+                "to": 'medium',
+                "metabolite_id": transaction[2],
+                "metabolite_name": transaction[3],
+                "value": transaction[4]
+            })
+        else:
+            cross_feeding.append({
+                "from": model_id(transaction[0]),
+                "to": model_id(transaction[1]),
+                "metabolite_id": transaction[2],
+                "metabolite_name": transaction[3],
+                "value": transaction[4]
+            })
     return {
         "growth_rate": solution.growth,
         "abundance": abundance,
