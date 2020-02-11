@@ -83,6 +83,9 @@ def simulate(wrappers, medium, method):
         )
 
     # Calculate transactions (cross-feeding, uptake and secretion)
+    logger.debug(
+        f"Calculating transactions (cross-feeding, uptake and secretion)"
+    )
     ex_met_ids = solution.community.merged_model.get_external_metabolites()
     met_id2name = create_metabolite_id2name_mapping(ex_met_ids, community)
     transactions = generate_transactions(met_id2name, solution.exchange_map)
@@ -94,13 +97,13 @@ def simulate(wrappers, medium, method):
     ]
     cross_feeding = [
         {
-            "from": model_id(cross_feeding[0]),
-            "to": model_id(cross_feeding[1]),
-            "metabolite_id": cross_feeding[2],
-            "metabolite_name": cross_feeding[3],
-            "value": cross_feeding[4],
+            "from": model_id(transaction[0]),
+            "to": model_id(transaction[1]),
+            "metabolite_id": transaction[2],
+            "metabolite_name": transaction[3],
+            "value": transaction[4],
         }
-        for cross_feeding in transactions
+        for transaction in transactions
     ]
     return {
         "growth_rate": solution.growth,
