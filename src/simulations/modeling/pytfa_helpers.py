@@ -39,6 +39,17 @@ def hack_annotation(model, from_namespace="chebi"):
             metabolite.annotation["seed_id"] = metabolite.annotation["chebi"][0]
 
 
+def tmfa(model):
+    """Convert the model to HandlerThermo and optimize it with .tmfa().
+
+    This way, the user can select TMFA as method even if metabolomics weren't
+    supplied.
+    """
+    if not callable(getattr(model, "tmfa", None)):
+        model = HandlerThermo(model)
+    return model.safe_tmfa()
+
+
 class HandlerThermo:
     """ Handler of pytfa.ThermoModel's.
 

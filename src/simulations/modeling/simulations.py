@@ -16,6 +16,7 @@ import logging
 
 from cobra.exceptions import OptimizationError
 from cobra.flux_analysis import flux_variability_analysis, pfba
+from simulations.modeling.pytfa_helpers import tmfa
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ def simulate(model, biomass_reaction, method, objective_id, objective_direction)
             )
         elif method == "tmfa":
             try:
-                solution = model.tmfa()
+                solution = tmfa(model)
             except AttributeError:
                 raise OptimizationError(
                     "Metabolomics must be provided to perform TMFA."
