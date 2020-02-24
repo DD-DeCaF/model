@@ -19,7 +19,7 @@ from os.path import dirname, join
 # from pytfa.thermo.equilibrator import build_thermo_from_equilibrator
 from pytfa import ThermoModel
 from pytfa.io import apply_compartment_data, load_thermoDB, read_compartment_data
-from pytfa.optim import relax_dgo
+from pytfa.optim import relax_dgo, relax_lc
 
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,8 @@ def hack_annotation(model, from_namespace="chebi"):
         # the thermoDB was translated so it contains the first chebi ID in
         # MetaNetX, which should be the first also in the models
         # the alternative is to buld a proper SQL db or add all the synonyms
-        metabolite.annotation["seed_id"] = metabolite.annotation["chebi"][0]
+        if "chebi" in metabolite.annotation:
+            metabolite.annotation["seed_id"] = metabolite.annotation["chebi"][0]
 
 
 class HandlerThermo:
@@ -120,17 +121,29 @@ class HandlerThermo:
         relaxation in thermodynamics but in a further relaxation/minimization
         involving metabolomics measurementens (check the related built-in functions)
         """
-        logger.warning(
-            "Relaxation not implemented `.safe_tmfa()`, redirection"
-            "to plain `.tmfa()``"
-        )
-        return self.tmfa()
         # NOTE: the problem with relax_dgo is that it performs tmfa innecesarily
         # several times, so it could be implemented with better perfomance here.
         solution = self.tmfa()
-        if solution.value < self.tolerance:
+        if solution.objective_value < self.tolerance:
+            logger.debug(
+                f"TMFA yielded {solution.objective_value} objective value, "
+                "trying with relaxation of thermodynamic constraints."
+            )
             # this check should be done (and it is done) in the pytfa side;
             # however it does the relaxation anyways.
-            self.thermo_model = relax_dgo(self.thermo_model.build_relaxation())[0]
+            self.thermo_model = relax_dgo(self.thermo_model, in_place=True)[0]
             solution = self.tmfa()
+        if solution.objective_value < self.tolerance:
+            logger.debug(
+                f"TMFA with DGO relaxation still yielded {solution.objective_value} "
+                "objective value, trying with relaxation of metabolite constraints."
+            )
+            try:
+                self.tmfa = relax_lc(self.thermo_model)[0]
+                solution = self.tmfa()
+            except ValueError:
+                # workaround a bug in the relax_lc that raises a pandas
+                # exception when no metabolite was found
+                pass
+
         return solution
