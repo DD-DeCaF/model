@@ -61,9 +61,9 @@ spec:
           initialDelaySeconds: 5
         resources:
           requests:
-            cpu: "10m"
+            cpu: "1m"
           limits:
-            cpu: "4000m"
+            cpu: "2000m"
       volumes:
       - name: prometheus-client
         emptyDir: {}
