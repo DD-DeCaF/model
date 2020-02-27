@@ -15,3 +15,6 @@ reframed
 # api documentation:
 # TypeError: None is not a callable object
 apispec==2.0.2
+
+# thermodynamics FBA
+pytfa==0.9.1

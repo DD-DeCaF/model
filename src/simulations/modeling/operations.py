@@ -18,6 +18,7 @@ from cobra import Metabolite, Reaction
 
 from simulations.exceptions import CompartmentNotFound
 from simulations.modeling.cobra_helpers import parse_bigg_compartment
+from simulations.modeling.pytfa_helpers import HandlerThermo
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ def apply_operations(model, operations):
             _add_reaction(model, operation["data"])
         elif operation["operation"] == "modify" and operation["type"] == "reaction":
             _modify_reaction(model, operation["id"], operation["data"])
+        elif operation["operation"] == "modify" and operation["type"] == "thermo":
+            _apply_metabolomics(model, operation["data"])
         elif operation["operation"] == "knockout" and operation["type"] == "reaction":
             _knockout_reaction(model, operation["id"])
         elif operation["operation"] == "knockout" and operation["type"] == "gene":
@@ -93,3 +96,8 @@ def _knockout_gene(model, id):
     logger.debug(f"Knocking out gene '{id}' in model '{model.id}'")
     gene = model.genes.query(lambda g: id in (g.id, g.name))[0]
     gene.knock_out()
+
+
+def _apply_metabolomics(model, metabolomics):
+    logger.debug(f"Creating thermodynamic model from '{model.id}'")
+    model = HandlerThermo(model, metabolomics)

@@ -501,13 +501,22 @@ def apply_measurements(
                 }
             )
 
+    valid_metabolomics = []
     for metabolite in metabolomics:
-        warning = (
-            f"Cannot apply metabolomics measure for '{metabolite['identifier']}'; "
-            f"feature has not yet been implemented"
+        try:
+            met_id = find_metabolite(
+                model, metabolite["identifier"], metabolite["namespace"], "e"
+            ).id
+            valid_metabolomics.append({**metabolite, "identifier": met_id})
+        except MetaboliteNotFound as error:
+            errors.append(str(error))
+
+    if valid_metabolomics:
+        # simulations will handle the transformation to avoid overheads when
+        # metabolomics is provided but tmfa is not selected as method
+        operations.append(
+            {"operation": "modify", "type": "thermo", "data": valid_metabolomics}
         )
-        warnings.append(warning)
-        logger.warning(warning)
 
     for measure in proteomics:
         if is_ec_model:
