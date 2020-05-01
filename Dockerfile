@@ -46,4 +46,4 @@ RUN chown -R "${APP_USER}:${APP_USER}" .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "-c", "gunicorn.py", "metabolic_ninja.wsgi:app"]
+CMD ["gunicorn", "-c", "gunicorn.py", "simulations.wsgi:app"]

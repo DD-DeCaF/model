@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - BASE_TAG=${BASE_TAG}
+        - BASE_TAG=${BASE_TAG:-cameo}
         - BUILD_COMMIT=${BUILD_COMMIT:-unknown}
         - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-unknown}
     image: gcr.io/dd-decaf-cfbf6/simulations:${BRANCH:-latest}
