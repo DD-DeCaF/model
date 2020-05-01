@@ -22,7 +22,7 @@ from simulations.app import init_app
 
 @pytest.fixture(scope="session")
 def app():
-    """Provide the initialized Flask app"""
+    """Provide the initialized Flask app."""
     init_app(app_, None)
     with app_.app_context():
         yield app_
@@ -30,7 +30,7 @@ def app():
 
 @pytest.fixture(scope="session")
 def client(app):
-    """Provide a Flask test client"""
+    """Provide a Flask test client."""
     with app.test_client() as client:
         yield client
 
@@ -77,7 +77,9 @@ def models():
 @pytest.fixture(scope="function")
 def e_coli_core(models):
     """
-    Provide the e_coli_core model in a context manager, so that modifications are not
+    Provide the e_coli_core model in a context manager.
+
+    That means modifications are not
     persisted beyond the scope of the test function. This model is fairly small and
     should be preferred in test cases where possible.
     """
@@ -89,8 +91,9 @@ def e_coli_core(models):
 @pytest.fixture(scope="function")
 def iJO1366(models):
     """
-    Provide the iJO1366 model in a context manager, so that modifications are not
-    persisted beyond the scope of the test function.
+    Provide the iJO1366 model in a context manager.
+
+    That means modifications are not persisted beyond the scope of the test function.
     """
     wrapper = storage._MODELS[models["iJO1366"]]
     with wrapper.model as model:
@@ -100,7 +103,9 @@ def iJO1366(models):
 @pytest.fixture(scope="function")
 def eciML1515(models):
     """
-    Provide the eciML1515 model in a context manager, so that modifications are not
+    Provide the eciML1515 model in a context manager.
+
+    That means modifications are not
     persisted beyond the scope of the test function. This is an enzyme-constrained
     model, so it should only be used for testing enzyme-constrained related functions
     (e.g. direct integration of proteomics data).

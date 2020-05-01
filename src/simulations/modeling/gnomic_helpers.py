@@ -14,5 +14,5 @@
 
 
 def feature_id(feature):
-    """Return the feature identifier (name or accession id) for the given feature"""
+    """Return the feature identifier (name or accession id) for the given feature."""
     return feature.name or feature.accession.identifier

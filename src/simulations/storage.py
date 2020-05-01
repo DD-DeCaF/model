@@ -33,6 +33,8 @@ class ModelWrapper:
         self, id, model, project_id, organism_id, biomass_reaction, is_ec_model
     ):
         """
+        Initialize the model wrapper.
+
         Parameters
         ----------
         id: int
@@ -68,7 +70,7 @@ _MODELS = {}
 
 
 def get(model_id):
-    """Return a ModelWrapper instance for the given model id"""
+    """Return a ModelWrapper instance for the given model id."""
     if model_id not in _MODELS:
         _load_model(model_id)
     wrapper = _MODELS[model_id]

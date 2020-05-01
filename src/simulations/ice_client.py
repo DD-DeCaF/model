@@ -28,7 +28,12 @@ logger = logging.getLogger(__name__)
 
 
 class ICE(metaclass=Singleton):
-    """ICE API client. Docs: http://ice.jbei.org/api/index.html"""
+    """
+    Define an ICE API client.
+
+    Docs: http://ice.jbei.org/api/index.html
+
+    """
 
     def __init__(self):
         """On instantiation, request and store a session id for later use."""
@@ -41,8 +46,9 @@ class ICE(metaclass=Singleton):
 
     def get_reaction_equations(self, genotype):
         """
-        Request genotype part info from ICE and return reaction map information from the
-        references field.
+        Request genotype part info from ICE.
+
+        Return reaction map information from the references field.
         """
         logger.info(f"Requesting genotype '{genotype}' from ICE")
         with API_REQUESTS.labels(
@@ -84,7 +90,9 @@ class ICE(metaclass=Singleton):
 
     def _update_session_id(self):
         """
-        Query ICE for a new access token. Note that this usually takes ~10 seconds!
+        Query ICE for a new access token.
+
+        Note that this usually takes ~10 seconds!
         """
         logger.info(f"Requesting session token from ICE")
         response = requests.post(
