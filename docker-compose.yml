@@ -4,7 +4,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: gcr.io/dd-decaf-cfbf6/simulations:${IMAGE_TAG:-latest}
+      args:
+        - BASE_TAG=${BASE_TAG}
+        - BUILD_COMMIT=${BUILD_COMMIT:-unknown}
+        - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-unknown}
+    image: gcr.io/dd-decaf-cfbf6/simulations:${BRANCH:-latest}
     networks:
       default:
       DD-DeCaF:
@@ -26,7 +30,6 @@ services:
       - .:/app
       - type: tmpfs
         target: "/prometheus-client"
-    command: gunicorn -c gunicorn.py simulations.wsgi:app
 
 networks:
   DD-DeCaF:
