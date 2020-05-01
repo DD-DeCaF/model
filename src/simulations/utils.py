@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class Singleton(type):
-    """Implement the singleton pattern by using this type as metaclass"""
+    """Implement the singleton pattern by using this type as metaclass."""
 
     _instances = {}
 

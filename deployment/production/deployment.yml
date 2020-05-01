@@ -53,7 +53,6 @@ spec:
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-c", "gunicorn.py", "simulations.wsgi:app"]
         readinessProbe:
           httpGet:
             path: /simulations/healthz

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 def minimize_distance(model, biomass_reaction, growth_rate, fluxomics):
-    """Replaces fluxomics measurements with the minimized distance"""
+    """Replace fluxomics measurements with the minimized distance."""
     index = []
     observations = []
     uncertainties = []
@@ -169,8 +169,10 @@ def flexibilize_proteomics(
     model, biomass_reaction, growth_rate, proteomics, uptake_secretion_rates
 ):
     """
-    Replace proteomics measurements with a set that enables the model to grow. Proteins
-    are removed from the set iteratively based on sensitivity analysis (shadow prices).
+    Replace proteomics measurements with a set that enables the model to grow.
+
+    Proteins are removed from the set iteratively based on sensitivity analysis
+    (shadow prices).
 
     Parameters
     ----------
@@ -310,8 +312,9 @@ def limit_proteins(model, measurements):
 
 def top_shadow_prices(solution, met_ids, top=1):
     """
-    Retrieves shadow prices for a list of metabolites from the solution and ranks
-    them from most to least sensitive in the model.
+    Retrieve shadow prices for a list of metabolites from the solution.
+
+    Rank the shadow prices from most to least sensitive in the model.
 
     Parameters
     ----------
@@ -333,7 +336,7 @@ def top_shadow_prices(solution, met_ids, top=1):
 
 
 def bounds(measurement, uncertainty):
-    """Return resolved bounds based on measurement and uncertainty"""
+    """Return resolved bounds based on measurement and uncertainty."""
     if uncertainty:
         return measurement - uncertainty, measurement + uncertainty
     else:

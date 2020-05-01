@@ -446,7 +446,7 @@ def apply_measurements(
     errors = []
 
     def bounds(measurement, uncertainty):
-        """Return resolved bounds based on measurement and uncertainty"""
+        """Return resolved bounds based on measurement and uncertainty."""
         if uncertainty:
             return (measurement - uncertainty, measurement + uncertainty)
         else:
