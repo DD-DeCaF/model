@@ -71,13 +71,13 @@ def simulate(wrappers, medium, method):
         environment.apply(community.merged_model, inplace=True)
 
         if method == "steadycom":
-            logger.info(f"Simulating community model with SteadyCom")
+            logger.info("Simulating community model with SteadyCom")
             solution = reframed.SteadyCom(community)
         elif method == "steadiercom":
-            logger.info(f"Simulating community model with SteadyCom")
+            logger.info("Simulating community model with SteadyCom")
             solution = reframed.SteadierCom(community)
 
-        logger.debug(f"Formatting solution response")
+        logger.debug("Formatting solution response")
 
         def model_id(original_id):
             """Map the models original name back to our platform internal DB IDs."""
@@ -86,7 +86,7 @@ def simulate(wrappers, medium, method):
             )
 
         # Calculate transactions (cross-feeding, uptake and secretion)
-        logger.debug(f"Calculating transactions (cross-feeding, uptake and secretion)")
+        logger.debug("Calculating transactions (cross-feeding, uptake and secretion)")
         ex_met_ids = solution.community.merged_model.get_external_metabolites()
         met_id2name = create_metabolite_id2name_mapping(ex_met_ids, community)
         transactions = generate_transactions(met_id2name, solution.exchange_map)

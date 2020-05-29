@@ -94,7 +94,7 @@ class ICE(metaclass=Singleton):
 
         Note that this usually takes ~10 seconds!
         """
-        logger.info(f"Requesting session token from ICE")
+        logger.info("Requesting session token from ICE")
         response = requests.post(
             f"{app.config['ICE_API']}/rest/accesstokens",
             headers=self._headers(add_session_id=False),

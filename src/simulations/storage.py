@@ -82,7 +82,7 @@ def get(model_id):
 
 def preload_public_models():
     """Retrieve all public models from storage and instantiate them in memory."""
-    logger.info(f"Preloading all public models (this may take some time)")
+    logger.info("Preloading all public models (this may take some time)")
     response = requests.get(f"{app.config['MODEL_STORAGE_API']}/models")
     response.raise_for_status()
     for model in response.json():
@@ -97,7 +97,7 @@ def _load_model(model_id):
     # in the production environment, where models are preloaded outside of any request
     # context.
     if g and g.jwt_valid:
-        logger.debug(f"Forwarding provided JWT")
+        logger.debug("Forwarding provided JWT")
         headers["Authorization"] = f"Bearer {g.jwt_token}"
     response = requests.get(
         f"{app.config['MODEL_STORAGE_API']}/models/{model_id}", headers=headers
@@ -115,7 +115,7 @@ def _load_model(model_id):
         raise ModelNotFound(f"No model with id {model_id}")
     response.raise_for_status()
 
-    logger.debug(f"Deserializing received model with cobrapy")
+    logger.debug("Deserializing received model with cobrapy")
     model_data = response.json()
     _MODELS[model_id] = ModelWrapper(
         model_data["id"],
