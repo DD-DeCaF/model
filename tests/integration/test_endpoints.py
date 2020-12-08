@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test local HTTP endpoints"""
+"""Test local HTTP endpoints."""
 
 from collections import namedtuple
 
@@ -392,7 +392,7 @@ def test_modify(monkeypatch, client, models):
 
 
 def test_prokaryomics_md120_bw25113(client, models):
-    """Test constraining and simulating a model with a real data set"""
+    """Test constraining and simulating a model with a real data set."""
     data = {
         "medium": [
             {

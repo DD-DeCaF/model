@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test external API service integrations"""
+"""Test external API service integrations."""
 
 import pytest
 

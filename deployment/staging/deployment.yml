@@ -53,7 +53,6 @@ spec:
         volumeMounts:
         - mountPath: /prometheus-client
           name: prometheus-client
-        command: ["gunicorn", "-c", "gunicorn.py", "simulations.wsgi:app"]
         readinessProbe:
           httpGet:
             path: /simulations/healthz
@@ -61,9 +60,9 @@ spec:
           initialDelaySeconds: 5
         resources:
           requests:
-            cpu: "10m"
+            cpu: "1m"
           limits:
-            cpu: "4000m"
+            cpu: "2000m"
       volumes:
       - name: prometheus-client
         emptyDir: {}
